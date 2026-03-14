@@ -1,0 +1,97 @@
+{
+  "status": "completed",
+  "backend_target": "learned",
+  "strategy_name": "learned-generation",
+  "design_score": 0.3347,
+  "design_reasons": [
+    "Adjacency satisfaction below 0.2",
+    "Alignment score below 0.45"
+  ],
+  "design_filter_stats": {
+    "accepted_count": 0,
+    "rejected_count": 1,
+    "rejection_reasons_counts": {
+      "Adjacency satisfaction below 0.2": 1,
+      "Alignment score below 0.45": 1
+    }
+  },
+  "report_status": "COMPLIANT",
+  "explanation": {
+    "summary": "Layout status: COMPLIANT.",
+    "why_this_layout": [
+      "Travel distance 8.28m within limit 22.5m (margin 14.22m).",
+      "Adjacency satisfaction 0.1379 (higher is better).",
+      "Circulation ratio 0.0398 relative to total area."
+    ],
+    "constraint_justification": [
+      {
+        "claim": "Travel distance within limit",
+        "evidence_path": "metrics.max_travel_distance",
+        "value": 8.28
+      },
+      {
+        "claim": "Allowed travel distance",
+        "evidence_path": "metrics.max_allowed_travel_distance",
+        "value": 22.5
+      },
+      {
+        "claim": "Corridor serves rooms",
+        "evidence_path": "metrics.corridor_served_ratio",
+        "value": 0.75
+      }
+    ],
+    "tradeoffs": [
+      "Adjacency satisfaction is 0.1379; consider improving priority pairs if low.",
+      "Circulation ratio 0.0398 balances compactness vs corridor access."
+    ],
+    "suggested_edits": [],
+    "open_questions": []
+  },
+  "llm": {
+    "used": false,
+    "provider": "deterministic",
+    "model": null,
+    "latency_ms": null,
+    "warning": null,
+    "evidence_hash": "17dec70326296af1da5d40c908b05dd1b7488b55565936c3a9822516bc38ec0b"
+  },
+  "requested_rooms": {
+    "Bedroom": 2,
+    "Bathroom": 1,
+    "Kitchen": 1,
+    "Garage": 1
+  },
+  "generated_rooms": {
+    "Bedroom": 2,
+    "Bathroom": 1,
+    "Garage": 1
+  },
+  "room_coverage": {
+    "matched": [
+      "Bathroom",
+      "Bedroom",
+      "Garage"
+    ],
+    "missing": [
+      "Kitchen: expected 1, got 0"
+    ],
+    "extra": []
+  },
+  "violations": [],
+  "artifact_paths": {
+    "svg": "outputs\\nl_learned_blueprint.svg",
+    "report": "outputs\\nl_learned_compliance_report.json"
+  },
+  "metrics": {
+    "fully_connected": true,
+    "max_travel_distance": 8.28,
+    "max_allowed_travel_distance": 22.5,
+    "adjacency_satisfaction": 0.1379,
+    "alignment_score": null
+  },
+  "generation_summary": {
+    "raw_valid_count": 0,
+    "repaired_valid_count": 5,
+    "total_attempts": 41
+  }
+}

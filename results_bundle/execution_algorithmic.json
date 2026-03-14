@@ -1,0 +1,128 @@
+{
+  "status": "completed",
+  "backend_target": "algorithmic",
+  "strategy_name": "balanced",
+  "design_score": 0.5004,
+  "design_reasons": [],
+  "report_status": "COMPLIANT",
+  "explanation": {
+    "summary": "Layout status: COMPLIANT.",
+    "why_this_layout": [
+      "Ranked top with score 0.7833 (hard=1.0, compact=0.9111, adjacency=0.2241, travel=0.1871, circulation=0.04, alignment=0.8981).",
+      "Travel distance 18.29m within limit 22.5m (margin 4.21m).",
+      "Adjacency satisfaction 0.2241 (higher is better).",
+      "Circulation ratio 0.04 relative to total area."
+    ],
+    "constraint_justification": [
+      {
+        "claim": "Travel distance within limit",
+        "evidence_path": "metrics.max_travel_distance",
+        "value": 18.29
+      },
+      {
+        "claim": "Allowed travel distance",
+        "evidence_path": "metrics.max_allowed_travel_distance",
+        "value": 22.5
+      }
+    ],
+    "tradeoffs": [
+      "Adjacency satisfaction is 0.2241; consider improving priority pairs if low.",
+      "Circulation ratio 0.04 balances compactness vs corridor access."
+    ],
+    "suggested_edits": [],
+    "open_questions": []
+  },
+  "llm": {
+    "used": false,
+    "provider": "deterministic",
+    "model": null,
+    "latency_ms": null,
+    "warning": null,
+    "evidence_hash": "1425f95371c08f3af464cbbdbdfd1a19a949d8a75d152d77dc93124d7903f6f4"
+  },
+  "requested_rooms": {
+    "Bedroom": 2,
+    "Bathroom": 1,
+    "Kitchen": 1,
+    "LivingRoom": 1
+  },
+  "generated_rooms": {
+    "Bedroom": 2,
+    "Bathroom": 1,
+    "Kitchen": 1,
+    "LivingRoom": 1
+  },
+  "room_coverage": {
+    "matched": [
+      "Bathroom",
+      "Bedroom",
+      "Kitchen",
+      "LivingRoom"
+    ],
+    "missing": [],
+    "extra": []
+  },
+  "violations": [],
+  "alternatives": [
+    {
+      "strategy_name": "balanced",
+      "design_score": 0.5004,
+      "design_reasons": [],
+      "diversity_from_selected": 0.0,
+      "metrics": {
+        "fully_connected": true,
+        "max_travel_distance": 18.29,
+        "max_allowed_travel_distance": 22.5,
+        "adjacency_satisfaction": 0.2241,
+        "alignment_score": 0.8981,
+        "corridor_width": 1.2
+      }
+    },
+    {
+      "strategy_name": "compactness-first",
+      "design_score": 0.5004,
+      "design_reasons": [],
+      "diversity_from_selected": 0.0,
+      "metrics": {
+        "fully_connected": true,
+        "max_travel_distance": 18.29,
+        "max_allowed_travel_distance": 22.5,
+        "adjacency_satisfaction": 0.2241,
+        "alignment_score": 0.8981,
+        "corridor_width": 1.2
+      }
+    },
+    {
+      "strategy_name": "corridor-minimization",
+      "design_score": 0.5004,
+      "design_reasons": [],
+      "diversity_from_selected": 0.0,
+      "metrics": {
+        "fully_connected": true,
+        "max_travel_distance": 18.29,
+        "max_allowed_travel_distance": 22.5,
+        "adjacency_satisfaction": 0.2241,
+        "alignment_score": 0.8981,
+        "corridor_width": 1.2
+      }
+    }
+  ],
+  "design_filter_stats": {
+    "accepted_count": 3,
+    "rejected_count": 2,
+    "rejection_reasons_counts": {
+      "Adjacency satisfaction below 0.2": 2
+    }
+  },
+  "artifact_paths": {
+    "svg": "outputs\\nl_algorithmic_blueprint.svg",
+    "report": "outputs\\nl_algorithmic_compliance_report.json"
+  },
+  "metrics": {
+    "fully_connected": true,
+    "max_travel_distance": 18.29,
+    "max_allowed_travel_distance": 22.5,
+    "adjacency_satisfaction": 0.2241,
+    "alignment_score": 0.8981
+  }
+}

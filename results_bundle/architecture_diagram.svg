@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520">
+  <style>
+    .box { fill:#e8f1ff; stroke:#2b4c7e; stroke-width:2; }
+    .title { font-family: Arial, sans-serif; font-size:14px; font-weight:bold; fill:#102542; }
+    .text { font-family: Arial, sans-serif; font-size:12px; fill:#102542; }
+    .arrow { stroke:#444; stroke-width:2; marker-end:url(#m); fill:none; }
+  </style>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 z" fill="#444"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="20" y="30" width="170" height="80"/>
+  <text class="title" x="35" y="55">NL UI / CLI</text>
+  <text class="text" x="35" y="75">User prompt + options</text>
+
+  <rect class="box" x="220" y="30" width="170" height="80"/>
+  <text class="title" x="235" y="55">Spec Extraction</text>
+  <text class="text" x="235" y="75">extract → validate → clarify</text>
+
+  <rect class="box" x="420" y="30" width="170" height="80"/>
+  <text class="title" x="435" y="55">Schema + KG Check</text>
+  <text class="text" x="435" y="75">ontology + rule preflight</text>
+
+  <rect class="box" x="620" y="30" width="170" height="80"/>
+  <text class="title" x="635" y="55">Pipeline Router</text>
+  <text class="text" x="635" y="75">algorithmic vs learned</text>
+
+  <rect class="box" x="820" y="10" width="250" height="110"/>
+  <text class="title" x="835" y="35">Generation + Repair + Rank</text>
+  <text class="text" x="835" y="55">variant build, repair loop</text>
+  <text class="text" x="835" y="75">design gate + ranking</text>
+
+  <rect class="box" x="820" y="150" width="250" height="90"/>
+  <text class="title" x="835" y="175">SVG Export + Metrics</text>
+  <text class="text" x="835" y="195">blueprint, compliance report</text>
+
+  <rect class="box" x="620" y="260" width="170" height="90"/>
+  <text class="title" x="635" y="285">Evidence Builder</text>
+  <text class="text" x="635" y="305">scores, metrics, violations,</text>
+  <text class="text" x="635" y="325">alternatives, KG, hashes</text>
+
+  <rect class="box" x="420" y="260" width="170" height="90"/>
+  <text class="title" x="435" y="285">Explanation Layer</text>
+  <text class="text" x="435" y="305">deterministic draft → Gemini</text>
+  <text class="text" x="435" y="325">validator / fallback</text>
+
+  <rect class="box" x="220" y="260" width="170" height="90"/>
+  <text class="title" x="235" y="285">UI Return</text>
+  <text class="text" x="235" y="305">assistant_text + artifacts</text>
+
+  <rect class="box" x="20" y="260" width="170" height="90"/>
+  <text class="title" x="35" y="285">Interactive Edit</text>
+  <text class="text" x="35" y="305">live validation + auto-fix hook</text>
+
+  <line class="arrow" x1="190" y1="70" x2="220" y2="70"/>
+  <line class="arrow" x1="390" y1="70" x2="420" y2="70"/>
+  <line class="arrow" x1="590" y1="70" x2="620" y2="70"/>
+  <line class="arrow" x1="790" y1="70" x2="820" y2="70"/>
+  <line class="arrow" x1="945" y1="120" x2="945" y2="150"/>
+  <line class="arrow" x1="945" y1="240" x2="710" y2="240"/>
+  <line class="arrow" x1="620" y1="305" x2="590" y2="305"/>
+  <line class="arrow" x1="420" y1="305" x2="390" y2="305"/>
+  <line class="arrow" x1="220" y1="305" x2="190" y2="305"/>
+  <line class="arrow" x1="105" y1="260" x2="105" y2="120"/>
+  <line class="arrow" x1="105" y1="120" x2="820" y2="120"/>
+
+  <text class="text" x="840" y="255">compliance & metrics</text>
+  <text class="text" x="260" y="245">assistant_text + artifacts</text>
+  <text class="text" x="55" y="245">edits/violations</text>
+</svg>

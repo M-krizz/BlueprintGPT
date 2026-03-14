@@ -1,0 +1,11 @@
+{
+  "rooms": [
+    {"type": "DrawingRoom"},
+    {"type": "Kitchen"},
+    {"type": "Bedroom"},
+    {"type": "Bathroom"},
+    {"type": "Lobby"},
+    {"type": "Passage"},
+    {"type": "Stairs"}
+  ]
+}

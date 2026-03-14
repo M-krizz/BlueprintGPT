@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlueprintGPT Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060b14;
+      --panel: #0e1628;
+      --accent: #7dd3fc;
+      --accent-strong: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #f87171;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.08), transparent 35%),
+                  radial-gradient(circle at 80% 0%, rgba(125,211,252,0.08), transparent 30%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+    }
+    .pill {
+      padding: 6px 10px;
+      background: rgba(125,211,252,0.1);
+      color: var(--accent-strong);
+      border-radius: 12px;
+      font-size: 13px;
+      border: 1px solid rgba(125,211,252,0.2);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 0 24px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(125,211,252,0.15);
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
+    .btn {
+      background: linear-gradient(135deg, #22d3ee, #7dd3fc);
+      color: #0b1220;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+      width: 100%;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(34,211,238,0.25); }
+    .btn:active { transform: translateY(0); }
+    .chat {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .bubble {
+      border-radius: 12px;
+      padding: 12px 14px;
+      line-height: 1.5;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+    }
+    .user { background: rgba(125,211,252,0.08); border-color: rgba(125,211,252,0.25); }
+    .bot { background: #0b1220; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .links { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .links a {
+      color: var(--accent-strong);
+      text-decoration: none;
+      border: 1px solid rgba(125,211,252,0.25);
+      padding: 5px 9px;
+      border-radius: 9px;
+      font-size: 12px;
+      background: rgba(125,211,252,0.08);
+    }
+    .links a:hover { border-color: var(--accent); }
+    .preview {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .preview img {
+      display: block;
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      background: #f3f4f6;
+    }
+    .status-ok { color: #34d399; font-weight: 600; }
+    .status-warn { color: #fbbf24; font-weight: 600; }
+    .prompt-wrap { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    .prompt {
+      min-height: 90px;
+      border-radius: 12px;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px;
+      font-size: 14px;
+      resize: vertical;
+    }
+    .advanced {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      overflow: hidden;
+    }
+    .advanced summary {
+      cursor: pointer;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      list-style: none;
+    }
+    .advanced summary::-webkit-details-marker { display:none; }
+    .advanced .content { padding: 0 12px 12px; }
+    .grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .prompt-wrap { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">BlueprintGPT Chat</div>
+    <div class="pill">Prompt → Layout → Explanation</div>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Conversation</h2>
+      <div class="prompt-wrap">
+        <textarea class="prompt" id="prompt" placeholder="Describe your requirement in natural language. Example: Need 2 bedrooms, 1 bathroom, 1 kitchen and 1 drawing room on a 10 marla plot with a north entrance and minimize corridor."></textarea>
+        <button class="btn" id="submit" style="height: 52px; align-self:end;">Generate</button>
+      </div>
+      <details class="advanced">
+        <summary>Advanced options (optional)</summary>
+        <div class="content">
+          <div class="grid">
+            <div>
+              <label for="width">Boundary Width (m)</label>
+              <input id="width" type="number" step="0.1" value="15" />
+            </div>
+            <div>
+              <label for="height">Boundary Height (m)</label>
+              <input id="height" type="number" step="0.1" value="10" />
+            </div>
+          </div>
+          <div class="grid" style="margin-top:10px;">
+            <div>
+              <label for="entranceX">Entrance X (optional)</label>
+              <input id="entranceX" type="number" step="0.1" />
+            </div>
+            <div>
+              <label for="entranceY">Entrance Y (optional)</label>
+              <input id="entranceY" type="number" step="0.1" />
+            </div>
+          </div>
+          <div class="grid" style="margin-top:10px;">
+            <div>
+              <label for="area">Total Area (optional)</label>
+              <input id="area" type="number" step="0.1" />
+            </div>
+            <div>
+              <label for="areaUnit">Area Unit</label>
+              <select id="areaUnit">
+                <option value="sq.m">sq.m</option>
+                <option value="sq.ft">sq.ft</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <label for="prefix">Output Prefix (optional)</label>
+            <input id="prefix" placeholder="chat_run" />
+          </div>
+        </div>
+      </details>
+      <div class="chat" id="chat"></div>
+    </section>
+  </main>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const submitBtn = document.getElementById('submit');
+
+    function addBubble(text, role = 'bot', links = null, svgUrl = null) {
+      const div = document.createElement('div');
+      div.className = `bubble ${role}`;
+      div.textContent = text;
+      if (links && Array.isArray(links) && links.length) {
+        const linksWrap = document.createElement('div');
+        linksWrap.className = 'links';
+        for (const link of links) {
+          const a = document.createElement('a');
+          a.href = link.href;
+          a.textContent = link.label;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          linksWrap.appendChild(a);
+        }
+        div.appendChild(linksWrap);
+      }
+      if (svgUrl) {
+        const preview = document.createElement('div');
+        preview.className = 'preview';
+        const img = document.createElement('img');
+        img.src = svgUrl;
+        img.alt = 'Generated blueprint preview';
+        preview.appendChild(img);
+        div.appendChild(preview);
+      }
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function persistHistory() {
+      localStorage.setItem('blueprintgpt_chat_history', chat.innerHTML);
+    }
+
+    function restoreHistory() {
+      const html = localStorage.getItem('blueprintgpt_chat_history');
+      if (html) {
+        chat.innerHTML = html;
+      }
+    }
+
+    function addChatResponse(data) {
+      const lines = [];
+      if (data.assistant_text) lines.push(data.assistant_text);
+
+      if (data.backend_ready && data.execution) {
+        const ex = data.execution;
+        lines.push('');
+        lines.push(`Status: ${ex.report_status || ex.status}`);
+        if (ex.strategy_name) lines.push(`Strategy: ${ex.strategy_name}`);
+        if (ex.metrics) {
+          const m = ex.metrics;
+          const parts = [];
+          if (m.max_travel_distance !== undefined) parts.push(`Travel ${m.max_travel_distance}`);
+          if (m.max_allowed_travel_distance !== undefined) parts.push(`Limit ${m.max_allowed_travel_distance}`);
+          if (m.adjacency_satisfaction !== undefined) parts.push(`Adjacency ${m.adjacency_satisfaction}`);
+          if (parts.length) lines.push(parts.join(' | '));
+        }
+        if (ex.explanation && ex.explanation.summary) {
+          lines.push(`Explanation: ${ex.explanation.summary}`);
+        }
+        if (ex.requested_rooms || ex.generated_rooms) {
+          lines.push('');
+          lines.push('Room fulfillment:');
+          const req = ex.requested_rooms || {};
+          const got = ex.generated_rooms || {};
+          const keys = Array.from(new Set([...Object.keys(req), ...Object.keys(got)])).sort();
+          for (const k of keys) {
+            lines.push(`- ${k}: requested ${req[k] || 0}, generated ${got[k] || 0}`);
+          }
+        }
+        if (ex.room_coverage) {
+          const missing = ex.room_coverage.missing || [];
+          const extra = ex.room_coverage.extra || [];
+          lines.push('');
+          if (!missing.length && !extra.length) {
+            lines.push('Coverage check: OK (all requested room counts matched).');
+          } else {
+            lines.push('Coverage check: Needs attention.');
+            if (missing.length) lines.push(`Missing -> ${missing.join('; ')}`);
+            if (extra.length) lines.push(`Extra -> ${extra.join('; ')}`);
+          }
+        }
+        if (Array.isArray(ex.violations) && ex.violations.length) {
+          lines.push('');
+          lines.push(`Violations: ${ex.violations.join('; ')}`);
+        }
+        if (ex.artifact_paths) {
+          if (ex.artifact_paths.report) lines.push(`Report file: ${ex.artifact_paths.report}`);
+          if (ex.artifact_paths.svg) lines.push(`SVG file: ${ex.artifact_paths.svg}`);
+        }
+      } else {
+        if (Array.isArray(data.validation_errors) && data.validation_errors.length) {
+          lines.push('');
+          lines.push(`Validation: ${data.validation_errors.join('; ')}`);
+        }
+        if (Array.isArray(data.missing_fields) && data.missing_fields.length) {
+          lines.push('');
+          lines.push(`Missing: ${data.missing_fields.join(', ')}`);
+        }
+      }
+
+      const links = [];
+      const execution = data.execution || {};
+      let svgUrl = null;
+      if (execution.artifact_urls) {
+        if (execution.artifact_urls.report) links.push({ label: 'Open Report JSON', href: execution.artifact_urls.report });
+        if (execution.artifact_urls.svg) links.push({ label: 'Open Blueprint SVG', href: execution.artifact_urls.svg });
+        svgUrl = execution.artifact_urls.svg || null;
+      }
+      addBubble(lines.join('\n'), 'bot', links, svgUrl);
+      persistHistory();
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt').value.trim();
+      const width = Number(document.getElementById('width').value || 0);
+      const height = Number(document.getElementById('height').value || 0);
+      const entranceX = document.getElementById('entranceX').value;
+      const entranceY = document.getElementById('entranceY').value;
+      const area = document.getElementById('area').value;
+      const areaUnit = document.getElementById('areaUnit').value;
+      const prefix = document.getElementById('prefix').value;
+
+      if (!prompt) {
+        addBubble('Please type your requirement prompt first.', 'bot');
+        return;
+      }
+
+      const entrance = (entranceX !== '' && entranceY !== '') ? [Number(entranceX), Number(entranceY)] : null;
+      const body = {
+        prompt,
+        boundary: { width, height },
+        entrance_point: entrance,
+        area: area !== '' ? Number(area) : undefined,
+        area_unit: areaUnit,
+        output_prefix: prefix || undefined,
+      };
+
+      addBubble(prompt, 'user');
+      persistHistory();
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Generating...';
+      try {
+        const res = await fetch('/chat/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          addBubble(`Error: ${detail.detail || res.statusText}`, 'bot');
+          persistHistory();
+        } else {
+          const data = await res.json();
+          addChatResponse(data);
+        }
+      } catch (err) {
+        addBubble(`Request failed: ${err}`, 'bot');
+        persistHistory();
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Generate';
+      }
+    });
+
+    document.getElementById('prompt').addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        submitBtn.click();
+      }
+    });
+
+    restoreHistory();
+    if (!chat.innerHTML.trim()) {
+      addBubble('Describe your home requirements in natural language and press Generate. Example: Need 2 bedrooms, 1 bathroom, 1 kitchen and 1 drawing room on a 10 marla plot with a north entrance and minimize corridor.', 'bot');
+      persistHistory();
+    }
+  </script>
+</body>
+</html>

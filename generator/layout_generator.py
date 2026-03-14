@@ -1,0 +1,299 @@
+import traceback
+from pathlib import Path
+
+from core.building import Building
+from core.room import Room
+from core.exit import Exit
+from constraints.rule_engine import RuleEngine
+from geometry.allocator import Allocator
+from geometry.polygon_packer import PolygonPacker
+from geometry.door_placer import DoorPlacer
+from geometry.corridor_placer import generate_corridor_variants
+from geometry.corridor_first_planner import generate_corridor_first_variants
+from geometry.zoning import assign_room_zones
+from geometry.adjacency_intent import adjacency_satisfaction_score
+from geometry.polygon import snap_building_to_grid, alignment_score, enforce_aspect_ratio
+from graph.connectivity import is_fully_connected
+from graph.manhattan_path import max_travel_distance
+from graph.door_graph_path import door_graph_travel_distance
+from generator.ranking import rank_layout_variants
+
+# ── Default checkpoint for learned generator ──────────────────────────────────
+_DEFAULT_CHECKPOINT = "learned/model/checkpoints/kaggle_test.pt"
+
+
+def _build_base(spec, regulation_file):
+    """Build and return a base (building, engine, allocation_breakdown, modifications)
+    from the spec without running corridor placement or ontology."""
+    occupancy = spec.get("occupancy", "Residential")
+    building = Building(occupancy_type=occupancy)
+
+    total_area_input = spec.get("total_area")
+    area_unit = spec.get("area_unit", "sq.ft")
+    allocation_strategy = spec.get("allocation_strategy", "priority_weights")
+
+    for room_data in spec.get("rooms", []):
+        requested_area = float(room_data.get("area", 0.0))
+        building.add_room(Room(room_data["name"], room_data["type"], requested_area))
+
+    engine = RuleEngine(regulation_file)
+
+    rule_preflight = engine.preflight_validate_spec(spec)
+    if not rule_preflight.get("valid", False):
+        raise ValueError("Rule preflight failed: " + "; ".join(rule_preflight.get("errors", [])))
+
+    modifications = []
+    allocation_breakdown = None
+
+    if total_area_input is not None:
+        alloc_mods, allocation_breakdown = engine.allocate_room_areas_from_total(
+            building,
+            float(total_area_input),
+            unit=area_unit,
+            strategy=allocation_strategy,
+        )
+        modifications.extend(alloc_mods)
+
+    modifications.extend(engine.apply_room_rules(building))
+    total_area, occupant_load = engine.compute_building_metrics(building)
+    exit_width = engine.compute_exit_width(building)
+
+    # ── Geometry: pack rooms ──────────────────────────────────────────────────
+    boundary_polygon = spec.get("boundary_polygon")
+    entrance_point = spec.get("entrance_point")
+    if boundary_polygon and len(boundary_polygon) >= 3:
+        packer = PolygonPacker(building, boundary_polygon, entrance_point=entrance_point)
+        width, height = packer.allocate()
+    else:
+        allocator = Allocator(building)
+        width, height = allocator.allocate()
+
+    exit_obj = Exit(width=exit_width)
+    exit_obj.segment = ((0, 0), (exit_width, 0))
+    building.set_exit(exit_obj)
+
+    return (
+        building,
+        engine,
+        allocation_breakdown,
+        modifications,
+        width,
+        height,
+        boundary_polygon,
+        rule_preflight,
+    )
+
+
+def generate_layout_from_spec(spec, regulation_file, ontology_validator=None):
+    """
+    Generate 3–5 layout variants (different corridor strategies) and return them
+    all. Also returns the first variant as the 'primary' result for backward compat.
+    """
+    building, engine, allocation_breakdown, modifications, width, height, boundary_polygon, rule_preflight = \
+        _build_base(spec, regulation_file)
+
+    kg_precheck = None
+    if ontology_validator is not None and hasattr(ontology_validator, "validate_spec_semantics"):
+        kg_precheck = ontology_validator.validate_spec_semantics(spec)
+        if not kg_precheck.get("valid", False):
+            raise ValueError("KG semantic precheck failed: " + "; ".join(kg_precheck.get("errors", [])))
+
+    # ── Generate corridor variants ────────────────────────────────────────────
+    circulation_factor = engine.data[building.occupancy_type]["circulation_factor"]
+    min_corridor_width = engine.data[building.occupancy_type].get(
+        "corridor", {}).get("min_width", 1.2)
+    min_door_width = engine.get_min_door_width(building.occupancy_type)
+    max_allowed_travel = engine.get_max_travel_distance(building.occupancy_type)
+
+    if boundary_polygon and len(boundary_polygon) >= 3:
+        variants = generate_corridor_first_variants(
+            building,
+            boundary_polygon=boundary_polygon,
+            entrance_point=spec.get("entrance_point"),
+            min_corridor_width=min_corridor_width,
+        )
+    else:
+        variants = generate_corridor_variants(
+            building,
+            circulation_factor=circulation_factor,
+            min_corridor_width=min_corridor_width,
+            boundary_polygon=boundary_polygon,
+            entrance_point=spec.get("entrance_point"),
+        )
+
+    # ── Validate each variant ─────────────────────────────────────────────────
+    if not variants:
+        variants = [(building, "balanced")]
+
+    validated_variants = []
+    for var_building, strategy_name in variants:
+        # Aspect ratio enforcement
+        for room in var_building.rooms:
+            enforce_aspect_ratio(room)
+
+        # Grid snapping
+        snap_building_to_grid(var_building, step=0.15)
+
+        # doors are generated after circulation carving so room/circulation boundaries are respected
+        door_placer = DoorPlacer(var_building, min_door_width)
+        door_placer.place_doors()
+
+        connected = is_fully_connected(var_building)
+        travel_distance = max_travel_distance(var_building)
+        zone_map = assign_room_zones(var_building, entrance_point=spec.get("entrance_point"))
+        adjacency_score, adjacency_details = adjacency_satisfaction_score(var_building)
+        circulation_spaces = getattr(var_building, "corridors", [])
+        walkable_area = round(sum(getattr(c, "walkable_area", 0.0) for c in circulation_spaces), 2)
+        corridor_width = round(max((c.width for c in circulation_spaces), default=0.0), 2)
+        connectivity_to_exit = all(
+            getattr(c, "connectivity_to_exit", False) for c in circulation_spaces
+        ) if circulation_spaces else False
+
+        # Door-graph travel distance (Dijkstra through doors + corridor)
+        door_path_travel = door_graph_travel_distance(var_building)
+
+        # Alignment quality
+        align_score = alignment_score(var_building)
+
+        ont_result = None
+        if ontology_validator is not None:
+            ont_result = ontology_validator.validate(var_building, engine)
+
+        validated_variants.append({
+            "building":      var_building,
+            "strategy_name": strategy_name,
+            "bounding_box":  {"width": width, "height": height},
+            "allocation":    allocation_breakdown,
+            "modifications": modifications,
+            "metrics": {
+                "total_area":               var_building.total_area,
+                "occupant_load":            var_building.occupant_load,
+                "required_exit_width":      var_building.exit.width if var_building.exit else 0,
+                "max_travel_distance":      travel_distance,
+                "max_allowed_travel_distance": max_allowed_travel,
+                "travel_distance_compliant": travel_distance <= max_allowed_travel,
+                "fully_connected":          connected,
+                "zone_map":                 zone_map,
+                "adjacency_satisfaction":   adjacency_score,
+                "adjacency_details":        adjacency_details,
+                "corridor_width":           corridor_width,
+                "circulation_walkable_area": walkable_area,
+                "connectivity_to_exit":     connectivity_to_exit,
+                "alignment_score":          align_score,
+                "door_path_travel_distance": door_path_travel,
+            },
+            "ontology":   ont_result,
+            "input_spec": spec,
+            "spec_validation": spec.get("_spec_validation"),
+            "repair": spec.get("_repair"),
+            "rule_preflight": rule_preflight,
+            "kg_precheck": kg_precheck,
+            "source":     "algorithmic",
+        })
+
+    # ── Learned-generator variants (Transformer + repair) ─────────────────────
+    learned_variants = _generate_learned_variants(
+        spec, boundary_polygon, engine, ontology_validator,
+        width, height, allocation_breakdown, modifications,
+        max_allowed_travel, rule_preflight, kg_precheck,
+    )
+    validated_variants.extend(learned_variants)
+
+    ranked_variants, recommended_index = rank_layout_variants(validated_variants)
+
+    # Primary result = first variant (backward compatibility)
+    primary = ranked_variants[0] if ranked_variants else {}
+    primary["layout_variants"] = ranked_variants
+    primary["recommended_index"] = recommended_index
+
+    return primary
+
+
+def _generate_learned_variants(
+    spec, boundary_polygon, engine, ontology_validator,
+    width, height, allocation_breakdown, modifications,
+    max_allowed_travel, rule_preflight, kg_precheck,
+    K: int = 5,
+) -> list:
+    """
+    Attempt to generate layout variants from the trained LayoutTransformer.
+    Returns a list of validated-variant dicts (same schema as algorithmic ones)
+    with additional ``source``, ``repair_trace``, and ``raw_validity`` fields.
+    Gracefully returns [] if checkpoint is missing or generation fails.
+    """
+    checkpoint = spec.get("learned_checkpoint", _DEFAULT_CHECKPOINT)
+    if not Path(checkpoint).exists():
+        return []
+
+    try:
+        from learned.integration.model_generation_loop import generate_best_layout_from_model
+        from learned.integration.repair_gate import evaluate_variant
+    except ImportError:
+        return []
+
+    entrance_point = spec.get("entrance_point")
+    occupancy = spec.get("occupancy", "Residential")
+
+    learned_validated = []
+
+    try:
+        best_variant, summary = generate_best_layout_from_model(
+            spec=spec,
+            boundary_poly=boundary_polygon if boundary_polygon else [(0, 0), (width, 0), (width, height), (0, height)],
+            entrance=entrance_point,
+            checkpoint_path=checkpoint,
+            regulation_file="ontology/regulation_data.json",
+            K=K,
+            max_attempts=max(K * 3, 15),
+            temperature=0.85,
+        )
+    except Exception:
+        traceback.print_exc()
+        return []
+
+    if best_variant is None:
+        return []
+
+    # Collect the best candidate and runners-up from the resample loop
+    all_candidates = best_variant.get("all_candidates", [])
+    top_candidates = [c for c in all_candidates if c.get("building") is not None][:3]
+
+    for idx, cand in enumerate(top_candidates):
+        var_building = cand["building"]
+        metrics = cand.get("metrics", {})
+        if not metrics:
+            metrics = evaluate_variant(var_building, "ontology/regulation_data.json", entrance_point)
+
+        ont_result = None
+        if ontology_validator is not None:
+            try:
+                ont_result = ontology_validator.validate(var_building, engine)
+            except Exception:
+                pass
+
+        learned_validated.append({
+            "building":      var_building,
+            "strategy_name": f"learned-gen-{idx+1}",
+            "bounding_box":  {"width": width, "height": height},
+            "allocation":    allocation_breakdown,
+            "modifications": cand.get("violations", []),
+            "metrics":       metrics,
+            "ontology":      ont_result,
+            "input_spec":    spec,
+            "spec_validation": spec.get("_spec_validation"),
+            "repair":        spec.get("_repair"),
+            "rule_preflight": rule_preflight,
+            "kg_precheck":   kg_precheck,
+            # ── Learned-specific fields ───────────────────────────────────
+            "source":        "learned",
+            "repair_trace":  cand.get("repair_trace", []),
+            "raw_validity":  cand.get("raw_valid", False),
+            "generation_summary": {
+                "raw_valid_count":     summary.get("raw_valid_count", 0),
+                "repaired_valid_count": summary.get("repaired_valid_count", 0),
+                "total_attempts":      summary.get("total_attempts", 0),
+                "top_failure_reasons": summary.get("top_failure_reasons", {}),
+            },
+        })
+
+    return learned_validated

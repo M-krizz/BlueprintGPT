@@ -1,0 +1,9 @@
+matplotlib
+owlready2
+shapely
+pytest
+pytest-cov
+fastapi
+uvicorn[standard]
+httpx
+anyio[trio]

@@ -1,0 +1,40 @@
+{
+  "ablation": [
+    {
+      "mode": "algorithmic_only",
+      "n_samples": 15,
+      "raw_validity_rate": 1.0,
+      "post_validity_rate": 1.0,
+      "avg_violations": 0.0,
+      "avg_travel_margin": 6.87,
+      "avg_adjacency": 0.6552
+    },
+    {
+      "mode": "learned_no_repair",
+      "n_samples": 3,
+      "raw_validity_rate": 0.0,
+      "post_validity_rate": 0.0,
+      "avg_violations": 2.67,
+      "avg_travel_margin": 6.41,
+      "avg_adjacency": 0.0575
+    },
+    {
+      "mode": "learned_repair",
+      "n_samples": 3,
+      "raw_validity_rate": 0.0,
+      "post_validity_rate": 0.3333,
+      "avg_violations": 6.67,
+      "avg_travel_margin": 8.55,
+      "avg_adjacency": 0.3563
+    },
+    {
+      "mode": "learned_repair_kg",
+      "n_samples": 3,
+      "raw_validity_rate": 0.0,
+      "post_validity_rate": 0.6667,
+      "avg_violations": 5.33,
+      "avg_travel_margin": 6.86,
+      "avg_adjacency": 0.3563
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "5Marla": {
+    "max_total_rooms": 5,
+    "max_bedrooms": 3
+  },
+  "10Marla": {
+    "max_total_rooms": 8,
+    "max_bedrooms": 5
+  },
+  "20Marla": {
+    "max_total_rooms": 12,
+    "max_bedrooms": 7
+  },
+  "Custom": {}
+}

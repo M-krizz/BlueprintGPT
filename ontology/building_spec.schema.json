@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genai.local/schemas/building_spec.schema.json",
+  "title": "Building Specification",
+  "type": "object",
+  "required": [
+    "occupancy",
+    "rooms"
+  ],
+  "properties": {
+    "occupancy": {
+      "type": "string",
+      "enum": [
+        "Residential"
+      ]
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Bedroom",
+              "LivingRoom",
+              "Kitchen",
+              "Bathroom",
+              "WC"
+            ]
+          },
+          "area": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "adjacency": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": [
+          "a",
+          "b",
+          "type"
+        ],
+        "properties": {
+          "a": {
+            "type": "string",
+            "minLength": 1
+          },
+          "b": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "must",
+              "prefer"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "total_area": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "area_unit": {
+      "type": "string",
+      "enum": [
+        "sq.ft",
+        "sq.m"
+      ],
+      "default": "sq.ft"
+    },
+    "allocation_strategy": {
+      "type": "string",
+      "enum": [
+        "priority_weights",
+        "proportional_to_min_area",
+        "equal_surplus"
+      ],
+      "default": "priority_weights"
+    },
+    "preferences": {
+      "type": "object",
+      "default": {},
+      "properties": {
+        "compactness": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "minimize_travel_distance": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

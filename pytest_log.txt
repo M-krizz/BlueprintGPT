@@ -1,0 +1,45 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0 -- D:\Projects\GenAI\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Projects\GenAI
+plugins: cov-7.0.0
+collecting ... collected 33 items
+
+tests/integration/test_e2e_pipeline.py::test_full_algorithmic_pipeline PASSED [  3%]
+tests/learned/test_constrained_processor.py::test_spec_constrained_processor PASSED [  6%]
+tests/learned/test_repair_gate.py::test_stage1_sanitize_boundaries PASSED [  9%]
+tests/learned/test_repair_gate.py::test_stage1_sanitize_degenerate PASSED [ 12%]
+tests/learned/test_tokenizer.py::test_tokenizer_encode_decode PASSED     [ 15%]
+tests/learned/test_tokenizer.py::test_tokenizer_pad PASSED               [ 18%]
+tests/unit/test_compliance_report.py::test_build_compliance_report_compliant PASSED [ 21%]
+tests/unit/test_compliance_report.py::test_build_compliance_report_non_compliant PASSED [ 24%]
+tests/unit/test_geometry.py::test_snap_to_grid PASSED                    [ 27%]
+tests/unit/test_geometry.py::test_aspect_ratio PASSED                    [ 30%]
+tests/unit/test_geometry.py::test_alignment_score PASSED                 [ 33%]
+tests/unit/test_geometry.py::test_walls PASSED                           [ 36%]
+tests/unit/test_geometry.py::test_bbox_operations PASSED                 [ 39%]
+tests/unit/test_geometry.py::test_adjacency_intent PASSED                [ 42%]
+tests/unit/test_geometry.py::test_zoning PASSED                          [ 45%]
+tests/unit/test_graph.py::test_door_graph_travel_distance PASSED         [ 48%]
+tests/unit/test_graph.py::test_get_room_travel_distances PASSED          [ 51%]
+tests/unit/test_gui.py::test_quick_validate PASSED                       [ 54%]
+tests/unit/test_ontology_bridge.py::test_ontology_bridge_load PASSED     [ 57%]
+tests/unit/test_ontology_bridge.py::test_semantic_precheck PASSED        [ 60%]
+tests/unit/test_ranking.py::test_score_variant_perfect PASSED            [ 63%]
+tests/unit/test_ranking.py::test_rank_layout_variants PASSED             [ 66%]
+tests/unit/test_repair_loop.py::test_repair_once_defaults PASSED         [ 69%]
+tests/unit/test_repair_loop.py::test_repair_room_aliases PASSED          [ 72%]
+tests/unit/test_repair_loop.py::test_validate_and_repair_loop PASSED     [ 75%]
+tests/unit/test_rule_engine.py::test_apply_room_rules_minimums PASSED    [ 78%]
+tests/unit/test_rule_engine.py::test_allocate_areas PASSED               [ 81%]
+tests/unit/test_rule_engine.py::test_compute_metrics PASSED              [ 84%]
+tests/unit/test_rule_engine.py::test_preflight_validate_spec_fail_small PASSED [ 87%]
+tests/unit/test_spec_validator.py::test_validate_spec_valid PASSED       [ 90%]
+tests/unit/test_spec_validator.py::test_validate_spec_invalid_occupancy PASSED [ 93%]
+tests/unit/test_spec_validator.py::test_validate_spec_invalid_room_type PASSED [ 96%]
+tests/unit/test_visualization.py::test_svg_rendering PASSED              [100%]
+
+============================= 33 passed in 31.84s =============================
+
+
+STDERR:

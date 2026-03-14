@@ -1,0 +1,17 @@
+{
+  "artifact_paths": {
+    "svg": "outputs\\bundle_test_21a78e81ae9d414e93a23d2a020c5156\\outputs\\blueprint_learned.svg",
+    "report": "outputs\\bundle_test_21a78e81ae9d414e93a23d2a020c5156\\outputs\\compliance_report_learned.json"
+  },
+  "design_score": 0.8,
+  "report_status": "COMPLIANT",
+  "alternatives": [],
+  "llm": {
+    "used": false,
+    "provider": "deterministic",
+    "model": null,
+    "latency_ms": null,
+    "warning": null,
+    "evidence_hash": "hash-b"
+  }
+}

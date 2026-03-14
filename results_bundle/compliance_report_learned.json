@@ -1,0 +1,1227 @@
+{
+  "input": {
+    "occupancy": "Residential",
+    "building_type": "Residential",
+    "plot_type": "10Marla",
+    "boundary_polygon": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        15.0,
+        0.0
+      ],
+      [
+        15.0,
+        10.0
+      ],
+      [
+        0.0,
+        10.0
+      ]
+    ],
+    "entrance_point": [
+      7.5,
+      10.0
+    ],
+    "entrance_side": "North",
+    "total_area": 150.0,
+    "area_unit": "sq.m",
+    "allocation_strategy": "priority_weights",
+    "adjacency": [],
+    "preferences": {
+      "compactness": "medium",
+      "minimize_travel_distance": false
+    },
+    "_nl_spec": {
+      "building_type": "Residential",
+      "plot_type": "10Marla",
+      "entrance_side": "North",
+      "rooms": [
+        {
+          "type": "Bedroom",
+          "count": 2
+        },
+        {
+          "type": "Bathroom",
+          "count": 1
+        },
+        {
+          "type": "Kitchen",
+          "count": 1
+        },
+        {
+          "type": "Garage",
+          "count": 1
+        }
+      ],
+      "preferences": {
+        "adjacency": [],
+        "privacy": {
+          "Bedroom": "private",
+          "Bathroom": "private",
+          "Garage": "service",
+          "Kitchen": "service"
+        },
+        "minimize_corridor": false
+      },
+      "weights": {
+        "privacy": 0.3333,
+        "compactness": 0.3333,
+        "corridor": 0.3333
+      }
+    },
+    "_nl_constraints": {
+      "adjacency": [],
+      "privacy": {
+        "Bedroom": "private",
+        "Bathroom": "private",
+        "Garage": "service",
+        "Kitchen": "service"
+      },
+      "weights": {
+        "privacy": 0.3333,
+        "compactness": 0.3333,
+        "corridor": 0.3333
+      }
+    },
+    "rooms": [
+      {
+        "type": "Bedroom"
+      },
+      {
+        "type": "Bedroom"
+      },
+      {
+        "type": "Bathroom"
+      },
+      {
+        "type": "Kitchen"
+      },
+      {
+        "type": "Garage"
+      }
+    ]
+  },
+  "source": "learned",
+  "allocation": null,
+  "modifications": [
+    "Kitchen_placeholder_1: no polygon, dropped",
+    "Bedroom_2: aspect ratio reshaped",
+    "Garage_1: aspect ratio reshaped",
+    "5 overlap(s) after push-apart \u2192 repacking",
+    "Bedroom_2: shifted 1.45m toward corridor",
+    "KG: 'NoneType' object has no attribute 'name'"
+  ],
+  "checks": {
+    "room_minimums": false,
+    "connectivity": true,
+    "travel_distance": true,
+    "exit_width": true,
+    "circulation_to_exit": true,
+    "llm_spec_valid": true,
+    "kg_valid": true,
+    "rule_preflight_valid": true,
+    "kg_precheck_valid": true
+  },
+  "metrics": {
+    "total_area": 150.75,
+    "occupant_load": 12,
+    "required_exit_width": 1.0,
+    "max_travel_distance": 8.28,
+    "max_allowed_travel_distance": 22.5,
+    "travel_distance_compliant": true,
+    "fully_connected": true,
+    "zone_map": {
+      "Bedroom_2": "private",
+      "Bedroom_1": "private",
+      "Bathroom_1": "private",
+      "Garage_1": "service"
+    },
+    "adjacency_satisfaction": 0.1379,
+    "adjacency_details": [
+      {
+        "pair": "Kitchen<->DiningRoom",
+        "weight": 1.0,
+        "satisfied": false
+      },
+      {
+        "pair": "Kitchen<->LivingRoom",
+        "weight": 0.9,
+        "satisfied": false
+      },
+      {
+        "pair": "LivingRoom<->DiningRoom",
+        "weight": 0.7,
+        "satisfied": false
+      },
+      {
+        "pair": "LivingRoom<->Bedroom",
+        "weight": 0.4,
+        "satisfied": false
+      },
+      {
+        "pair": "Bedroom<->Bathroom",
+        "weight": 0.8,
+        "satisfied": true
+      },
+      {
+        "pair": "Bedroom<->WC",
+        "weight": 0.6,
+        "satisfied": false
+      },
+      {
+        "pair": "Bedroom<->DressingArea",
+        "weight": 0.5,
+        "satisfied": false
+      },
+      {
+        "pair": "LivingRoom<->Lobby",
+        "weight": 0.6,
+        "satisfied": false
+      },
+      {
+        "pair": "Lobby<->Kitchen",
+        "weight": 0.3,
+        "satisfied": false
+      }
+    ],
+    "corridor_width": 1.2,
+    "circulation_walkable_area": 6.0,
+    "connectivity_to_exit": true,
+    "corridor_served_ratio": 0.75,
+    "corridor_connected_room_names": [
+      "Bathroom_1",
+      "Bedroom_1",
+      "Garage_1"
+    ]
+  },
+  "circulation_space": {
+    "corridor_width": 1.2,
+    "walkable_area": 6.0,
+    "connectivity_to_exit": true
+  },
+  "grounding": {
+    "llm_spec_valid": true,
+    "kg_valid": true,
+    "rule_preflight_valid": true,
+    "kg_precheck_valid": true,
+    "repair_attempts": 0,
+    "errors": [],
+    "rule_preflight": {},
+    "kg_precheck": {}
+  },
+  "truth_table": [
+    {
+      "claim": "Connectivity",
+      "algorithm_result": true
+    },
+    {
+      "claim": "Travel distance within limit",
+      "algorithm_result": true,
+      "margin": 14.22
+    },
+    {
+      "claim": "Exit width sufficient",
+      "algorithm_result": true
+    }
+  ],
+  "status": "COMPLIANT",
+  "violations": [],
+  "bounding_box": {
+    "x_min": 0.0,
+    "y_min": 0.0,
+    "x_max": 15.0,
+    "y_max": 10.0
+  },
+  "raw_validity": false,
+  "repair_trace": [
+    {
+      "stage": "sanitize",
+      "action": "dropped_no_polygon",
+      "room": "Kitchen_placeholder_1"
+    },
+    {
+      "stage": "aspect_ratio",
+      "action": "reshaped",
+      "room": "Bedroom_2"
+    },
+    {
+      "stage": "aspect_ratio",
+      "action": "reshaped",
+      "room": "Garage_1"
+    },
+    {
+      "stage": "overlap_repair",
+      "action": "push_apart_incomplete_5_overlaps",
+      "room": ""
+    },
+    {
+      "stage": "overlap_repair",
+      "action": "full_repack_applied",
+      "room": ""
+    },
+    {
+      "stage": "corridor",
+      "action": "generated_5_variants",
+      "room": ""
+    },
+    {
+      "stage": "accessibility",
+      "action": "shifted_1.45m",
+      "room": "Bedroom_2"
+    },
+    {
+      "stage": "doors",
+      "action": "fully_connected",
+      "room": ""
+    },
+    {
+      "stage": "travel",
+      "action": "compliant_8.33<=22.5",
+      "room": ""
+    },
+    {
+      "stage": "ontology",
+      "action": "validated_reasoner=ontology-bridge-error",
+      "room": ""
+    },
+    {
+      "stage": "grid_snap",
+      "action": "snapped_5_polygons",
+      "room": ""
+    }
+  ],
+  "generation_summary": {
+    "total_attempts": 41,
+    "valid_samples": 5,
+    "raw_valid_count": 0,
+    "repaired_valid_count": 5,
+    "pre_ranked_count": 5,
+    "top_failure_reasons": {
+      "raw_not_connected": 20,
+      "raw_Bedroom_1_under_area": 1
+    },
+    "all_candidates": [
+      {
+        "index": 3,
+        "raw_valid": false,
+        "adjacency_proxy": 0.1778,
+        "violations": [
+          "Kitchen_placeholder_1: no polygon, dropped",
+          "Bedroom_2: aspect ratio reshaped",
+          "Garage_1: aspect ratio reshaped",
+          "5 overlap(s) after push-apart \u2192 repacking",
+          "Bedroom_2: shifted 1.45m toward corridor",
+          "KG: 'NoneType' object has no attribute 'name'"
+        ],
+        "status": "COMPLIANT",
+        "score": 0.6868,
+        "breakdown": {
+          "hard_compliance": 1.0,
+          "compactness": 0.9116,
+          "adjacency": 0.1379,
+          "travel_margin": 0.632,
+          "circulation_ratio": 0.0398,
+          "alignment": 0.0
+        },
+        "metrics": {
+          "total_area": 150.75,
+          "occupant_load": 12,
+          "required_exit_width": 1.0,
+          "max_travel_distance": 8.28,
+          "max_allowed_travel_distance": 22.5,
+          "travel_distance_compliant": true,
+          "fully_connected": true,
+          "zone_map": {
+            "Bedroom_2": "private",
+            "Bedroom_1": "private",
+            "Bathroom_1": "private",
+            "Garage_1": "service"
+          },
+          "adjacency_satisfaction": 0.1379,
+          "adjacency_details": [
+            {
+              "pair": "Kitchen<->DiningRoom",
+              "weight": 1.0,
+              "satisfied": false
+            },
+            {
+              "pair": "Kitchen<->LivingRoom",
+              "weight": 0.9,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->DiningRoom",
+              "weight": 0.7,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Bedroom",
+              "weight": 0.4,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->Bathroom",
+              "weight": 0.8,
+              "satisfied": true
+            },
+            {
+              "pair": "Bedroom<->WC",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->DressingArea",
+              "weight": 0.5,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Lobby",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Lobby<->Kitchen",
+              "weight": 0.3,
+              "satisfied": false
+            }
+          ],
+          "corridor_width": 1.2,
+          "circulation_walkable_area": 6.0,
+          "connectivity_to_exit": true,
+          "corridor_served_ratio": 0.75,
+          "corridor_connected_room_names": [
+            "Bathroom_1",
+            "Bedroom_1",
+            "Garage_1"
+          ]
+        },
+        "repair_trace": [
+          {
+            "stage": "sanitize",
+            "action": "dropped_no_polygon",
+            "room": "Kitchen_placeholder_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bedroom_2"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Garage_1"
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "push_apart_incomplete_5_overlaps",
+            "room": ""
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "full_repack_applied",
+            "room": ""
+          },
+          {
+            "stage": "corridor",
+            "action": "generated_5_variants",
+            "room": ""
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_1.45m",
+            "room": "Bedroom_2"
+          },
+          {
+            "stage": "doors",
+            "action": "fully_connected",
+            "room": ""
+          },
+          {
+            "stage": "travel",
+            "action": "compliant_8.33<=22.5",
+            "room": ""
+          },
+          {
+            "stage": "ontology",
+            "action": "validated_reasoner=ontology-bridge-error",
+            "room": ""
+          },
+          {
+            "stage": "grid_snap",
+            "action": "snapped_5_polygons",
+            "room": ""
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "raw_valid": false,
+        "adjacency_proxy": 0.1778,
+        "violations": [
+          "Bedroom_2: aspect ratio reshaped",
+          "Bedroom_1: aspect ratio reshaped",
+          "Bathroom_1: aspect ratio reshaped",
+          "Kitchen_1: aspect ratio reshaped",
+          "Garage_1: aspect ratio reshaped",
+          "6 overlap(s) after push-apart \u2192 repacking",
+          "Bedroom_1: shifted 4.10m toward corridor",
+          "Bathroom_1: shifted 0.79m toward corridor",
+          "Kitchen_1: shifted 0.79m toward corridor",
+          "not fully connected after first door pass",
+          "KG: 'NoneType' object has no attribute 'name'"
+        ],
+        "status": "COMPLIANT",
+        "score": 0.6859,
+        "breakdown": {
+          "hard_compliance": 1.0,
+          "compactness": 0.9113,
+          "adjacency": 0.1379,
+          "travel_margin": 0.6182,
+          "circulation_ratio": 0.0399,
+          "alignment": 0.0
+        },
+        "metrics": {
+          "total_area": 150.3225,
+          "occupant_load": 12,
+          "required_exit_width": 1.0,
+          "max_travel_distance": 8.59,
+          "max_allowed_travel_distance": 22.5,
+          "travel_distance_compliant": true,
+          "fully_connected": true,
+          "zone_map": {
+            "Bedroom_2": "private",
+            "Bedroom_1": "private",
+            "Bathroom_1": "private",
+            "Kitchen_1": "service",
+            "Garage_1": "service"
+          },
+          "adjacency_satisfaction": 0.1379,
+          "adjacency_details": [
+            {
+              "pair": "Kitchen<->DiningRoom",
+              "weight": 1.0,
+              "satisfied": false
+            },
+            {
+              "pair": "Kitchen<->LivingRoom",
+              "weight": 0.9,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->DiningRoom",
+              "weight": 0.7,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Bedroom",
+              "weight": 0.4,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->Bathroom",
+              "weight": 0.8,
+              "satisfied": true
+            },
+            {
+              "pair": "Bedroom<->WC",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->DressingArea",
+              "weight": 0.5,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Lobby",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Lobby<->Kitchen",
+              "weight": 0.3,
+              "satisfied": false
+            }
+          ],
+          "corridor_width": 1.2,
+          "circulation_walkable_area": 6.0,
+          "connectivity_to_exit": true,
+          "corridor_served_ratio": 0.4,
+          "corridor_connected_room_names": [
+            "Bedroom_2",
+            "Garage_1"
+          ]
+        },
+        "repair_trace": [
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bedroom_2"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Garage_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Bedroom_2"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Garage_1"
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "push_apart_incomplete_6_overlaps",
+            "room": ""
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "full_repack_applied",
+            "room": ""
+          },
+          {
+            "stage": "corridor",
+            "action": "generated_5_variants",
+            "room": ""
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_4.10m",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_0.79m",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_0.79m",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "doors",
+            "action": "not_connected_retry",
+            "room": ""
+          },
+          {
+            "stage": "doors",
+            "action": "synthetic_corridor_door",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "doors",
+            "action": "synthetic_corridor_door",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "travel",
+            "action": "compliant_8.68<=22.5",
+            "room": ""
+          },
+          {
+            "stage": "ontology",
+            "action": "validated_reasoner=ontology-bridge-error",
+            "room": ""
+          },
+          {
+            "stage": "grid_snap",
+            "action": "snapped_6_polygons",
+            "room": ""
+          }
+        ]
+      },
+      {
+        "index": 0,
+        "raw_valid": false,
+        "adjacency_proxy": 0.1778,
+        "violations": [
+          "Garage_placeholder_1: no polygon, dropped",
+          "Bathroom_1: aspect ratio reshaped",
+          "Kitchen_1: aspect ratio reshaped",
+          "4 overlap(s) after push-apart \u2192 repacking",
+          "Bedroom_2: shifted 0.53m toward corridor",
+          "Bathroom_1: shifted 0.53m toward corridor",
+          "Kitchen_1: shifted 5.61m toward corridor",
+          "not fully connected after first door pass",
+          "KG: 'NoneType' object has no attribute 'name'"
+        ],
+        "status": "COMPLIANT",
+        "score": 0.6858,
+        "breakdown": {
+          "hard_compliance": 1.0,
+          "compactness": 0.9104,
+          "adjacency": 0.1379,
+          "travel_margin": 0.6191,
+          "circulation_ratio": 0.0403,
+          "alignment": 0.0
+        },
+        "metrics": {
+          "total_area": 148.8375,
+          "occupant_load": 11,
+          "required_exit_width": 1.0,
+          "max_travel_distance": 8.57,
+          "max_allowed_travel_distance": 22.5,
+          "travel_distance_compliant": true,
+          "fully_connected": true,
+          "zone_map": {
+            "Bedroom_1": "private",
+            "Bedroom_2": "private",
+            "Bathroom_1": "private",
+            "Kitchen_1": "service"
+          },
+          "adjacency_satisfaction": 0.1379,
+          "adjacency_details": [
+            {
+              "pair": "Kitchen<->DiningRoom",
+              "weight": 1.0,
+              "satisfied": false
+            },
+            {
+              "pair": "Kitchen<->LivingRoom",
+              "weight": 0.9,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->DiningRoom",
+              "weight": 0.7,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Bedroom",
+              "weight": 0.4,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->Bathroom",
+              "weight": 0.8,
+              "satisfied": true
+            },
+            {
+              "pair": "Bedroom<->WC",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->DressingArea",
+              "weight": 0.5,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Lobby",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Lobby<->Kitchen",
+              "weight": 0.3,
+              "satisfied": false
+            }
+          ],
+          "corridor_width": 1.2,
+          "circulation_walkable_area": 6.0,
+          "connectivity_to_exit": true,
+          "corridor_served_ratio": 0.25,
+          "corridor_connected_room_names": [
+            "Bedroom_1"
+          ]
+        },
+        "repair_trace": [
+          {
+            "stage": "sanitize",
+            "action": "dropped_no_polygon",
+            "room": "Garage_placeholder_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "push_apart_incomplete_4_overlaps",
+            "room": ""
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "full_repack_applied",
+            "room": ""
+          },
+          {
+            "stage": "corridor",
+            "action": "generated_5_variants",
+            "room": ""
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_0.53m",
+            "room": "Bedroom_2"
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_0.53m",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_5.61m",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "doors",
+            "action": "not_connected_retry",
+            "room": ""
+          },
+          {
+            "stage": "doors",
+            "action": "synthetic_corridor_door",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "doors",
+            "action": "synthetic_corridor_door",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "travel",
+            "action": "compliant_8.61<=22.5",
+            "room": ""
+          },
+          {
+            "stage": "ontology",
+            "action": "validated_reasoner=ontology-bridge-error",
+            "room": ""
+          },
+          {
+            "stage": "grid_snap",
+            "action": "snapped_5_polygons",
+            "room": ""
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "raw_valid": false,
+        "adjacency_proxy": 0.1778,
+        "violations": [
+          "Bedroom_placeholder_1: no polygon, dropped",
+          "Garage_placeholder_1: no polygon, dropped",
+          "Bathroom_1: aspect ratio reshaped",
+          "Kitchen_1: aspect ratio reshaped",
+          "3 overlap(s) after push-apart \u2192 repacking",
+          "Bedroom_1: shifted 3.73m toward corridor",
+          "Bathroom_1: shifted 0.57m toward corridor",
+          "KG: 'NoneType' object has no attribute 'name'"
+        ],
+        "status": "COMPLIANT",
+        "score": 0.6618,
+        "breakdown": {
+          "hard_compliance": 1.0,
+          "compactness": 0.9113,
+          "adjacency": 0.0,
+          "travel_margin": 0.6289,
+          "circulation_ratio": 0.0399,
+          "alignment": 0.0
+        },
+        "metrics": {
+          "total_area": 150.2775,
+          "occupant_load": 12,
+          "required_exit_width": 1.0,
+          "max_travel_distance": 8.35,
+          "max_allowed_travel_distance": 22.5,
+          "travel_distance_compliant": true,
+          "fully_connected": true,
+          "zone_map": {
+            "Bedroom_1": "private",
+            "Bathroom_1": "private",
+            "Kitchen_1": "service"
+          },
+          "adjacency_satisfaction": 0.0,
+          "adjacency_details": [
+            {
+              "pair": "Kitchen<->DiningRoom",
+              "weight": 1.0,
+              "satisfied": false
+            },
+            {
+              "pair": "Kitchen<->LivingRoom",
+              "weight": 0.9,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->DiningRoom",
+              "weight": 0.7,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Bedroom",
+              "weight": 0.4,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->Bathroom",
+              "weight": 0.8,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->WC",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->DressingArea",
+              "weight": 0.5,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Lobby",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Lobby<->Kitchen",
+              "weight": 0.3,
+              "satisfied": false
+            }
+          ],
+          "corridor_width": 1.2,
+          "circulation_walkable_area": 6.0,
+          "connectivity_to_exit": true,
+          "corridor_served_ratio": 0.3333,
+          "corridor_connected_room_names": [
+            "Kitchen_1"
+          ]
+        },
+        "repair_trace": [
+          {
+            "stage": "sanitize",
+            "action": "dropped_no_polygon",
+            "room": "Bedroom_placeholder_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "dropped_no_polygon",
+            "room": "Garage_placeholder_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "push_apart_incomplete_3_overlaps",
+            "room": ""
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "full_repack_applied",
+            "room": ""
+          },
+          {
+            "stage": "corridor",
+            "action": "generated_5_variants",
+            "room": ""
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_3.73m",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_0.57m",
+            "room": "Bathroom_1"
+          },
+          {
+            "stage": "doors",
+            "action": "fully_connected",
+            "room": ""
+          },
+          {
+            "stage": "travel",
+            "action": "compliant_8.34<=22.5",
+            "room": ""
+          },
+          {
+            "stage": "ontology",
+            "action": "validated_reasoner=ontology-bridge-error",
+            "room": ""
+          },
+          {
+            "stage": "grid_snap",
+            "action": "snapped_4_polygons",
+            "room": ""
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "raw_valid": false,
+        "adjacency_proxy": 0.1778,
+        "violations": [
+          "Bathroom_placeholder_1: no polygon, dropped",
+          "Bedroom_2: aspect ratio reshaped",
+          "Bedroom_1: aspect ratio reshaped",
+          "Kitchen_1: aspect ratio reshaped",
+          "6 overlap(s) after push-apart \u2192 repacking",
+          "Bedroom_1: shifted 1.68m toward corridor",
+          "not fully connected after first door pass",
+          "KG: 'NoneType' object has no attribute 'name'"
+        ],
+        "status": "COMPLIANT",
+        "score": 0.6219,
+        "breakdown": {
+          "hard_compliance": 1.0,
+          "compactness": 0.7246,
+          "adjacency": 0.0,
+          "travel_margin": 0.5253,
+          "circulation_ratio": 0.124,
+          "alignment": 0.0
+        },
+        "metrics": {
+          "total_area": 146.025,
+          "occupant_load": 11,
+          "required_exit_width": 1.0,
+          "max_travel_distance": 10.68,
+          "max_allowed_travel_distance": 22.5,
+          "travel_distance_compliant": true,
+          "fully_connected": true,
+          "zone_map": {
+            "Bedroom_2": "private",
+            "Bedroom_1": "private",
+            "Kitchen_1": "service",
+            "Garage_1": "service"
+          },
+          "adjacency_satisfaction": 0.0,
+          "adjacency_details": [
+            {
+              "pair": "Kitchen<->DiningRoom",
+              "weight": 1.0,
+              "satisfied": false
+            },
+            {
+              "pair": "Kitchen<->LivingRoom",
+              "weight": 0.9,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->DiningRoom",
+              "weight": 0.7,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Bedroom",
+              "weight": 0.4,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->Bathroom",
+              "weight": 0.8,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->WC",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Bedroom<->DressingArea",
+              "weight": 0.5,
+              "satisfied": false
+            },
+            {
+              "pair": "LivingRoom<->Lobby",
+              "weight": 0.6,
+              "satisfied": false
+            },
+            {
+              "pair": "Lobby<->Kitchen",
+              "weight": 0.3,
+              "satisfied": false
+            }
+          ],
+          "corridor_width": 1.35,
+          "circulation_walkable_area": 18.1,
+          "connectivity_to_exit": true,
+          "corridor_served_ratio": 0.75,
+          "corridor_connected_room_names": [
+            "Bedroom_2",
+            "Garage_1",
+            "Kitchen_1"
+          ]
+        },
+        "repair_trace": [
+          {
+            "stage": "sanitize",
+            "action": "dropped_no_polygon",
+            "room": "Bathroom_placeholder_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bedroom_2"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "aspect_ratio",
+            "action": "reshaped",
+            "room": "Kitchen_1"
+          },
+          {
+            "stage": "sanitize",
+            "action": "clamped_to_boundary",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "push_apart_incomplete_6_overlaps",
+            "room": ""
+          },
+          {
+            "stage": "overlap_repair",
+            "action": "full_repack_applied",
+            "room": ""
+          },
+          {
+            "stage": "corridor",
+            "action": "generated_5_variants",
+            "room": ""
+          },
+          {
+            "stage": "accessibility",
+            "action": "shifted_1.68m",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "doors",
+            "action": "not_connected_retry",
+            "room": ""
+          },
+          {
+            "stage": "doors",
+            "action": "synthetic_corridor_door",
+            "room": "Bedroom_1"
+          },
+          {
+            "stage": "travel",
+            "action": "compliant_12.00<=22.5",
+            "room": ""
+          },
+          {
+            "stage": "ontology",
+            "action": "validated_reasoner=ontology-bridge-error",
+            "room": ""
+          },
+          {
+            "stage": "grid_snap",
+            "action": "snapped_5_polygons",
+            "room": ""
+          }
+        ]
+      }
+    ]
+  },
+  "wall_pipeline": {
+    "wall_segments_raw_count": 19,
+    "wall_segments_merged_count": 13,
+    "doors_input_count": 6,
+    "doors_deduped_count": 6,
+    "windows_input_count": 3,
+    "windows_deduped_count": 3,
+    "door_gaps_cut_count": 5,
+    "window_gaps_cut_count": 3
+  },
+  "explanation": {
+    "summary": "Layout status: COMPLIANT.",
+    "why_this_layout": [
+      "Travel distance 8.28m within limit 22.5m (margin 14.22m).",
+      "Adjacency satisfaction 0.1379 (higher is better).",
+      "Circulation ratio 0.0398 relative to total area."
+    ],
+    "constraint_justification": [
+      {
+        "claim": "Travel distance within limit",
+        "evidence_path": "metrics.max_travel_distance",
+        "value": 8.28
+      },
+      {
+        "claim": "Allowed travel distance",
+        "evidence_path": "metrics.max_allowed_travel_distance",
+        "value": 22.5
+      },
+      {
+        "claim": "Corridor serves rooms",
+        "evidence_path": "metrics.corridor_served_ratio",
+        "value": 0.75
+      }
+    ],
+    "tradeoffs": [
+      "Adjacency satisfaction is 0.1379; consider improving priority pairs if low.",
+      "Circulation ratio 0.0398 balances compactness vs corridor access."
+    ],
+    "suggested_edits": [],
+    "open_questions": []
+  }
+}
