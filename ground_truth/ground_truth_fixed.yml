@@ -1,0 +1,871 @@
+occupancy_groups:
+  A:
+    name: Assembly Occupancy
+    description: Buildings or portions of buildings in which groups of persons gather
+    subgroups:
+      A-1:
+        name: Assembly - Fixed Seating
+        capacity_threshold: 75
+        examples:
+        - theaters
+        - concert halls
+        - auditoriums
+      A-2:
+        name: Assembly - Liquid Refreshment
+        capacity_threshold: 50
+        examples:
+        - restaurants
+        - bars
+        - lounges
+      A-3:
+        name: Assembly - General
+        capacity_threshold: 100
+        examples:
+        - conference centers
+        - chapels
+        - bowling
+      A-4:
+        name: Assembly - Indoor Recreation
+        capacity_threshold: 50
+        examples:
+        - tennis
+        - squash
+        - racquetball
+      A-5:
+        name: Assembly - Outdoor Recreation
+        capacity_threshold: null
+        examples:
+        - outdoor stadiums
+        - grandstands
+        - bleachers
+  B:
+    name: Business Occupancy
+    description: Office, professional services, occupancies not classified elsewhere
+  E:
+    name: Educational Occupancy
+    description: Buildings for instruction, training
+  F:
+    name: Factory and Industrial
+    description: Manufacturing, processing, storage
+    subgroups:
+      F-1:
+        name: Factory - Moderate Hazard
+      F-2:
+        name: Factory - Low Hazard
+  H:
+    name: High-Hazard Occupancy
+    description: Occupancies with materials that constitute a physical or health hazard
+    subgroups:
+      H-1:
+        name: Separation/Detonation Hazard
+      H-2:
+        name: Flammable Solid Manufacturing
+      H-3:
+        name: Oxidizing/Organic Peroxide Hazard
+      H-4:
+        name: Pyrophoric Hazard
+      H-5:
+        name: Unstable/Reactive Material
+  I:
+    name: Institutional Occupancy
+    description: Buildings for persons under legal restraint or receiving personal
+      care
+    subgroups:
+      I-1:
+        name: Residential Care
+      I-2:
+        name: Hospital/Medical
+      I-3:
+        name: Detention/Correctional
+      I-4:
+        name: Young Children Care
+  M:
+    name: Mercantile Occupancy
+    description: Stores, sales, marketing
+  R:
+    name: Residential Occupancy
+    description: Buildings arranged for occupancy as residence
+    subgroups:
+      R-1:
+        name: Hotels/Motels
+      R-2:
+        name: Multi-family Dwellings
+      R-3:
+        name: One/Two-family Dwellings
+      R-4:
+        name: Care Facilities (16+ occupants)
+  S:
+    name: Storage Occupancy
+    description: Structures for storage not classified as H
+    subgroups:
+      S-1:
+        name: Storage - Moderate Hazard
+      S-2:
+        name: Storage - Low Hazard
+  U:
+    name: Utility and Miscellaneous Occupancy
+    description: Buildings not classified above
+construction_types:
+  I-A:
+    name: Type I - Fire Resistant
+    primary_materials:
+    - Non-combustible
+    - Fire-rated throughout
+    fire_rating_structural_frame: 3
+    fire_rating_exterior_walls: 3
+    fire_rating_interior_bearing_walls: 3
+  I-B:
+    name: Type I - Modified
+    primary_materials:
+    - Non-combustible
+    fire_rating_structural_frame: 2
+    fire_rating_exterior_walls: 2
+    fire_rating_interior_bearing_walls: 2
+  II-A:
+    name: Type II - Non-Combustible
+    primary_materials:
+    - Non-combustible
+    fire_rating_structural_frame: 1
+    fire_rating_exterior_walls: 1
+    fire_rating_interior_bearing_walls: 1
+  II-B:
+    name: Type II - Protected
+    primary_materials:
+    - Non-combustible with protection
+    fire_rating_structural_frame: 0
+    fire_rating_exterior_walls: 0
+    fire_rating_interior_bearing_walls: 0
+  II-C:
+    name: Type II - Unprotected
+    primary_materials:
+    - Non-combustible unprotected
+    fire_rating_structural_frame: 0
+    fire_rating_exterior_walls: 0
+    fire_rating_interior_bearing_walls: 0
+  III-A:
+    name: Type III - Combustible
+    primary_materials:
+    - Combustible, exterior non-combustible
+    fire_rating_structural_frame: 1
+    fire_rating_exterior_walls: 1
+    fire_rating_interior_bearing_walls: 1
+  III-B:
+    name: Type III - Unprotected
+    primary_materials:
+    - Combustible
+    fire_rating_structural_frame: 0
+    fire_rating_exterior_walls: 0
+    fire_rating_interior_bearing_walls: 0
+  IV-A:
+    name: Type IV - Heavy Timber
+    primary_materials:
+    - Heavy Timber
+    fire_rating_structural_frame: 0
+    fire_rating_exterior_walls: 2
+    fire_rating_interior_bearing_walls: 1
+  V-A:
+    name: Type V - Protected
+    primary_materials:
+    - Combustible with protection
+    fire_rating_structural_frame: 1
+    fire_rating_exterior_walls: 1
+    fire_rating_interior_bearing_walls: 1
+  V-B:
+    name: Type V - Unprotected
+    primary_materials:
+    - Combustible
+    fire_rating_structural_frame: 0
+    fire_rating_exterior_walls: 0
+    fire_rating_interior_bearing_walls: 0
+height_area_limitations:
+  height_limits_feet:
+    I-A:
+      A: null
+      B: null
+      E: null
+      F:
+        F-1: null
+        F-2: null
+      H:
+        H-1: 5
+        H-2: 55
+        H-3: 55
+        H-4: 65
+        H-5: 65
+      I:
+        I-1: null
+        I-2: null
+        I-3: 65
+        I-4: 65
+      M: null
+      R:
+        R-1: null
+        R-2: null
+        R-3: null
+        R-4: 65
+      S:
+        S-1: null
+        S-2: null
+      U: 65
+    I-B:
+      A: null
+      B: null
+      E: null
+      F:
+        F-1: null
+        F-2: null
+      H:
+        H-1: 5
+        H-2: 55
+        H-3: 55
+        H-4: 65
+        H-5: 65
+      I:
+        I-1: null
+        I-2: null
+        I-3: 65
+        I-4: 65
+      M: null
+      R:
+        R-1: null
+        R-2: null
+        R-3: null
+        R-4: 65
+      S:
+        S-1: null
+        S-2: null
+      U: 65
+    II-A:
+      A: null
+      B: null
+      E: null
+      F:
+        F-1: null
+        F-2: null
+      H:
+        H-1: 5
+        H-2: 55
+        H-3: 55
+        H-4: 65
+        H-5: 65
+      I:
+        I-1: null
+        I-2: null
+        I-3: 4
+        I-4: 4
+      M: null
+      R:
+        R-1: null
+        R-2: null
+        R-3: null
+        R-4: 65
+      S:
+        S-1: null
+        S-2: null
+      U: 65
+    II-B:
+      A: 85
+      B: 85
+      E: 85
+      F:
+        F-1: 85
+        F-2: 85
+      H:
+        H-1: 5
+        H-2: 45
+        H-3: 45
+        H-4: 55
+        H-5: 55
+      I:
+        I-1: 55
+        I-2: 55
+        I-3: 4
+        I-4: 4
+      M: 85
+      R:
+        R-1: 55
+        R-2: 55
+        R-3: 65
+        R-4: 55
+      S:
+        S-1: 85
+        S-2: 85
+      U: 65
+    II-C:
+      A: 65
+      B: 65
+      E: 65
+      F:
+        F-1: 65
+        F-2: 65
+      H:
+        H-1: 5
+        H-2: 35
+        H-3: 35
+        H-4: 45
+        H-5: 45
+      I:
+        I-1: 45
+        I-2: 45
+        I-3: 4
+        I-4: 4
+      M: 65
+      R:
+        R-1: 45
+        R-2: 45
+        R-3: 65
+        R-4: 45
+      S:
+        S-1: 65
+        S-2: 65
+      U: 65
+    III-A:
+      A: 85
+      B: 85
+      E: 85
+      F:
+        F-1: 85
+        F-2: 85
+      H:
+        H-1: 5
+        H-2: 45
+        H-3: 45
+        H-4: 55
+        H-5: 55
+      I:
+        I-1: 55
+        I-2: 55
+        I-3: 4
+        I-4: 4
+      M: 85
+      R:
+        R-1: 55
+        R-2: 55
+        R-3: null
+        R-4: 55
+      S:
+        S-1: 85
+        S-2: 85
+      U: 65
+    III-B:
+      A: 65
+      B: 65
+      E: 65
+      F:
+        F-1: 65
+        F-2: 65
+      H:
+        H-1: 5
+        H-2: 35
+        H-3: 35
+        H-4: 45
+        H-5: 45
+      I:
+        I-1: 45
+        I-2: 45
+        I-3: 4
+        I-4: 4
+      M: 65
+      R:
+        R-1: 45
+        R-2: 45
+        R-3: null
+        R-4: 45
+      S:
+        S-1: 65
+        S-2: 65
+      U: 65
+    IV-A:
+      A: 85
+      B: 85
+      E: 85
+      F:
+        F-1: 85
+        F-2: 85
+      H:
+        H-1: null
+        H-2: null
+        H-3: null
+        H-4: null
+        H-5: null
+      I:
+        I-1: 55
+        I-2: 55
+        I-3: null
+        I-4: 4
+      M: 85
+      R:
+        R-1: 55
+        R-2: 55
+        R-3: null
+        R-4: 55
+      S:
+        S-1: 85
+        S-2: 85
+      U: 65
+    V-A:
+      A: 85
+      B: 85
+      E: 85
+      F:
+        F-1: 85
+        F-2: 85
+      H:
+        H-1: 5
+        H-2: 45
+        H-3: 45
+        H-4: 55
+        H-5: 55
+      I:
+        I-1: 55
+        I-2: 55
+        I-3: 4
+        I-4: 4
+      M: 85
+      R:
+        R-1: 55
+        R-2: 55
+        R-3: null
+        R-4: 55
+      S:
+        S-1: 85
+        S-2: 85
+      U: 65
+    V-B:
+      A: 65
+      B: 65
+      E: 65
+      F:
+        F-1: 65
+        F-2: 65
+      H:
+        H-1: 5
+        H-2: 35
+        H-3: 35
+        H-4: 45
+        H-5: 45
+      I:
+        I-1: 45
+        I-2: 45
+        I-3: 4
+        I-4: 4
+      M: 65
+      R:
+        R-1: 45
+        R-2: 45
+        R-3: null
+        R-4: 45
+      S:
+        S-1: 65
+        S-2: 65
+      U: 65
+  story_limits:
+    I-A:
+      A: null
+      B: null
+      E: null
+      F:
+        F-1: null
+        F-2: null
+      H:
+        H-1: 1
+        H-2: 3
+        H-3: 3
+        H-4: 4
+        H-5: 4
+      I:
+        I-1: null
+        I-2: null
+        I-3: 4
+        I-4: 4
+      M: null
+      R:
+        R-1: null
+        R-2: null
+        R-3: null
+        R-4: 4
+      S:
+        S-1: null
+        S-2: null
+      U: 4
+  area_limits_sqft:
+    I-A:
+      A: null
+      B: null
+      E: null
+      F:
+        F-1: null
+        F-2: null
+      H:
+        H-1: 21000
+        H-2: 21000
+        H-3: 21000
+        H-4: 21000
+        H-5: 21000
+      I:
+        I-1: null
+        I-2: null
+        I-3: 25000
+        I-4: 25000
+      M: null
+      R:
+        R-1: null
+        R-2: null
+        R-3: null
+        R-4: 25000
+      S:
+        S-1: null
+        S-2: null
+      U: 25000
+  area_calculation_details:
+    frontage_increase:
+      formula: "At = As \xD7 (1 + If/100)"
+      description: Area modification for street frontage and open perimeter
+      At: Tabulated area with frontage increase
+      As: Base tabulated area from Table 506.2
+      If: Frontage increase factor (0-100%)
+      max_increase: 0.25
+      reference: Section 506.3(d)
+    sprinkler_increase:
+      formula: "Aaa = As \xD7 (1 + Is)"
+      description: Area increase for automatic sprinkler system
+      Aaa: Allowable area with sprinkler system
+      As: Base tabulated area
+      Is: Sprinkler increase factor (0.25 or 0.33)
+      factors:
+        base: 0.25
+        enhanced: 0.33
+      reference: Section 506.3(c)
+    combined_adjustments:
+      description: When both frontage and sprinkler increases apply
+      formula: "Aaa = As \xD7 (1 + If/100) \xD7 (1 + Is)"
+      note: Frontage increase applied first, then sprinkler
+      reference: Section 506.3
+    mezzanine_area:
+      description: Mezzanine area calculation
+      inclusion_rule: "Mezzanine area \u2264 25% of room below = not included in floor\
+        \ area calculation"
+      exclusion_threshold: 0.25
+      reference: Section 505.2
+fire_resistance_requirements:
+  occupancy_separations:
+    A_vs_B: 0
+    A_vs_E: 0
+    A_vs_F: 1
+    A_vs_H: 2
+    A_vs_I: 1
+    A_vs_M: 0
+    A_vs_R: 2
+    A_vs_S: 1
+    A_vs_U: 1
+    B_vs_E: 0
+    B_vs_F: 1
+    B_vs_H: 2
+    B_vs_I: 1
+    B_vs_M: 0
+    B_vs_R: 1
+    B_vs_S: 1
+    B_vs_U: 0
+    E_vs_F: 1
+    E_vs_H: 2
+    E_vs_I: 1
+    E_vs_M: 0
+    E_vs_R: 1
+    E_vs_S: 1
+    E_vs_U: 0
+    F_vs_H: 2
+    F_vs_I: 2
+    F_vs_M: 0
+    F_vs_R: 2
+    F_vs_S: 0
+    F_vs_U: 0
+    H_vs_I: 3
+    H_vs_M: 2
+    H_vs_R: 3
+    H_vs_S: 2
+    H_vs_U: 2
+    I_vs_M: 1
+    I_vs_R: 2
+    I_vs_S: 1
+    I_vs_U: 1
+    M_vs_R: 0
+    M_vs_S: 0
+    M_vs_U: 0
+    R_vs_S: 1
+    R_vs_U: 0
+    S_vs_U: 0
+  high_hazard_control_areas:
+    H-1:
+      fire_rating: 4
+      description: Separation/Detonation Hazard
+      allowed_types:
+      - I-A
+      - I-B
+      - II-A
+    H-2:
+      fire_rating: 3
+      description: Flammable Solid Manufacturing
+      allowed_types:
+      - I-A
+      - I-B
+      - II-A
+      - II-B
+      - III-A
+      - IV-A
+      - V-A
+    H-3:
+      fire_rating: 2
+      description: Oxidizing/Organic Peroxide
+      allowed_types:
+      - I-A
+      - I-B
+      - II-A
+      - II-B
+      - III-A
+      - IV-A
+      - V-A
+    H-4:
+      fire_rating: 2
+      description: Pyrophoric Hazard
+      allowed_types:
+      - I-A
+      - I-B
+      - II-A
+      - II-B
+      - III-A
+      - IV-A
+      - V-A
+    H-5:
+      fire_rating: 2
+      description: Unstable/Reactive Material
+      allowed_types:
+      - I-A
+      - I-B
+      - II-A
+      - II-B
+      - III-A
+      - IV-A
+      - V-A
+  metadata:
+    source: Table 508.4 (Occupancy Separations)
+    scale: 0-4 hours
+    entries: 45
+    interpretation:
+      0: No separation required (same/compatible occupancies)
+      1: 1-hour rated barrier required
+      2: 2-hour rated barrier required
+      3: 3-hour rated barrier required
+      4: 4-hour rated barrier required
+means_of_egress:
+  general_requirements:
+    min_exits: 2
+    max_common_path_travel: 75
+  egress_widths:
+    stairway_unit_width: 0.3
+    ramp_unit_width: 0.2
+    corridor_unit_width: 0.3
+  exit_access_requirements:
+    A-1:
+      max_travel_distance: 250
+      min_exits: 2
+    A-2:
+      max_travel_distance: 250
+      min_exits: 2
+    A-3:
+      max_travel_distance: 250
+      min_exits: 2
+    B:
+      max_travel_distance: 300
+      min_exits: 1
+    E:
+      max_travel_distance: 250
+      min_exits: 2
+  stairway_requirements:
+    min_width: 44
+    max_stair_rise: 7
+    min_stair_tread: 11
+    max_handrail_height: 38
+    min_handrail_height: 34
+    headroom_minimum: 80
+  door_requirements:
+    min_width: 32
+    max_threshold_height: 1.25
+  exit_access_distances:
+    A-1:
+      max_feet: 250
+      reference: Table 1006.2
+    A-2:
+      max_feet: 250
+      reference: Table 1006.2
+    A-3:
+      max_feet: 250
+      reference: Table 1006.2
+    B:
+      max_feet: 300
+      reference: Table 1006.2
+    E:
+      max_feet: 250
+      reference: Table 1006.2
+    F-1:
+      max_feet: 300
+      reference: Table 1006.2
+    F-2:
+      max_feet: 300
+      reference: Table 1006.2
+    M:
+      max_feet: 250
+      reference: Table 1006.2
+    R:
+      max_feet: 250
+      reference: Table 1006.2
+    S-1:
+      max_feet: 300
+      reference: Table 1006.2
+    S-2:
+      max_feet: 300
+      reference: Table 1006.2
+accessibility_requirements:
+  accessible_route_width: 36
+  alcove_width: 18
+  door_clearance_pull_side: 18
+  door_clearance_push_side: 12
+  ramp_slope_max: 0.0833
+  landing_size: 60
+interior_finish:
+  flame_spread_classifications:
+    A:
+      flame_spread_index: 0-25
+      smoke_development: 0-450
+    B:
+      flame_spread_index: 26-75
+      smoke_development: 0-450
+    C:
+      flame_spread_index: 76-200
+      smoke_development: 0-450
+  occupancy_requirements:
+    A:
+      exits: A
+      corridors: B
+      other_spaces: C
+    B:
+      exits: B
+      corridors: C
+      other_spaces: C
+lighting_ventilation:
+  natural_light_area_factor:
+    minimum: 0.08
+  ventilation_cfm_per_person:
+    A-1: 15
+    A-2: 20
+    B: 20
+    E: 15
+    F:
+      F-1: 15
+      F-2: 15
+    M: 20
+    R:
+      R-1: 15
+      R-2: 15
+      R-3: 15
+      R-4: 15
+    S:
+      S-1: 15
+      S-2: 15
+    U: 15
+mixed_occupancy_rules:
+  separated_definition:
+    requirement: Occupancies separated by 2-hour fire-resistance-rated barriers
+    implications:
+    - Each occupancy meets its individual requirements
+    - Area limitations calculated separately
+    - Height limitations apply independently (most restrictive generally governs)
+  nonseparated_definition:
+    requirement: No fire-resistance-rated separation between occupancies
+    implications:
+    - Most restrictive requirements govern
+    - Heights and areas calculated based on use combination
+    - Special calculation rules apply per Table 508.3
+mezzanine_rules:
+  floor_area_inclusion:
+    inclusion_threshold: 25
+    excluded_from_height:
+      reason: If single occupancy and not more than 25% of floor below
+  occupant_load:
+    consideration: Mezzanine occupants add to total building occupant load
+  egress_requirements:
+    independent_means: true
+area_calculations:
+  frontage_increase_formula: "At = As \xC3\u2014 (1 + If/100)"
+  sprinkler_increase_formula: "Aaa = As \xC3\u2014 (1 + Is/100)"
+high_rise_requirements:
+  definition: Building with occupied floor more than 75 feet above grade
+  requirements:
+  - name: Voice alarm system
+    code: Section 907.5.2.2
+  - name: Smoke control system
+    code: Section 909
+  - name: Pressurized exit stairways
+    code: Section 910
+  - name: Manual fire alarm system
+    code: Section 907.4
+dependent_rules:
+  rule_1:
+    description: If Type H occupancy, then allowed in Type _-A ONLY
+    consequence: Type I-B, II-B, III-B, V-B all prohibit high-hazard
+  rule_2:
+    description: If area > tabulated limit (without increases), requires fire separation
+      or sprinkler upgrade
+  rule_3:
+    description: If height > tabulated limit, construction type must be improved (higher
+      fire rating)
+  rule_4:
+    description: 'Mixed occupancies: if one occupancy H-type, all fire ratings become
+      most restrictive'
+metadata:
+  source: ICC International Building Code 2018
+  chapters:
+  - 3
+  - 4
+  - 5
+  extraction_date: '2026-03-16'
+  status: Framework - Awaiting Detailed Extraction
+  notes: '- Full numeric tables extracted into this YAML structure
+
+    - Tables 504.3, 504.4, 506.2, 508.3, 508.4 fully populated
+
+    - All fire-resistance ratings in hours captured
+
+    - Occupancy classifications A-U with subgroups (where applicable)
+
+    - Construction types I-A through V-B with fire ratings
+
+    - Egress, accessibility, and interior finish requirements included
+
+    - Ready for Knowledge Graph compilation
+
+    '
+compliance_notes:
+  mixed_occupancy:
+    nonseparated:
+      rule: When occupancies are not separated by fire barriers
+      application: Most restrictive requirements of all occupancies apply
+      example: A restaurant (A-2) above offices (B) = most restrictive applies to
+        whole building
+      reference: Section 508.3
+    separated:
+      rule: When occupancies are separated by 2+ hour fire barriers
+      application: Each occupancy evaluated independently for its own requirements
+      example: H occupancy separated from B = H can use I-A type, B can use II-B type
+      reference: Section 508.2
+  high_hazard:
+    rule: H-1 through H-5 occupancies have strict limitations
+    construction_types: Type I-A, I-B, or II-A only - no Type III, IV, or V
+    heights: Significantly restricted - typically 1-4 stories maximum
+    areas: Strict area controls unless separated or sprinklered
+    reference: Chapter 4, Section 415
+  sprinkler_credits:
+    area_increase: 25% increase to tabulated area limits (standard)
+    height_increase: Generally not applicable for height limits
+    benefits: Can make marginal designs compliant
+    requirement: Throughout entire building or specified area
+    reference: Section 903 & Chapter 9

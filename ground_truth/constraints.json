@@ -1,0 +1,1729 @@
+{
+  "constraints": [
+    {
+      "constraint_id": "constraint_height_I-A_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": null,
+        "F-2": null
+      },
+      "rule_references": [
+        "Table 504.3 I-A/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-A_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 55,
+        "H-3": 55,
+        "H-4": 65,
+        "H-5": 65
+      },
+      "rule_references": [
+        "Table 504.3 I-A/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-A_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": null,
+        "I-2": null,
+        "I-3": 65,
+        "I-4": 65
+      },
+      "rule_references": [
+        "Table 504.3 I-A/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-A_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": null,
+        "R-2": null,
+        "R-3": null,
+        "R-4": 65
+      },
+      "rule_references": [
+        "Table 504.3 I-A/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-A_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": null,
+        "S-2": null
+      },
+      "rule_references": [
+        "Table 504.3 I-A/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-A_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 I-A/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-B_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": null,
+        "F-2": null
+      },
+      "rule_references": [
+        "Table 504.3 I-B/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-B_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 55,
+        "H-3": 55,
+        "H-4": 65,
+        "H-5": 65
+      },
+      "rule_references": [
+        "Table 504.3 I-B/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-B_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": null,
+        "I-2": null,
+        "I-3": 65,
+        "I-4": 65
+      },
+      "rule_references": [
+        "Table 504.3 I-B/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-B_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": null,
+        "R-2": null,
+        "R-3": null,
+        "R-4": 65
+      },
+      "rule_references": [
+        "Table 504.3 I-B/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-B_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": null,
+        "S-2": null
+      },
+      "rule_references": [
+        "Table 504.3 I-B/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_I-B_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 I-B/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-A_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": null,
+        "F-2": null
+      },
+      "rule_references": [
+        "Table 504.3 II-A/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-A_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 55,
+        "H-3": 55,
+        "H-4": 65,
+        "H-5": 65
+      },
+      "rule_references": [
+        "Table 504.3 II-A/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-A_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": null,
+        "I-2": null,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 II-A/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-A_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": null,
+        "R-2": null,
+        "R-3": null,
+        "R-4": 65
+      },
+      "rule_references": [
+        "Table 504.3 II-A/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-A_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": null,
+        "S-2": null
+      },
+      "rule_references": [
+        "Table 504.3 II-A/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-A_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-A/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 II-B/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 II-B/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 II-B/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 85,
+        "F-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 II-B/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 45,
+        "H-3": 45,
+        "H-4": 55,
+        "H-5": 55
+      },
+      "rule_references": [
+        "Table 504.3 II-B/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 55,
+        "I-2": 55,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 II-B/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 II-B/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 55,
+        "R-2": 55,
+        "R-3": 65,
+        "R-4": 55
+      },
+      "rule_references": [
+        "Table 504.3 II-B/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 85,
+        "S-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 II-B/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-B_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-B/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-C/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-C/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-C/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 65,
+        "F-2": 65
+      },
+      "rule_references": [
+        "Table 504.3 II-C/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 35,
+        "H-3": 35,
+        "H-4": 45,
+        "H-5": 45
+      },
+      "rule_references": [
+        "Table 504.3 II-C/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 45,
+        "I-2": 45,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 II-C/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-C/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 45,
+        "R-2": 45,
+        "R-3": 65,
+        "R-4": 45
+      },
+      "rule_references": [
+        "Table 504.3 II-C/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 65,
+        "S-2": 65
+      },
+      "rule_references": [
+        "Table 504.3 II-C/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_II-C_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 II-C/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 III-A/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 III-A/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 III-A/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 85,
+        "F-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 III-A/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 45,
+        "H-3": 45,
+        "H-4": 55,
+        "H-5": 55
+      },
+      "rule_references": [
+        "Table 504.3 III-A/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 55,
+        "I-2": 55,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 III-A/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 III-A/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 55,
+        "R-2": 55,
+        "R-3": null,
+        "R-4": 55
+      },
+      "rule_references": [
+        "Table 504.3 III-A/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 85,
+        "S-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 III-A/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-A_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 III-A/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 III-B/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 III-B/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 III-B/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 65,
+        "F-2": 65
+      },
+      "rule_references": [
+        "Table 504.3 III-B/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 35,
+        "H-3": 35,
+        "H-4": 45,
+        "H-5": 45
+      },
+      "rule_references": [
+        "Table 504.3 III-B/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 45,
+        "I-2": 45,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 III-B/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 III-B/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 45,
+        "R-2": 45,
+        "R-3": null,
+        "R-4": 45
+      },
+      "rule_references": [
+        "Table 504.3 III-B/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 65,
+        "S-2": 65
+      },
+      "rule_references": [
+        "Table 504.3 III-B/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_III-B_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 III-B/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 IV-A/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 IV-A/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 IV-A/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 85,
+        "F-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 IV-A/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": null,
+        "H-2": null,
+        "H-3": null,
+        "H-4": null,
+        "H-5": null
+      },
+      "rule_references": [
+        "Table 504.3 IV-A/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 55,
+        "I-2": 55,
+        "I-3": null,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 IV-A/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 IV-A/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 55,
+        "R-2": 55,
+        "R-3": null,
+        "R-4": 55
+      },
+      "rule_references": [
+        "Table 504.3 IV-A/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 85,
+        "S-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 IV-A/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_IV-A_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 IV-A/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 V-A/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 V-A/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 V-A/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 85,
+        "F-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 V-A/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 45,
+        "H-3": 45,
+        "H-4": 55,
+        "H-5": 55
+      },
+      "rule_references": [
+        "Table 504.3 V-A/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 55,
+        "I-2": 55,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 V-A/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 85,
+      "rule_references": [
+        "Table 504.3 V-A/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 55,
+        "R-2": 55,
+        "R-3": null,
+        "R-4": 55
+      },
+      "rule_references": [
+        "Table 504.3 V-A/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 85,
+        "S-2": 85
+      },
+      "rule_references": [
+        "Table 504.3 V-A/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-A_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 V-A/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_A",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 V-B/A"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_B",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 V-B/B"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_E",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 V-B/E"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": 65,
+        "F-2": 65
+      },
+      "rule_references": [
+        "Table 504.3 V-B/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 5,
+        "H-2": 35,
+        "H-3": 35,
+        "H-4": 45,
+        "H-5": 45
+      },
+      "rule_references": [
+        "Table 504.3 V-B/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": 45,
+        "I-2": 45,
+        "I-3": 4,
+        "I-4": 4
+      },
+      "rule_references": [
+        "Table 504.3 V-B/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_M",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 V-B/M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": 45,
+        "R-2": 45,
+        "R-3": null,
+        "R-4": 45
+      },
+      "rule_references": [
+        "Table 504.3 V-B/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": 65,
+        "S-2": 65
+      },
+      "rule_references": [
+        "Table 504.3 V-B/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_height_V-B_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_height_feet"
+      ],
+      "operator": "<=",
+      "value": 65,
+      "rule_references": [
+        "Table 504.3 V-B/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_area_I-A_F",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_area_sqft"
+      ],
+      "operator": "<=",
+      "value": {
+        "F-1": null,
+        "F-2": null
+      },
+      "rule_references": [
+        "Table 506.2 I-A/F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_area_I-A_H",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_area_sqft"
+      ],
+      "operator": "<=",
+      "value": {
+        "H-1": 21000,
+        "H-2": 21000,
+        "H-3": 21000,
+        "H-4": 21000,
+        "H-5": 21000
+      },
+      "rule_references": [
+        "Table 506.2 I-A/H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_area_I-A_I",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_area_sqft"
+      ],
+      "operator": "<=",
+      "value": {
+        "I-1": null,
+        "I-2": null,
+        "I-3": 25000,
+        "I-4": 25000
+      },
+      "rule_references": [
+        "Table 506.2 I-A/I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_area_I-A_R",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_area_sqft"
+      ],
+      "operator": "<=",
+      "value": {
+        "R-1": null,
+        "R-2": null,
+        "R-3": null,
+        "R-4": 25000
+      },
+      "rule_references": [
+        "Table 506.2 I-A/R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_area_I-A_S",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_area_sqft"
+      ],
+      "operator": "<=",
+      "value": {
+        "S-1": null,
+        "S-2": null
+      },
+      "rule_references": [
+        "Table 506.2 I-A/S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_area_I-A_U",
+      "constraint_type": "inequality_lte",
+      "variables": [
+        "building_area_sqft"
+      ],
+      "operator": "<=",
+      "value": 25000,
+      "rule_references": [
+        "Table 506.2 I-A/U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_A_vs_F",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 A_vs_F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_A_vs_H",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 A_vs_H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_A_vs_I",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 A_vs_I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_A_vs_R",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 A_vs_R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_A_vs_S",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 A_vs_S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_A_vs_U",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 A_vs_U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_B_vs_F",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 B_vs_F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_B_vs_H",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 B_vs_H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_B_vs_I",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 B_vs_I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_B_vs_R",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 B_vs_R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_B_vs_S",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 B_vs_S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_E_vs_F",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 E_vs_F"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_E_vs_H",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 E_vs_H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_E_vs_I",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 E_vs_I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_E_vs_R",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 E_vs_R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_E_vs_S",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 E_vs_S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_F_vs_H",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 F_vs_H"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_F_vs_I",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 F_vs_I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_F_vs_R",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 F_vs_R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_H_vs_I",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 3,
+      "rule_references": [
+        "Table 508.4 H_vs_I"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_H_vs_M",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 H_vs_M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_H_vs_R",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 3,
+      "rule_references": [
+        "Table 508.4 H_vs_R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_H_vs_S",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 H_vs_S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_H_vs_U",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 H_vs_U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_I_vs_M",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 I_vs_M"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_I_vs_R",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 2,
+      "rule_references": [
+        "Table 508.4 I_vs_R"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_I_vs_S",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 I_vs_S"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_I_vs_U",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 I_vs_U"
+      ]
+    },
+    {
+      "constraint_id": "constraint_fire_rating_R_vs_S",
+      "constraint_type": "inequality_gte",
+      "variables": [
+        "separation_fire_rating_hours"
+      ],
+      "operator": ">=",
+      "value": 1,
+      "rule_references": [
+        "Table 508.4 R_vs_S"
+      ]
+    }
+  ],
+  "metadata": {
+    "constraint_count": 123,
+    "types": [
+      "inequality_gte",
+      "inequality_lte"
+    ]
+  }
+}

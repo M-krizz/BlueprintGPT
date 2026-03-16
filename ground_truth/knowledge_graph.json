@@ -1,0 +1,1401 @@
+{
+  "nodes": [
+    {
+      "node_id": "occupancy_A",
+      "node_type": "occupancy",
+      "label": "Assembly Occupancy",
+      "properties": {
+        "code": "A",
+        "description": "Buildings or portions of buildings in which groups of persons gather",
+        "has_subgroups": true
+      }
+    },
+    {
+      "node_id": "occupancy_A_A-1",
+      "node_type": "occupancy",
+      "label": "Assembly - Fixed Seating",
+      "properties": {
+        "code": "A-1",
+        "parent_group": "A",
+        "description": "",
+        "capacity_threshold": 75,
+        "examples": [
+          "theaters",
+          "concert halls",
+          "auditoriums"
+        ]
+      }
+    },
+    {
+      "node_id": "occupancy_A_A-2",
+      "node_type": "occupancy",
+      "label": "Assembly - Liquid Refreshment",
+      "properties": {
+        "code": "A-2",
+        "parent_group": "A",
+        "description": "",
+        "capacity_threshold": 50,
+        "examples": [
+          "restaurants",
+          "bars",
+          "lounges"
+        ]
+      }
+    },
+    {
+      "node_id": "occupancy_A_A-3",
+      "node_type": "occupancy",
+      "label": "Assembly - General",
+      "properties": {
+        "code": "A-3",
+        "parent_group": "A",
+        "description": "",
+        "capacity_threshold": 100,
+        "examples": [
+          "conference centers",
+          "chapels",
+          "bowling"
+        ]
+      }
+    },
+    {
+      "node_id": "occupancy_A_A-4",
+      "node_type": "occupancy",
+      "label": "Assembly - Indoor Recreation",
+      "properties": {
+        "code": "A-4",
+        "parent_group": "A",
+        "description": "",
+        "capacity_threshold": 50,
+        "examples": [
+          "tennis",
+          "squash",
+          "racquetball"
+        ]
+      }
+    },
+    {
+      "node_id": "occupancy_A_A-5",
+      "node_type": "occupancy",
+      "label": "Assembly - Outdoor Recreation",
+      "properties": {
+        "code": "A-5",
+        "parent_group": "A",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": [
+          "outdoor stadiums",
+          "grandstands",
+          "bleachers"
+        ]
+      }
+    },
+    {
+      "node_id": "occupancy_B",
+      "node_type": "occupancy",
+      "label": "Business Occupancy",
+      "properties": {
+        "code": "B",
+        "description": "Office, professional services, occupancies not classified elsewhere",
+        "has_subgroups": false
+      }
+    },
+    {
+      "node_id": "occupancy_E",
+      "node_type": "occupancy",
+      "label": "Educational Occupancy",
+      "properties": {
+        "code": "E",
+        "description": "Buildings for instruction, training",
+        "has_subgroups": false
+      }
+    },
+    {
+      "node_id": "occupancy_F",
+      "node_type": "occupancy",
+      "label": "Factory and Industrial",
+      "properties": {
+        "code": "F",
+        "description": "Manufacturing, processing, storage",
+        "has_subgroups": true
+      }
+    },
+    {
+      "node_id": "occupancy_F_F-1",
+      "node_type": "occupancy",
+      "label": "Factory - Moderate Hazard",
+      "properties": {
+        "code": "F-1",
+        "parent_group": "F",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_F_F-2",
+      "node_type": "occupancy",
+      "label": "Factory - Low Hazard",
+      "properties": {
+        "code": "F-2",
+        "parent_group": "F",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_H",
+      "node_type": "occupancy",
+      "label": "High-Hazard Occupancy",
+      "properties": {
+        "code": "H",
+        "description": "Occupancies with materials that constitute a physical or health hazard",
+        "has_subgroups": true
+      }
+    },
+    {
+      "node_id": "occupancy_H_H-1",
+      "node_type": "occupancy",
+      "label": "Separation/Detonation Hazard",
+      "properties": {
+        "code": "H-1",
+        "parent_group": "H",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_H_H-2",
+      "node_type": "occupancy",
+      "label": "Flammable Solid Manufacturing",
+      "properties": {
+        "code": "H-2",
+        "parent_group": "H",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_H_H-3",
+      "node_type": "occupancy",
+      "label": "Oxidizing/Organic Peroxide Hazard",
+      "properties": {
+        "code": "H-3",
+        "parent_group": "H",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_H_H-4",
+      "node_type": "occupancy",
+      "label": "Pyrophoric Hazard",
+      "properties": {
+        "code": "H-4",
+        "parent_group": "H",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_H_H-5",
+      "node_type": "occupancy",
+      "label": "Unstable/Reactive Material",
+      "properties": {
+        "code": "H-5",
+        "parent_group": "H",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_I",
+      "node_type": "occupancy",
+      "label": "Institutional Occupancy",
+      "properties": {
+        "code": "I",
+        "description": "Buildings for persons under legal restraint or receiving personal care",
+        "has_subgroups": true
+      }
+    },
+    {
+      "node_id": "occupancy_I_I-1",
+      "node_type": "occupancy",
+      "label": "Residential Care",
+      "properties": {
+        "code": "I-1",
+        "parent_group": "I",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_I_I-2",
+      "node_type": "occupancy",
+      "label": "Hospital/Medical",
+      "properties": {
+        "code": "I-2",
+        "parent_group": "I",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_I_I-3",
+      "node_type": "occupancy",
+      "label": "Detention/Correctional",
+      "properties": {
+        "code": "I-3",
+        "parent_group": "I",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_I_I-4",
+      "node_type": "occupancy",
+      "label": "Young Children Care",
+      "properties": {
+        "code": "I-4",
+        "parent_group": "I",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_M",
+      "node_type": "occupancy",
+      "label": "Mercantile Occupancy",
+      "properties": {
+        "code": "M",
+        "description": "Stores, sales, marketing",
+        "has_subgroups": false
+      }
+    },
+    {
+      "node_id": "occupancy_R",
+      "node_type": "occupancy",
+      "label": "Residential Occupancy",
+      "properties": {
+        "code": "R",
+        "description": "Buildings arranged for occupancy as residence",
+        "has_subgroups": true
+      }
+    },
+    {
+      "node_id": "occupancy_R_R-1",
+      "node_type": "occupancy",
+      "label": "Hotels/Motels",
+      "properties": {
+        "code": "R-1",
+        "parent_group": "R",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_R_R-2",
+      "node_type": "occupancy",
+      "label": "Multi-family Dwellings",
+      "properties": {
+        "code": "R-2",
+        "parent_group": "R",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_R_R-3",
+      "node_type": "occupancy",
+      "label": "One/Two-family Dwellings",
+      "properties": {
+        "code": "R-3",
+        "parent_group": "R",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_R_R-4",
+      "node_type": "occupancy",
+      "label": "Care Facilities (16+ occupants)",
+      "properties": {
+        "code": "R-4",
+        "parent_group": "R",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_S",
+      "node_type": "occupancy",
+      "label": "Storage Occupancy",
+      "properties": {
+        "code": "S",
+        "description": "Structures for storage not classified as H",
+        "has_subgroups": true
+      }
+    },
+    {
+      "node_id": "occupancy_S_S-1",
+      "node_type": "occupancy",
+      "label": "Storage - Moderate Hazard",
+      "properties": {
+        "code": "S-1",
+        "parent_group": "S",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_S_S-2",
+      "node_type": "occupancy",
+      "label": "Storage - Low Hazard",
+      "properties": {
+        "code": "S-2",
+        "parent_group": "S",
+        "description": "",
+        "capacity_threshold": null,
+        "examples": []
+      }
+    },
+    {
+      "node_id": "occupancy_U",
+      "node_type": "occupancy",
+      "label": "Utility and Miscellaneous Occupancy",
+      "properties": {
+        "code": "U",
+        "description": "Buildings not classified above",
+        "has_subgroups": false
+      }
+    },
+    {
+      "node_id": "construction_type_I-A",
+      "node_type": "construction_type",
+      "label": "Type I - Fire Resistant",
+      "properties": {
+        "code": "I-A",
+        "description": "Type I - Fire Resistant",
+        "fire_rating_structural_frame": 3,
+        "fire_rating_exterior_walls": 3,
+        "fire_rating_interior_bearing_walls": 3,
+        "primary_materials": [
+          "Non-combustible",
+          "Fire-rated throughout"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_I-B",
+      "node_type": "construction_type",
+      "label": "Type I - Modified",
+      "properties": {
+        "code": "I-B",
+        "description": "Type I - Modified",
+        "fire_rating_structural_frame": 2,
+        "fire_rating_exterior_walls": 2,
+        "fire_rating_interior_bearing_walls": 2,
+        "primary_materials": [
+          "Non-combustible"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_II-A",
+      "node_type": "construction_type",
+      "label": "Type II - Non-Combustible",
+      "properties": {
+        "code": "II-A",
+        "description": "Type II - Non-Combustible",
+        "fire_rating_structural_frame": 1,
+        "fire_rating_exterior_walls": 1,
+        "fire_rating_interior_bearing_walls": 1,
+        "primary_materials": [
+          "Non-combustible"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_II-B",
+      "node_type": "construction_type",
+      "label": "Type II - Protected",
+      "properties": {
+        "code": "II-B",
+        "description": "Type II - Protected",
+        "fire_rating_structural_frame": 0,
+        "fire_rating_exterior_walls": 0,
+        "fire_rating_interior_bearing_walls": 0,
+        "primary_materials": [
+          "Non-combustible with protection"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_II-C",
+      "node_type": "construction_type",
+      "label": "Type II - Unprotected",
+      "properties": {
+        "code": "II-C",
+        "description": "Type II - Unprotected",
+        "fire_rating_structural_frame": 0,
+        "fire_rating_exterior_walls": 0,
+        "fire_rating_interior_bearing_walls": 0,
+        "primary_materials": [
+          "Non-combustible unprotected"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_III-A",
+      "node_type": "construction_type",
+      "label": "Type III - Combustible",
+      "properties": {
+        "code": "III-A",
+        "description": "Type III - Combustible",
+        "fire_rating_structural_frame": 1,
+        "fire_rating_exterior_walls": 1,
+        "fire_rating_interior_bearing_walls": 1,
+        "primary_materials": [
+          "Combustible, exterior non-combustible"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_III-B",
+      "node_type": "construction_type",
+      "label": "Type III - Unprotected",
+      "properties": {
+        "code": "III-B",
+        "description": "Type III - Unprotected",
+        "fire_rating_structural_frame": 0,
+        "fire_rating_exterior_walls": 0,
+        "fire_rating_interior_bearing_walls": 0,
+        "primary_materials": [
+          "Combustible"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_IV-A",
+      "node_type": "construction_type",
+      "label": "Type IV - Heavy Timber",
+      "properties": {
+        "code": "IV-A",
+        "description": "Type IV - Heavy Timber",
+        "fire_rating_structural_frame": 0,
+        "fire_rating_exterior_walls": 2,
+        "fire_rating_interior_bearing_walls": 1,
+        "primary_materials": [
+          "Heavy Timber"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_V-A",
+      "node_type": "construction_type",
+      "label": "Type V - Protected",
+      "properties": {
+        "code": "V-A",
+        "description": "Type V - Protected",
+        "fire_rating_structural_frame": 1,
+        "fire_rating_exterior_walls": 1,
+        "fire_rating_interior_bearing_walls": 1,
+        "primary_materials": [
+          "Combustible with protection"
+        ]
+      }
+    },
+    {
+      "node_id": "construction_type_V-B",
+      "node_type": "construction_type",
+      "label": "Type V - Unprotected",
+      "properties": {
+        "code": "V-B",
+        "description": "Type V - Unprotected",
+        "fire_rating_structural_frame": 0,
+        "fire_rating_exterior_walls": 0,
+        "fire_rating_interior_bearing_walls": 0,
+        "primary_materials": [
+          "Combustible"
+        ]
+      }
+    },
+    {
+      "node_id": "property_height_limit",
+      "node_type": "property",
+      "label": "Height Limit (feet)",
+      "properties": {
+        "unit": "feet",
+        "category": "dimensional"
+      }
+    },
+    {
+      "node_id": "property_area_limit",
+      "node_type": "property",
+      "label": "Area Limit (sq ft)",
+      "properties": {
+        "unit": "square_feet",
+        "category": "dimensional"
+      }
+    },
+    {
+      "node_id": "property_fire_rating",
+      "node_type": "property",
+      "label": "Fire Resistance Rating",
+      "properties": {
+        "unit": "hours",
+        "category": "fire_safety"
+      }
+    },
+    {
+      "node_id": "property_story_limit",
+      "node_type": "property",
+      "label": "Story Limit",
+      "properties": {
+        "unit": "stories",
+        "category": "dimensional"
+      }
+    },
+    {
+      "node_id": "property_occupancy_load",
+      "node_type": "property",
+      "label": "Occupancy Load",
+      "properties": {
+        "unit": "persons",
+        "category": "capacity"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source_id": "construction_type_I-A",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "I-A has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_I-A",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "I-A requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_I-B",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "I-B has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_I-B",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "I-B requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_II-A",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "II-A has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_II-A",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "II-A requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_II-B",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "II-B has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_II-B",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "II-B requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_II-C",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "II-C has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_II-C",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "II-C requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_III-A",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "III-A has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_III-A",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "III-A requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_III-B",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "III-B has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_III-B",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "III-B requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_IV-A",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "IV-A has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_IV-A",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "IV-A requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_V-A",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "V-A has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_V-A",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "V-A requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "construction_type_V-B",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "V-B has height limit",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "construction_type_V-B",
+      "target_id": "property_fire_rating",
+      "edge_type": "requires",
+      "label": "V-B requires fire rating",
+      "properties": {
+        "rule_section": "Chapter 6"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "A occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "A occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_B",
+      "edge_type": "separation_requires",
+      "label": "A vs B: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_E",
+      "edge_type": "separation_requires",
+      "label": "A vs E: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_F",
+      "edge_type": "separation_requires",
+      "label": "A vs F: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_H",
+      "edge_type": "separation_requires",
+      "label": "A vs H: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_I",
+      "edge_type": "separation_requires",
+      "label": "A vs I: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_M",
+      "edge_type": "separation_requires",
+      "label": "A vs M: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "A vs R: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "A vs S: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_A",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "A vs U: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "B occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "B occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_E",
+      "edge_type": "separation_requires",
+      "label": "B vs E: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_F",
+      "edge_type": "separation_requires",
+      "label": "B vs F: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_H",
+      "edge_type": "separation_requires",
+      "label": "B vs H: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_I",
+      "edge_type": "separation_requires",
+      "label": "B vs I: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_M",
+      "edge_type": "separation_requires",
+      "label": "B vs M: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "B vs R: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "B vs S: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_B",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "B vs U: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "E occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "E occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_F",
+      "edge_type": "separation_requires",
+      "label": "E vs F: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_H",
+      "edge_type": "separation_requires",
+      "label": "E vs H: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_I",
+      "edge_type": "separation_requires",
+      "label": "E vs I: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_M",
+      "edge_type": "separation_requires",
+      "label": "E vs M: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "E vs R: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "E vs S: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_E",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "E vs U: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "F occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "F occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "occupancy_H",
+      "edge_type": "separation_requires",
+      "label": "F vs H: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "occupancy_I",
+      "edge_type": "separation_requires",
+      "label": "F vs I: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "occupancy_M",
+      "edge_type": "separation_requires",
+      "label": "F vs M: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "F vs R: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "F vs S: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_F",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "F vs U: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "H occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "H occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "occupancy_I",
+      "edge_type": "separation_requires",
+      "label": "H vs I: 3-hr rating",
+      "properties": {
+        "fire_rating_hours": 3,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "occupancy_M",
+      "edge_type": "separation_requires",
+      "label": "H vs M: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "H vs R: 3-hr rating",
+      "properties": {
+        "fire_rating_hours": 3,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "H vs S: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_H",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "H vs U: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_I",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "I occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_I",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "I occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_I",
+      "target_id": "occupancy_M",
+      "edge_type": "separation_requires",
+      "label": "I vs M: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_I",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "I vs R: 2-hr rating",
+      "properties": {
+        "fire_rating_hours": 2,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_I",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "I vs S: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_I",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "I vs U: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_M",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "M occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_M",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "M occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_M",
+      "target_id": "occupancy_R",
+      "edge_type": "separation_requires",
+      "label": "M vs R: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_M",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "M vs S: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_M",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "M vs U: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_R",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "R occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_R",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "R occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_R",
+      "target_id": "occupancy_S",
+      "edge_type": "separation_requires",
+      "label": "R vs S: 1-hr rating",
+      "properties": {
+        "fire_rating_hours": 1,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_R",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "R vs U: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_S",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "S occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_S",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "S occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    },
+    {
+      "source_id": "occupancy_S",
+      "target_id": "occupancy_U",
+      "edge_type": "separation_requires",
+      "label": "S vs U: 0-hr rating",
+      "properties": {
+        "fire_rating_hours": 0,
+        "rule_section": "Table 508.4"
+      }
+    },
+    {
+      "source_id": "occupancy_U",
+      "target_id": "property_height_limit",
+      "edge_type": "has_limit",
+      "label": "U occupancy subject to height limits",
+      "properties": {
+        "rule_section": "Table 504.3"
+      }
+    },
+    {
+      "source_id": "occupancy_U",
+      "target_id": "property_area_limit",
+      "edge_type": "has_limit",
+      "label": "U occupancy subject to area limits",
+      "properties": {
+        "rule_section": "Table 506.2"
+      }
+    }
+  ],
+  "metadata": {
+    "node_count": 47,
+    "edge_count": 85,
+    "source": "ground_truth\\ground_truth.yml"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "Residential": {
-    "occupant_load_per_100sqm": 8,
+    "occupant_load_per_100sqm": 8.0,
     "max_travel_distance": 22.5,
     "circulation_factor": 0.12,
     "rooms": {
@@ -24,7 +24,7 @@
       },
       "Bathroom": {
         "min_area": 1.8,
-        "min_width": 1.0,
+        "min_width": 1.2,
         "min_height": 2.2,
         "default_weight": 0.5
       },
@@ -33,11 +33,32 @@
         "min_width": 0.9,
         "min_height": 2.2,
         "default_weight": 0.3
+      },
+      "BathWC": {
+        "min_area": 2.8,
+        "min_width": 1.2,
+        "min_height": 2.2,
+        "default_weight": 0.5
+      },
+      "Pantry": {
+        "min_area": 3.0,
+        "min_width": 1.4,
+        "min_height": 2.75,
+        "default_weight": 0.4
+      },
+      "Garage": {
+        "min_area": 14.85,
+        "min_width": 2.75,
+        "min_length": 5.4,
+        "min_height": 2.4,
+        "default_weight": 0.3
       }
     },
     "corridor": {
-      "min_width": 1.2,
+      "min_width": 1.0,
+      "min_width_hostel": 1.25,
       "min_height": 2.1,
+      "passage_min_width": 1.0,
       "hub_connection": "LivingRoom",
       "essential_connections": [
         "Bedroom",
@@ -46,10 +67,282 @@
       ]
     },
     "door": {
-      "min_width": 0.75
+      "min_width": 0.9,
+      "min_height": 2.2,
+      "service_min_width": 0.75,
+      "service_min_height": 2.0
     },
     "exit": {
-      "min_width": 1.0
+      "min_width": 1.0,
+      "min_height": 2.0,
+      "hospital_min_width": 1.5,
+      "must_open_outward": true,
+      "no_sliding_overhead_revolving": true,
+      "landing_required": true
+    },
+    "stair": {
+      "min_width_low_rise": 0.9,
+      "min_width_other": 1.25
+    },
+    "chapter4_residential": {
+      "plot_buckets": {
+        "upto_50sqm": {
+          "description": "Plot area <= 50 sq.m (Table 4.2)",
+          "rooms": {
+            "Habitable": { "min_area": 7.5, "min_width": 2.1, "min_height": 2.75 },
+            "Kitchen":   { "min_area": 3.3, "min_width": 1.5, "min_height": 2.75 },
+            "Bathroom":  { "min_area": 1.2, "min_width": 1.0, "min_height": 2.2  },
+            "WC":        { "min_area": 1.0, "min_width": 0.9, "min_height": 2.2  },
+            "BathWC":    { "min_area": 1.8, "min_width": 1.0, "min_height": 2.2  }
+          },
+          "doors": {
+            "habitable": { "min_width": 0.8, "min_height": 2.0 },
+            "service":   { "min_width": 0.75, "min_height": 2.0 }
+          },
+          "stair_width": 0.75,
+          "internal_ladder": "no_restriction"
+        },
+        "above_50sqm": {
+          "description": "Plot area > 50 sq.m (Table 4.2)",
+          "rooms": {
+            "Habitable": { "min_area": 9.5, "min_width": 2.4, "min_height": 2.75 },
+            "Kitchen":   { "min_area": 4.5, "min_width": 1.5, "min_height": 2.75 },
+            "Pantry":    { "min_area": 3.0, "min_width": 1.4, "min_height": 2.75 },
+            "Bathroom":  { "min_area": 1.8, "min_width": 1.2, "min_height": 2.2  },
+            "WC":        { "min_area": 1.1, "min_width": 0.9, "min_height": 2.2  },
+            "BathWC":    { "min_area": 2.8, "min_width": 1.2, "min_height": 2.2  },
+            "Garage":    { "min_area": 14.85, "min_width": 2.75, "min_length": 5.4, "min_height": 2.4 }
+          },
+          "doors": {
+            "habitable": { "min_width": 0.9, "min_height": 2.2 },
+            "service":   { "min_width": 0.75, "min_height": 2.0 }
+          },
+          "stair_width": 0.9,
+          "passage_width": 1.0
+        }
+      },
+      "clear_headway_under_beams": 2.4,
+      "max_component_height": 4.0,
+      "notes": [
+        "Habitable category: Bedroom, LivingRoom, DrawingRoom, DiningRoom, Study",
+        "Service category: Kitchen, Bathroom, WC, BathWC, Pantry",
+        "For plot <= 50 sq.m, internal ladder stair has no width restriction"
+      ]
     }
+  },
+
+  "chapter4_occupant_load": {
+    "_comment": "Occupant load per 100 sq.m of covered area",
+    "Residential":    8.0,
+    "Educational":   25.0,
+    "Institutional":  6.6,
+    "Assembly": {
+      "with_fixed_seats_and_dance_floor": 166.6,
+      "without_seating_incl_dining":       66.6
+    },
+    "Mercantile": {
+      "street_and_sales_basement": 33.3,
+      "upper_sales":              16.6
+    },
+    "Business":   10.0,
+    "Industrial":  10.0,
+    "Storage":      3.3,
+    "Hazardous":   10.0,
+    "special_notes": {
+      "dormitory_sleeping_portion_min_per_100sqm": 13.3
+    }
+  },
+
+  "chapter4_egress": {
+    "travel_distance": {
+      "_comment": "Maximum travel distance to nearest exit (meters)",
+      "Residential":   22.5,
+      "Educational":   22.5,
+      "Institutional": 22.5,
+      "Hazardous":     22.5,
+      "Assembly":      30.0,
+      "Business":      30.0,
+      "Mercantile":    30.0,
+      "Industrial":    30.0,
+      "Storage":       30.0
+    },
+    "exit_capacity_per_50cm_unit_width": {
+      "_comment": "Table 4.3 — persons per 50cm unit width",
+      "Residential": { "stair": 25, "ramp": 50, "door": 75 },
+      "Educational": { "stair": 25, "ramp": 50, "door": 75 },
+      "Institutional": { "stair": 25, "ramp": 50, "door": 75 },
+      "Assembly":    { "stair": 40, "ramp": 50, "door": 75 },
+      "Business":    { "stair": 50, "ramp": 50, "door": 75 },
+      "Mercantile":  { "stair": 50, "ramp": 50, "door": 75 },
+      "Industrial":  { "stair": 50, "ramp": 50, "door": 75 },
+      "Storage":     { "stair": 50, "ramp": 50, "door": 75 },
+      "Hazardous":   { "stair": 25, "ramp": 50, "door": 75 }
+    },
+    "corridor_min_width": {
+      "_comment": "Section 4.8.7 — minimum corridor widths (meters)",
+      "residential_dwelling_unit": 1.0,
+      "residential_hostel":       1.25,
+      "assembly":                 2.0,
+      "hotel":                    1.5,
+      "others":                   1.5,
+      "hospital":                 2.4
+    },
+    "exit_door": {
+      "min_width":          1.0,
+      "min_width_hospital": 1.5,
+      "min_height":         2.0,
+      "must_open_outward":  true,
+      "no_sliding_overhead_revolving": true,
+      "landing_required":   true,
+      "notes": "Exit door must not open directly onto stairs; landing required"
+    },
+    "stair_min_width": {
+      "_comment": "Section 4.8.6 — minimum stairway widths (meters)",
+      "residential_low_rise": 0.9,
+      "residential_other":    1.25,
+      "assembly":             2.0,
+      "institutional":        2.0,
+      "educational":          1.5,
+      "others":               1.5
+    }
+  },
+
+  "chapter4_lighting_ventilation": {
+    "opening_area_ratio": {
+      "_comment": "Minimum ratio of opening area (excl doors) to floor area for habitable rooms and kitchens",
+      "min_ratio": 0.10,
+      "applies_to": ["Habitable", "Kitchen"]
+    },
+    "max_lighting_depth": {
+      "_comment": "No portion considered lighted if more than this distance from opening used for lighting",
+      "max_distance_m": 7.5
+    },
+    "kitchen_window": {
+      "min_opening_area_sqm": 1.0,
+      "must_open_to": "interior or exterior open space (not into a shaft)"
+    },
+    "bathroom_wc_ventilation": {
+      "min_opening_area_sqm": 0.37,
+      "requirement": "at least one wall opens to external air, or shaft rules apply"
+    },
+    "ventilation_shaft_min_sizes": {
+      "_comment": "Table 4.5 — minimum ventilation shaft dimensions",
+      "upto_9m":  { "min_area_sqm": 1.5, "min_dimension_m": 1.0 },
+      "upto_12p5m": { "min_area_sqm": 3.0, "min_dimension_m": 1.2 },
+      "upto_15m": { "min_area_sqm": 4.0, "min_dimension_m": 1.5 },
+      "above_15m_note": "Mechanical ventilation required in addition to shaft"
+    }
+  },
+
+  "chapter4_wet_area": {
+    "_comment": "Wet area construction constraints (schematic enforcement only)",
+    "floor": "Impervious, slope to drain",
+    "wall_finish": "Impervious wall finish up to 1.0m",
+    "wc_exclusivity": "WC not used for any other purpose",
+    "sewage": "To municipal sewer or septic tank within plot where sewer absent"
+  },
+
+  "chapter4_open_space": {
+    "_comment": "Enforce only if system models height and open spaces; else record as metadata",
+    "habitable_rooms_abut": "open space or verandah",
+    "interior_open_space_min_m": 3.0,
+    "applies_when": "building height <= 12.5m",
+    "increase_rule": "Increases for taller buildings as per NBC table"
+  },
+
+  "Educational": {
+    "occupant_load_per_100sqm": 25.0,
+    "max_travel_distance": 22.5,
+    "circulation_factor": 0.15,
+    "rooms": {},
+    "corridor": { "min_width": 1.5 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 1.5 }
+  },
+
+  "Institutional": {
+    "occupant_load_per_100sqm": 6.6,
+    "max_travel_distance": 22.5,
+    "circulation_factor": 0.15,
+    "rooms": {},
+    "corridor": { "min_width": 2.4 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.5, "min_height": 2.0 },
+    "stair":    { "min_width": 2.0 }
+  },
+
+  "Assembly": {
+    "occupant_load_per_100sqm": 66.6,
+    "occupant_load_variants": {
+      "with_fixed_seats_and_dance_floor": 166.6,
+      "without_seating_incl_dining": 66.6
+    },
+    "max_travel_distance": 30.0,
+    "circulation_factor": 0.15,
+    "rooms": {},
+    "corridor": { "min_width": 2.0 },
+    "door":     { "min_width": 1.0 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 2.0 }
+  },
+
+  "Business": {
+    "occupant_load_per_100sqm": 10.0,
+    "max_travel_distance": 30.0,
+    "circulation_factor": 0.12,
+    "rooms": {},
+    "corridor": { "min_width": 1.5 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 1.5 }
+  },
+
+  "Mercantile": {
+    "occupant_load_per_100sqm": 33.3,
+    "occupant_load_variants": {
+      "street_and_sales_basement": 33.3,
+      "upper_sales": 16.6
+    },
+    "max_travel_distance": 30.0,
+    "circulation_factor": 0.12,
+    "rooms": {},
+    "corridor": { "min_width": 1.5 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 1.5 }
+  },
+
+  "Industrial": {
+    "occupant_load_per_100sqm": 10.0,
+    "max_travel_distance": 30.0,
+    "circulation_factor": 0.12,
+    "rooms": {},
+    "corridor": { "min_width": 1.5 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 1.5 }
+  },
+
+  "Storage": {
+    "occupant_load_per_100sqm": 3.3,
+    "max_travel_distance": 30.0,
+    "circulation_factor": 0.10,
+    "rooms": {},
+    "corridor": { "min_width": 1.5 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 1.5 }
+  },
+
+  "Hazardous": {
+    "occupant_load_per_100sqm": 10.0,
+    "max_travel_distance": 22.5,
+    "circulation_factor": 0.15,
+    "rooms": {},
+    "corridor": { "min_width": 1.5 },
+    "door":     { "min_width": 0.9 },
+    "exit":     { "min_width": 1.0 },
+    "stair":    { "min_width": 1.5 }
   }
 }
