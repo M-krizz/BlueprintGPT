@@ -3,358 +3,1002 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BlueprintGPT Chat</title>
+  <title>BlueprintGPT</title>
+  <meta name="description" content="AI-powered floor plan generator. Describe your home in natural language.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #060b14;
-      --panel: #0e1628;
-      --accent: #7dd3fc;
-      --accent-strong: #22d3ee;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
+      --bg-primary: #0f0f0f;
+      --bg-secondary: #1a1a1a;
+      --bg-tertiary: #212121;
+      --bg-message-user: #2a2a2a;
+      --bg-message-bot: transparent;
+      --bg-input: #1e1e1e;
+      --border: #2e2e2e;
+      --border-focus: #4a9eff;
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --text-muted: #6b6b6b;
+      --accent: #4a9eff;
+      --accent-hover: #6cb3ff;
+      --success: #34d399;
+      --warn: #fbbf24;
       --danger: #f87171;
-      --border: #1f2937;
+      --gradient-accent: linear-gradient(135deg, #4a9eff, #7c5cfc);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --radius: 12px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
-      margin: 0;
-      font-family: 'Space Grotesk', system-ui, sans-serif;
-      background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.08), transparent 35%),
-                  radial-gradient(circle at 80% 0%, rgba(125,211,252,0.08), transparent 30%),
-                  var(--bg);
-      color: var(--text);
-      min-height: 100vh;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    header {
-      padding: 24px;
+
+    /* ─── Top Nav ─────────────────────────────────── */
+    .topnav {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .topnav-left { display: flex; align-items: center; gap: 12px; }
+    .topnav-logo {
+      width: 32px; height: 32px;
+      background: var(--gradient-accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: white;
+    }
+    .topnav-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .topnav-right { display: flex; align-items: center; gap: 8px; }
+    .icon-btn {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; border: none;
+      background: transparent; color: var(--text-secondary);
+      cursor: pointer; font-size: 18px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .icon-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .icon-btn.active { background: var(--accent); color: white; }
+
+    /* ─── Main Layout ─────────────────────────────── */
+    .main-wrap {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ─── Chat Area ───────────────────────────────── */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 0;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 6px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── Message Rows ────────────────────────────── */
+    .msg-row {
+      display: flex;
+      gap: 16px;
+      padding: 16px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .msg-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600;
+    }
+    .msg-avatar.user-av {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .msg-avatar.bot-av {
+      background: var(--gradient-accent);
+      color: white;
+    }
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+    .msg-text {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg-links {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .msg-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 4px 10px;
+      border: 1px solid rgba(74,158,255,0.25);
+      border-radius: var(--radius-full);
+      background: rgba(74,158,255,0.06);
+      transition: all 0.15s;
+    }
+    .msg-link:hover { background: rgba(74,158,255,0.12); border-color: var(--accent); }
+
+    /* ─── Blueprint Preview in chat ───────────────── */
+    .blueprint-preview {
+      margin-top: 12px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: white;
+    }
+    .blueprint-preview img {
+      display: block; width: 100%;
+      max-height: 400px; object-fit: contain;
+      cursor: pointer;
+    }
+
+    /* ─── Collapsible Blocks ──────────────────────── */
+    .collapse-block {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg-secondary);
+    }
+    .collapse-block summary {
+      cursor: pointer;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.15s;
+    }
+    .collapse-block summary:hover { color: var(--text-primary); }
+    .collapse-block summary::-webkit-details-marker { display:none; }
+    .collapse-block[open] summary { border-bottom: 1px solid var(--border); }
+    .collapse-content { padding: 10px 14px; font-size: 13px; }
+
+    .ev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+    .ev-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .ev-label { color: var(--text-secondary); }
+    .ev-value { color: var(--text-primary); font-weight: 500; text-align: right; }
+
+    /* Repair trace */
+    .repair-list { max-height: 180px; overflow-y: auto; }
+    .repair-item {
+      display: grid;
+      grid-template-columns: 90px 1fr auto;
+      gap: 6px;
+      padding: 4px 0;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .repair-stage { color: var(--warn); font-weight: 500; }
+    .repair-action { color: var(--text-primary); }
+    .repair-room { color: var(--text-muted); font-style: italic; }
+
+    /* Variants table */
+    .var-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .var-table th { text-align: left; padding: 6px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+    .var-table td { padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .var-table .selected-row { background: rgba(52,211,153,0.06); }
+
+    /* Confidence badge */
+    .conf-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 600;
+    }
+    .conf-high { background: rgba(52,211,153,0.12); color: var(--success); }
+    .conf-med  { background: rgba(251,191,36,0.12); color: var(--warn); }
+    .conf-low  { background: rgba(248,113,113,0.12); color: var(--danger); }
+
+    /* ─── Input Area ──────────────────────────────── */
+    .input-area {
+      flex-shrink: 0;
+      padding: 12px 24px 20px;
+      background: var(--bg-primary);
+    }
+    .input-wrap {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .input-box {
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 8px 8px 8px 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-box:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(74,158,255,0.1);
+    }
+    .input-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: none;
+      max-height: 140px;
+      min-height: 24px;
+      padding: 6px 0;
+    }
+    .input-textarea::placeholder { color: var(--text-muted); }
+    .send-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .send-btn:hover { background: var(--accent-hover); }
+    .send-btn:active { transform: scale(0.94); }
+    .send-btn:disabled { background: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; }
+    .send-btn svg { width: 18px; height: 18px; }
+
+    .input-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
     }
-    .title {
-      font-size: 24px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
+
+    /* ─── Side Panel ──────────────────────────────── */
+    .side-panel {
+      width: 360px;
+      border-left: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
     }
-    .pill {
-      padding: 6px 10px;
-      background: rgba(125,211,252,0.1);
-      color: var(--accent-strong);
-      border-radius: 12px;
-      font-size: 13px;
-      border: 1px solid rgba(125,211,252,0.2);
+    .side-panel.open { display: flex; }
+    .side-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px; font-weight: 600;
     }
-    main {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-      padding: 0 24px 24px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    }
-    .card h2 {
-      margin: 0 0 12px;
-      font-size: 16px;
-      letter-spacing: 0.2px;
-    }
-    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-    input, select, textarea {
+    .side-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+    .side-body::-webkit-scrollbar { width: 4px; }
+    .side-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Spec editor */
+    .spec-editor {
       width: 100%;
-      background: #0b1220;
+      min-height: 200px;
+      background: var(--bg-primary);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-size: 14px;
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 12px;
+      padding: 12px;
       outline: none;
-      transition: border 0.2s ease, box-shadow 0.2s ease;
+      resize: vertical;
+      line-height: 1.5;
     }
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(125,211,252,0.15);
+    .spec-editor:focus { border-color: var(--border-focus); }
+
+    /* Settings fields */
+    .setting-group { margin-bottom: 14px; }
+    .setting-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500; }
+    .setting-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .setting-input {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
     }
-    textarea { min-height: 120px; resize: vertical; }
-    .grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
-    .btn {
-      background: linear-gradient(135deg, #22d3ee, #7dd3fc);
-      color: #0b1220;
-      border: none;
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-weight: 600;
+    .setting-input:focus { border-color: var(--border-focus); }
+    .setting-select {
+      appearance: none;
+      background: var(--bg-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6b6b' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 10px center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
       cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.2s ease;
       width: 100%;
     }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(34,211,238,0.25); }
-    .btn:active { transform: translateY(0); }
-    .chat {
+
+    /* ─── Blueprint Viewer Panel ──────────────────── */
+    .viewer-panel {
+      width: 50%;
+      max-width: 600px;
+      border-left: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .viewer-panel.open { display: flex; }
+    .viewer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+    }
+    .viewer-body img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+    }
+
+    /* ─── Welcome ─────────────────────────────────── */
+    .welcome {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      max-height: 60vh;
-      overflow-y: auto;
-      padding: 4px;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 40px 24px;
+      text-align: center;
     }
-    .bubble {
-      border-radius: 12px;
-      padding: 12px 14px;
-      line-height: 1.5;
+    .welcome-icon {
+      width: 64px; height: 64px;
+      background: var(--gradient-accent);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin-bottom: 20px;
+    }
+    .welcome h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4a9eff, #b47cff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .welcome p { color: var(--text-secondary); font-size: 15px; max-width: 480px; line-height: 1.5; }
+    .suggestion-chips {
+      display: flex; flex-wrap: wrap;
+      gap: 8px; margin-top: 24px;
+      justify-content: center;
+      max-width: 600px;
+    }
+    .chip {
+      padding: 10px 16px;
+      background: var(--bg-secondary);
       border: 1px solid var(--border);
-      white-space: pre-wrap;
-    }
-    .user { background: rgba(125,211,252,0.08); border-color: rgba(125,211,252,0.25); }
-    .bot { background: #0b1220; }
-    .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
-    .links { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
-    .links a {
-      color: var(--accent-strong);
-      text-decoration: none;
-      border: 1px solid rgba(125,211,252,0.25);
-      padding: 5px 9px;
-      border-radius: 9px;
-      font-size: 12px;
-      background: rgba(125,211,252,0.08);
-    }
-    .links a:hover { border-color: var(--accent); }
-    .preview {
-      margin-top: 10px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      background: #ffffff;
-    }
-    .preview img {
-      display: block;
-      width: 100%;
-      max-height: 420px;
-      object-fit: contain;
-      background: #f3f4f6;
-    }
-    .status-ok { color: #34d399; font-weight: 600; }
-    .status-warn { color: #fbbf24; font-weight: 600; }
-    .prompt-wrap { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-    .prompt {
-      min-height: 90px;
-      border-radius: 12px;
-      background: #0b1220;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 12px;
-      font-size: 14px;
-      resize: vertical;
-    }
-    .advanced {
-      margin-top: 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.02);
-      overflow: hidden;
-    }
-    .advanced summary {
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      color: var(--text-secondary);
       cursor: pointer;
-      padding: 12px;
-      color: var(--muted);
-      font-size: 14px;
-      list-style: none;
+      transition: all 0.15s;
     }
-    .advanced summary::-webkit-details-marker { display:none; }
-    .advanced .content { padding: 0 12px 12px; }
-    .grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
-    @media (max-width: 860px) {
-      .grid { grid-template-columns: 1fr; }
-      .prompt-wrap { grid-template-columns: 1fr; }
+    .chip:hover { border-color: var(--accent); color: var(--text-primary); background: var(--bg-tertiary); }
+
+    /* ─── Responsive ──────────────────────────────── */
+    @media (max-width: 768px) {
+      .side-panel, .viewer-panel { display: none !important; }
+      .msg-row { padding: 12px 16px; }
+      .input-area { padding: 8px 12px 14px; }
+      .topnav { padding: 0 12px; }
     }
+
+    /* ─── Typing indicator ────────────────────────── */
+    .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
+    .typing-dots span {
+      width: 6px; height: 6px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: blink 1.4s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
   </style>
 </head>
 <body>
-  <header>
-    <div class="title">BlueprintGPT Chat</div>
-    <div class="pill">Prompt → Layout → Explanation</div>
-  </header>
-  <main>
-    <section class="card">
-      <h2>Conversation</h2>
-      <div class="prompt-wrap">
-        <textarea class="prompt" id="prompt" placeholder="Describe your requirement in natural language. Example: Need 2 bedrooms, 1 bathroom, 1 kitchen and 1 drawing room on a 10 marla plot with a north entrance and minimize corridor."></textarea>
-        <button class="btn" id="submit" style="height: 52px; align-self:end;">Generate</button>
-      </div>
-      <details class="advanced">
-        <summary>Advanced options (optional)</summary>
-        <div class="content">
-          <div class="grid">
-            <div>
-              <label for="width">Boundary Width (m)</label>
-              <input id="width" type="number" step="0.1" value="15" />
-            </div>
-            <div>
-              <label for="height">Boundary Height (m)</label>
-              <input id="height" type="number" step="0.1" value="10" />
-            </div>
-          </div>
-          <div class="grid" style="margin-top:10px;">
-            <div>
-              <label for="entranceX">Entrance X (optional)</label>
-              <input id="entranceX" type="number" step="0.1" />
-            </div>
-            <div>
-              <label for="entranceY">Entrance Y (optional)</label>
-              <input id="entranceY" type="number" step="0.1" />
-            </div>
-          </div>
-          <div class="grid" style="margin-top:10px;">
-            <div>
-              <label for="area">Total Area (optional)</label>
-              <input id="area" type="number" step="0.1" />
-            </div>
-            <div>
-              <label for="areaUnit">Area Unit</label>
-              <select id="areaUnit">
-                <option value="sq.m">sq.m</option>
-                <option value="sq.ft">sq.ft</option>
-              </select>
-            </div>
-          </div>
-          <div style="margin-top:10px;">
-            <label for="prefix">Output Prefix (optional)</label>
-            <input id="prefix" placeholder="chat_run" />
+
+  <!-- Top Navigation -->
+  <nav class="topnav">
+    <div class="topnav-left">
+      <div class="topnav-logo">B</div>
+      <span class="topnav-title">BlueprintGPT</span>
+    </div>
+    <div class="topnav-right">
+      <button class="icon-btn" id="settingsToggle" title="Settings">⚙️</button>
+      <button class="icon-btn" id="viewerToggle" title="Blueprint Viewer">🖼️</button>
+      <button class="icon-btn" id="exportBtn" title="Export Session">💾</button>
+      <button class="icon-btn" id="importBtn" title="Import Session">📂</button>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-wrap">
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+      <div class="messages" id="messages">
+        <div class="welcome" id="welcomeScreen">
+          <div class="welcome-icon">🏗️</div>
+          <h1>BlueprintGPT</h1>
+          <p>Describe your home requirements in natural language and I'll generate a professional architectural floor plan for you.</p>
+          <div class="suggestion-chips">
+            <div class="chip" onclick="useSuggestion(this)">2 bedrooms, 1 kitchen, 1 bathroom on a 10 marla plot</div>
+            <div class="chip" onclick="useSuggestion(this)">3BHK apartment with north entrance, minimize corridor</div>
+            <div class="chip" onclick="useSuggestion(this)">Small house: 1 bedroom, 1 bathroom, open kitchen-living</div>
           </div>
         </div>
-      </details>
-      <div class="chat" id="chat"></div>
-    </section>
-  </main>
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-wrap">
+          <div class="input-box">
+            <textarea class="input-textarea" id="prompt" rows="1" placeholder="Describe your floor plan requirements..." ></textarea>
+            <button class="send-btn" id="submitBtn" title="Generate (Ctrl+Enter)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div class="input-footer">
+            <span>Ctrl+Enter to send</span>
+            <span id="statusIndicator">Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Side Panel -->
+    <aside class="side-panel" id="settingsPanel">
+      <div class="side-header">
+        <span>⚙️ Settings & Spec</span>
+        <button class="icon-btn" onclick="toggleSettings()" style="width:28px;height:28px;font-size:14px;">✕</button>
+      </div>
+      <div class="side-body">
+        <div class="setting-group">
+          <div class="setting-label" style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span>Draw Boundary (Optional)</span>
+            <span id="canvasTools" style="display:flex; gap:6px;">
+              <button type="button" class="icon-btn" style="width:auto; height:24px; padding:0 6px; font-size:11px;" id="btnModePoly">Poly</button>
+              <button type="button" class="icon-btn" style="width:auto; height:24px; padding:0 6px; font-size:11px;" id="btnModeEntrance">Entr</button>
+              <button type="button" class="icon-btn" style="width:auto; height:24px; padding:0 6px; font-size:11px; color:var(--danger);" id="btnClearCanvas">Clear</button>
+            </span>
+          </div>
+          <div style="position:relative;">
+            <canvas id="polyCanvas" width="320" height="240" style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; width:100%; height:auto; aspect-ratio:4/3; cursor:crosshair;"></canvas>
+            <div id="canvasInstruction" style="position:absolute; top:10px; left:10px; color:var(--text-muted); font-size:11px; pointer-events:none;">Click to add points. 40px=1m.</div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Boundary Size</div>
+          <div class="setting-row">
+            <input class="setting-input" id="width" type="number" step="0.1" value="15" placeholder="Width (m)" />
+            <input class="setting-input" id="height" type="number" step="0.1" value="10" placeholder="Height (m)" />
+          </div>
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Entrance Point</div>
+          <div class="setting-row">
+            <input class="setting-input" id="entranceX" type="number" step="0.1" placeholder="X" />
+            <input class="setting-input" id="entranceY" type="number" step="0.1" placeholder="Y" />
+          </div>
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Area</div>
+          <div class="setting-row">
+            <input class="setting-input" id="area" type="number" step="0.1" placeholder="Total area" />
+            <select class="setting-select setting-input" id="areaUnit">
+              <option value="sq.m">sq.m</option>
+              <option value="sq.ft">sq.ft</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Output Prefix</div>
+          <input class="setting-input" id="prefix" placeholder="chat_run" />
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Gemini API Key</div>
+          <input class="setting-input" id="llmApiKey" type="password" placeholder="For AI explanations" />
+        </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+        <div class="setting-label" style="margin-bottom:8px;">📋 Current Spec</div>
+        <textarea class="spec-editor" id="specEditor" placeholder="Spec will populate after generation..."></textarea>
+      </div>
+    </aside>
+
+    <!-- Blueprint Viewer Panel -->
+    <aside class="viewer-panel" id="viewerPanel">
+      <div class="side-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span>🖼️ Blueprint Viewer</span>
+          <button class="icon-btn" id="downloadSvgBtn" title="Download SVG" style="width:28px;height:28px;font-size:14px;display:none;">⬇️</button>
+        </div>
+        <button class="icon-btn" onclick="toggleViewer()" style="width:28px;height:28px;font-size:14px;">✕</button>
+      </div>
+      <div class="viewer-body" id="viewerBody">
+        <p style="color:var(--text-muted);font-size:14px;">Generate a layout to see the blueprint here</p>
+      </div>
+    </aside>
+
+  </div>
 
   <script>
-    const chat = document.getElementById('chat');
-    const submitBtn = document.getElementById('submit');
+    const messagesEl = document.getElementById('messages');
+    const submitBtn = document.getElementById('submitBtn');
+    const promptEl = document.getElementById('prompt');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    let lastResponseData = null;
 
-    function addBubble(text, role = 'bot', links = null, svgUrl = null) {
-      const div = document.createElement('div');
-      div.className = `bubble ${role}`;
-      div.textContent = text;
-      if (links && Array.isArray(links) && links.length) {
-        const linksWrap = document.createElement('div');
-        linksWrap.className = 'links';
-        for (const link of links) {
+    // ─── Canvas Logic ────────────────────────────────
+    const cvs = document.getElementById('polyCanvas');
+    const ctx = cvs.getContext('2d');
+    let points = [];
+    let entrancePt = null;
+    let mode = 'poly';
+    let isClosed = false;
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.strokeStyle = '#2e2e2e';
+      ctx.lineWidth = 1;
+      for(let x=0; x<=cvs.width; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,cvs.height); ctx.stroke(); }
+      for(let y=0; y<=cvs.height; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cvs.width,y); ctx.stroke(); }
+      if (points.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for(let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+        if (isClosed) { ctx.closePath(); ctx.fillStyle = 'rgba(74,158,255,0.1)'; ctx.fill(); }
+        ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#6cb3ff';
+        for(let p of points) { ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); }
+      }
+      if (entrancePt) {
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath(); ctx.arc(entrancePt.x, entrancePt.y, 6, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    
+    cvs.addEventListener('mousedown', (e) => {
+      const rect = cvs.getBoundingClientRect();
+      const scaleX = cvs.width / rect.width;
+      const scaleY = cvs.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      if (mode === 'poly') {
+        if (isClosed) return;
+        if (points.length > 2) {
+          if (Math.hypot(x - points[0].x, y - points[0].y) < 15) {
+            isClosed = true;
+            document.getElementById('canvasInstruction').innerText = "Polygon closed. Add entrance or generate.";
+            drawCanvas(); return;
+          }
+        }
+        points.push({x, y});
+      } else if (mode === 'entrance') {
+        entrancePt = {x, y};
+        document.getElementById('canvasInstruction').innerText = "Entrance set.";
+        document.getElementById('entranceX').value = (x / 40).toFixed(1);
+        document.getElementById('entranceY').value = ((cvs.height - y) / 40).toFixed(1);
+      }
+      drawCanvas();
+    });
+
+    document.getElementById('btnModePoly').onclick = () => { mode = 'poly'; };
+    document.getElementById('btnModeEntrance').onclick = () => { mode = 'entrance'; document.getElementById('canvasInstruction').innerText = "Click to set entrance."; };
+    document.getElementById('btnClearCanvas').onclick = () => { 
+      points=[]; entrancePt=null; isClosed=false; mode='poly'; 
+      document.getElementById('canvasInstruction').innerText = "Click to add points. 40px=1m."; 
+      document.getElementById('entranceX').value = "";
+      document.getElementById('entranceY').value = "";
+      drawCanvas(); 
+    };
+    drawCanvas();
+    // ──────────────────────────────────────────────────
+
+    // Auto-resize textarea
+    promptEl.addEventListener('input', () => {
+      promptEl.style.height = 'auto';
+      promptEl.style.height = Math.min(promptEl.scrollHeight, 140) + 'px';
+    });
+
+    function useSuggestion(el) {
+      promptEl.value = el.textContent;
+      promptEl.focus();
+      promptEl.style.height = 'auto';
+      promptEl.style.height = Math.min(promptEl.scrollHeight, 140) + 'px';
+    }
+
+    // ─── Toggle panels ──────────────────────────────
+    function toggleSettings() {
+      const p = document.getElementById('settingsPanel');
+      p.classList.toggle('open');
+      document.getElementById('settingsToggle').classList.toggle('active', p.classList.contains('open'));
+    }
+    function toggleViewer() {
+      const p = document.getElementById('viewerPanel');
+      p.classList.toggle('open');
+      document.getElementById('viewerToggle').classList.toggle('active', p.classList.contains('open'));
+    }
+    document.getElementById('settingsToggle').addEventListener('click', toggleSettings);
+    document.getElementById('viewerToggle').addEventListener('click', toggleViewer);
+
+    // ─── Message rendering ───────────────────────────
+    function addMessage(text, role = 'bot', extras = {}) {
+      if (welcomeScreen) welcomeScreen.style.display = 'none';
+
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+
+      const avatar = document.createElement('div');
+      avatar.className = `msg-avatar ${role === 'user' ? 'user-av' : 'bot-av'}`;
+      avatar.textContent = role === 'user' ? 'Y' : 'B';
+
+      const body = document.createElement('div');
+      body.className = 'msg-body';
+
+      const name = document.createElement('div');
+      name.className = 'msg-name';
+      name.textContent = role === 'user' ? 'You' : 'BlueprintGPT';
+
+      const msg = document.createElement('div');
+      msg.className = 'msg-text';
+      msg.textContent = text;
+
+      body.appendChild(name);
+      body.appendChild(msg);
+
+      // Links
+      if (extras.links && extras.links.length) {
+        const linksDiv = document.createElement('div');
+        linksDiv.className = 'msg-links';
+        for (const link of extras.links) {
           const a = document.createElement('a');
           a.href = link.href;
           a.textContent = link.label;
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
-          linksWrap.appendChild(a);
+          a.className = 'msg-link';
+          linksDiv.appendChild(a);
         }
-        div.appendChild(linksWrap);
+        body.appendChild(linksDiv);
       }
-      if (svgUrl) {
+
+      // SVG preview
+      if (extras.svgUrl) {
         const preview = document.createElement('div');
-        preview.className = 'preview';
+        preview.className = 'blueprint-preview';
         const img = document.createElement('img');
-        img.src = svgUrl;
-        img.alt = 'Generated blueprint preview';
+        img.src = extras.svgUrl;
+        img.alt = 'Generated floor plan';
+        img.onclick = () => {
+          const vp = document.getElementById('viewerPanel');
+          const vb = document.getElementById('viewerBody');
+          vb.innerHTML = '';
+          const bigImg = document.createElement('img');
+          bigImg.src = extras.svgUrl;
+          bigImg.alt = 'Blueprint';
+          vb.appendChild(bigImg);
+          if (!vp.classList.contains('open')) toggleViewer();
+        };
         preview.appendChild(img);
-        div.appendChild(preview);
+        body.appendChild(preview);
       }
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
 
-    function persistHistory() {
-      localStorage.setItem('blueprintgpt_chat_history', chat.innerHTML);
-    }
-
-    function restoreHistory() {
-      const html = localStorage.getItem('blueprintgpt_chat_history');
-      if (html) {
-        chat.innerHTML = html;
+      // Explanation block (A3)
+      if (extras.explanation) {
+        body.appendChild(buildExplanationBlock(extras.explanation, extras.execution));
       }
+
+      // Variants block (A2)
+      if (extras.variants) {
+        body.appendChild(buildVariantBlock(extras.variants, extras.chosen));
+      }
+
+      // Repair trace (C2)
+      if (extras.repairTrace && extras.repairTrace.length) {
+        body.appendChild(buildRepairBlock(extras.repairTrace, extras.rawConfidence));
+      }
+
+      row.appendChild(avatar);
+      row.appendChild(body);
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return row;
     }
 
+    function addTypingIndicator() {
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.id = 'typingRow';
+      row.innerHTML = `
+        <div class="msg-avatar bot-av">B</div>
+        <div class="msg-body">
+          <div class="msg-name">BlueprintGPT</div>
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+        </div>
+      `;
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typingRow');
+      if (el) el.remove();
+    }
+
+    // ─── A3: Explanation block ───────────────────────
+    function buildExplanationBlock(explanation, execution) {
+      const block = document.createElement('details');
+      block.className = 'collapse-block';
+      const sum = document.createElement('summary');
+      sum.textContent = '💡 Why this layout?';
+      block.appendChild(sum);
+
+      const content = document.createElement('div');
+      content.className = 'collapse-content';
+      const grid = document.createElement('div');
+      grid.className = 'ev-grid';
+
+      const ex = execution || {};
+      const m = ex.metrics || {};
+      const items = [];
+      if (ex.design_score != null) items.push(['Design Score', ex.design_score]);
+      if (ex.report_status) items.push(['Status', ex.report_status]);
+      if (ex.strategy_name) items.push(['Strategy', ex.strategy_name]);
+      if (m.adjacency_satisfaction != null) items.push(['Adjacency', m.adjacency_satisfaction]);
+      if (m.max_travel_distance != null) items.push(['Travel Dist', `${m.max_travel_distance} / ${m.max_allowed_travel_distance || '?'}`]);
+      if (m.alignment_score != null) items.push(['Alignment', m.alignment_score]);
+      if (m.fully_connected != null) items.push(['Connected', m.fully_connected ? '✅ Yes' : '❌ No']);
+      if (ex.design_reasons && ex.design_reasons.length) items.push(['Factors', ex.design_reasons.join(', ')]);
+      if (explanation.summary) items.push(['Summary', explanation.summary]);
+
+      for (const [l, v] of items) {
+        const item = document.createElement('div');
+        item.className = 'ev-item';
+        item.innerHTML = `<span class="ev-label">${l}</span><span class="ev-value">${v}</span>`;
+        grid.appendChild(item);
+      }
+      content.appendChild(grid);
+      block.appendChild(content);
+      return block;
+    }
+
+    // ─── A2: Variant comparison ──────────────────────
+    function buildVariantBlock(alternatives, chosen) {
+      if (!alternatives.length) return document.createElement('span');
+      const block = document.createElement('details');
+      block.className = 'collapse-block';
+      const sum = document.createElement('summary');
+      sum.textContent = `📊 Variant Comparison (${alternatives.length} alternatives)`;
+      block.appendChild(sum);
+
+      const content = document.createElement('div');
+      content.className = 'collapse-content';
+      const table = document.createElement('table');
+      table.className = 'var-table';
+      table.innerHTML = `<thead><tr><th>Strategy</th><th>Score</th><th>Adjacency</th><th>Travel</th><th>Diversity</th></tr></thead>`;
+      const tbody = document.createElement('tbody');
+
+      if (chosen) {
+        const tr = document.createElement('tr');
+        tr.className = 'selected-row';
+        const cm = chosen.metrics || {};
+        tr.innerHTML = `<td>✅ ${chosen.strategy_name||'Selected'}</td><td>${chosen.design_score||'—'}</td><td>${cm.adjacency_satisfaction ?? '—'}</td><td>${cm.max_travel_distance ?? '—'}</td><td>—</td>`;
+        tbody.appendChild(tr);
+      }
+      for (const alt of alternatives) {
+        const tr = document.createElement('tr');
+        const am = alt.metrics || {};
+        tr.innerHTML = `<td>${alt.strategy_name||'Alt'}</td><td>${alt.design_score||'—'}</td><td>${am.adjacency_satisfaction ?? '—'}</td><td>${am.max_travel_distance ?? '—'}</td><td>${alt.diversity_from_selected ?? '—'}</td>`;
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      content.appendChild(table);
+      block.appendChild(content);
+      return block;
+    }
+
+    // ─── C2: Repair trace ────────────────────────────
+    function buildRepairBlock(trace, rawConf) {
+      const block = document.createElement('details');
+      block.className = 'collapse-block';
+      const sum = document.createElement('summary');
+      let label = '🔧 Repair Trace';
+      if (rawConf != null) label += ` (confidence: ${(rawConf * 100).toFixed(0)}%)`;
+      sum.textContent = label;
+      block.appendChild(sum);
+
+      const content = document.createElement('div');
+      content.className = 'collapse-content';
+
+      if (rawConf != null) {
+        const cls = rawConf >= 0.7 ? 'conf-high' : rawConf >= 0.4 ? 'conf-med' : 'conf-low';
+        content.innerHTML = `<div style="margin-bottom:8px"><span class="conf-badge ${cls}">Pre-repair: ${(rawConf*100).toFixed(1)}%</span></div>`;
+      }
+
+      const list = document.createElement('div');
+      list.className = 'repair-list';
+      for (const s of trace) {
+        const item = document.createElement('div');
+        item.className = 'repair-item';
+        item.innerHTML = `<span class="repair-stage">${s.stage||''}</span><span class="repair-action">${s.action||''}</span><span class="repair-room">${s.room||''}</span>`;
+        list.appendChild(item);
+      }
+      content.appendChild(list);
+      block.appendChild(content);
+      return block;
+    }
+
+    // ─── Process API response ────────────────────────
     function addChatResponse(data) {
+      lastResponseData = data;
       const lines = [];
       if (data.assistant_text) lines.push(data.assistant_text);
 
+      const ex = data.execution || {};
+      if (data.validation_errors && data.validation_errors.length) {
+        lines.push(`\n⚠️ Errors: ${data.validation_errors.join('; ')}`);
+      }
+
       if (data.backend_ready && data.execution) {
-        const ex = data.execution;
         lines.push('');
         lines.push(`Status: ${ex.report_status || ex.status}`);
         if (ex.strategy_name) lines.push(`Strategy: ${ex.strategy_name}`);
         if (ex.metrics) {
           const m = ex.metrics;
           const parts = [];
-          if (m.max_travel_distance !== undefined) parts.push(`Travel ${m.max_travel_distance}`);
-          if (m.max_allowed_travel_distance !== undefined) parts.push(`Limit ${m.max_allowed_travel_distance}`);
-          if (m.adjacency_satisfaction !== undefined) parts.push(`Adjacency ${m.adjacency_satisfaction}`);
-          if (parts.length) lines.push(parts.join(' | '));
-        }
-        if (ex.explanation && ex.explanation.summary) {
-          lines.push(`Explanation: ${ex.explanation.summary}`);
+          if (m.max_travel_distance != null) parts.push(`Travel ${m.max_travel_distance}`);
+          if (m.adjacency_satisfaction != null) parts.push(`Adjacency ${m.adjacency_satisfaction}`);
+          if (parts.length) lines.push(parts.join(' · '));
         }
         if (ex.requested_rooms || ex.generated_rooms) {
           lines.push('');
-          lines.push('Room fulfillment:');
           const req = ex.requested_rooms || {};
           const got = ex.generated_rooms || {};
-          const keys = Array.from(new Set([...Object.keys(req), ...Object.keys(got)])).sort();
-          for (const k of keys) {
-            lines.push(`- ${k}: requested ${req[k] || 0}, generated ${got[k] || 0}`);
-          }
+          const keys = [...new Set([...Object.keys(req), ...Object.keys(got)])].sort();
+          for (const k of keys) lines.push(`${k}: ${got[k]||0}/${req[k]||0}`);
         }
         if (ex.room_coverage) {
-          const missing = ex.room_coverage.missing || [];
-          const extra = ex.room_coverage.extra || [];
-          lines.push('');
-          if (!missing.length && !extra.length) {
-            lines.push('Coverage check: OK (all requested room counts matched).');
-          } else {
-            lines.push('Coverage check: Needs attention.');
-            if (missing.length) lines.push(`Missing -> ${missing.join('; ')}`);
-            if (extra.length) lines.push(`Extra -> ${extra.join('; ')}`);
+          const mis = ex.room_coverage.missing || [];
+          const ext = ex.room_coverage.extra || [];
+          if (!mis.length && !ext.length) lines.push('\n✅ All rooms matched');
+          else {
+            if (mis.length) lines.push(`\n⚠️ Missing: ${mis.join('; ')}`);
+            if (ext.length) lines.push(`Extra: ${ext.join('; ')}`);
           }
         }
-        if (Array.isArray(ex.violations) && ex.violations.length) {
-          lines.push('');
-          lines.push(`Violations: ${ex.violations.join('; ')}`);
-        }
-        if (ex.artifact_paths) {
-          if (ex.artifact_paths.report) lines.push(`Report file: ${ex.artifact_paths.report}`);
-          if (ex.artifact_paths.svg) lines.push(`SVG file: ${ex.artifact_paths.svg}`);
-        }
-      } else {
-        if (Array.isArray(data.validation_errors) && data.validation_errors.length) {
-          lines.push('');
-          lines.push(`Validation: ${data.validation_errors.join('; ')}`);
-        }
-        if (Array.isArray(data.missing_fields) && data.missing_fields.length) {
-          lines.push('');
-          lines.push(`Missing: ${data.missing_fields.join(', ')}`);
-        }
+        if (Array.isArray(ex.violations) && ex.violations.length)
+          lines.push(`\n❌ Violations: ${ex.violations.join('; ')}`);
       }
 
       const links = [];
-      const execution = data.execution || {};
       let svgUrl = null;
-      if (execution.artifact_urls) {
-        if (execution.artifact_urls.report) links.push({ label: 'Open Report JSON', href: execution.artifact_urls.report });
-        if (execution.artifact_urls.svg) links.push({ label: 'Open Blueprint SVG', href: execution.artifact_urls.svg });
-        svgUrl = execution.artifact_urls.svg || null;
+      if (ex.artifact_urls) {
+        if (ex.artifact_urls.report) links.push({ label: '📄 Report', href: ex.artifact_urls.report });
+        if (ex.artifact_urls.svg) links.push({ label: '🏗️ Blueprint SVG', href: ex.artifact_urls.svg });
+        svgUrl = ex.artifact_urls.svg || null;
       }
-      addBubble(lines.join('\n'), 'bot', links, svgUrl);
-      persistHistory();
+
+      addMessage(lines.join('\n'), 'bot', {
+        links,
+        svgUrl,
+        explanation: (data.backend_ready && ex.explanation) ? ex.explanation : null,
+        execution: ex,
+        variants: ex.alternatives || [],
+        chosen: { strategy_name: ex.strategy_name, design_score: ex.design_score, metrics: ex.metrics },
+        repairTrace: ex.repair_trace || [],
+        rawConfidence: ex.raw_confidence,
+      });
+
+      // Update spec panel
+      updateSpecPanel(data);
+
+      // Auto-open viewer if an SVG was generated
+      if (svgUrl) {
+        const vp = document.getElementById('viewerPanel');
+        const vb = document.getElementById('viewerBody');
+        vb.innerHTML = '';
+        const bigImg = document.createElement('img');
+        bigImg.src = svgUrl;
+        bigImg.alt = 'Blueprint';
+        vb.appendChild(bigImg);
+        
+        const dlBtn = document.getElementById('downloadSvgBtn');
+        dlBtn.style.display = 'flex';
+        dlBtn.onclick = () => {
+          const a = document.createElement('a');
+          a.href = svgUrl;
+          a.download = svgUrl.split('/').pop() || 'blueprint.svg';
+          a.click();
+        };
+
+        if (!vp.classList.contains('open')) toggleViewer();
+      }
     }
 
+    function updateSpecPanel(data) {
+      const editor = document.getElementById('specEditor');
+      const spec = {};
+      if (data.execution) {
+        spec.backend = data.backend_target;
+        spec.rooms = data.execution.requested_rooms;
+        spec.metrics = data.execution.metrics;
+        spec.status = data.execution.report_status;
+        if (data.execution.generation_summary) spec.generation = data.execution.generation_summary;
+      } else {
+        if (data.missing_fields?.length) spec.missing = data.missing_fields;
+      }
+      editor.value = JSON.stringify(spec, null, 2);
+    }
+
+    // ─── Submit handler ──────────────────────────────
     submitBtn.addEventListener('click', async () => {
-      const prompt = document.getElementById('prompt').value.trim();
+      const prompt = promptEl.value.trim();
+      if (!prompt) return;
+
       const width = Number(document.getElementById('width').value || 0);
       const height = Number(document.getElementById('height').value || 0);
       const entranceX = document.getElementById('entranceX').value;
@@ -362,61 +1006,106 @@
       const area = document.getElementById('area').value;
       const areaUnit = document.getElementById('areaUnit').value;
       const prefix = document.getElementById('prefix').value;
+      const llmApiKey = document.getElementById('llmApiKey').value;
 
-      if (!prompt) {
-        addBubble('Please type your requirement prompt first.', 'bot');
-        return;
+      let customPoly = undefined;
+      let targetEntrance = (entranceX !== '' && entranceY !== '') ? [Number(entranceX), Number(entranceY)] : null;
+      
+      if (isClosed && points.length >= 3) {
+        customPoly = points.map(p => [p.x / 40, (cvs.height - p.y) / 40]);
       }
 
-      const entrance = (entranceX !== '' && entranceY !== '') ? [Number(entranceX), Number(entranceY)] : null;
       const body = {
         prompt,
         boundary: { width, height },
-        entrance_point: entrance,
+        boundary_polygon: customPoly,
+        entrance_point: targetEntrance,
         area: area !== '' ? Number(area) : undefined,
         area_unit: areaUnit,
         output_prefix: prefix || undefined,
+        llm_api_key: llmApiKey || undefined,
       };
 
-      addBubble(prompt, 'user');
-      persistHistory();
+      addMessage(prompt, 'user');
+      promptEl.value = '';
+      promptEl.style.height = 'auto';
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Generating...';
+      document.getElementById('statusIndicator').textContent = 'Generating...';
+      addTypingIndicator();
+
       try {
         const res = await fetch('/chat/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
+        removeTypingIndicator();
         if (!res.ok) {
           const detail = await res.json().catch(() => ({}));
-          addBubble(`Error: ${detail.detail || res.statusText}`, 'bot');
-          persistHistory();
+          addMessage(`Error: ${detail.detail || res.statusText}`, 'bot');
         } else {
-          const data = await res.json();
-          addChatResponse(data);
+          addChatResponse(await res.json());
         }
       } catch (err) {
-        addBubble(`Request failed: ${err}`, 'bot');
-        persistHistory();
+        removeTypingIndicator();
+        addMessage(`Request failed: ${err}`, 'bot');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Generate';
+        document.getElementById('statusIndicator').textContent = 'Ready';
       }
     });
 
-    document.getElementById('prompt').addEventListener('keydown', (e) => {
+    promptEl.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
         submitBtn.click();
       }
     });
 
-    restoreHistory();
-    if (!chat.innerHTML.trim()) {
-      addBubble('Describe your home requirements in natural language and press Generate. Example: Need 2 bedrooms, 1 bathroom, 1 kitchen and 1 drawing room on a 10 marla plot with a north entrance and minimize corridor.', 'bot');
-      persistHistory();
-    }
+    // ─── A4: Session export/import ───────────────────
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const session = {
+        version: 1,
+        timestamp: new Date().toISOString(),
+        lastResponse: lastResponseData,
+        formState: {
+          width: document.getElementById('width').value,
+          height: document.getElementById('height').value,
+          entranceX: document.getElementById('entranceX').value,
+          entranceY: document.getElementById('entranceY').value,
+          area: document.getElementById('area').value,
+          areaUnit: document.getElementById('areaUnit').value,
+          prefix: document.getElementById('prefix').value,
+        }
+      };
+      const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `blueprintgpt_session_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const s = JSON.parse(ev.target.result);
+          if (s.lastResponse) { lastResponseData = s.lastResponse; addChatResponse(s.lastResponse); }
+          if (s.formState) for (const [k, v] of Object.entries(s.formState)) {
+            const el = document.getElementById(k);
+            if (el) el.value = v;
+          }
+          addMessage('✅ Session restored', 'bot');
+        } catch (err) { addMessage(`Import failed: ${err}`, 'bot'); }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
   </script>
 </body>
 </html>

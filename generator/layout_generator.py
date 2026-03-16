@@ -127,9 +127,9 @@ def generate_layout_from_spec(spec, regulation_file, ontology_validator=None):
 
     validated_variants = []
     for var_building, strategy_name in variants:
-        # Aspect ratio enforcement
-        for room in var_building.rooms:
-            enforce_aspect_ratio(room)
+        # Aspect ratio enforcement (Disabled to allow arbitrary free-form polygon shapes)
+        # for room in var_building.rooms:
+        #     enforce_aspect_ratio(room)
 
         # Grid snapping
         snap_building_to_grid(var_building, step=0.15)

@@ -1,4 +1,4 @@
-﻿"""Constants and helpers for the additive natural-language spec layer."""
+"""Constants and helpers for the additive natural-language spec layer."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ ALLOWED_ROOM_TYPES = (
     "Bedroom",
     "Bathroom",
     "Kitchen",
+    "LivingRoom",
     "DrawingRoom",
     "DiningRoom",
     "Garage",
@@ -31,6 +32,7 @@ DEFAULT_PRIVACY_BY_ROOM = {
     "Bedroom": "private",
     "Bathroom": "private",
     "Kitchen": "service",
+    "LivingRoom": "public",
     "DrawingRoom": "public",
     "DiningRoom": "public",
     "Garage": "service",
@@ -41,6 +43,7 @@ EXTERNAL_TO_INTERNAL_ROOM = {
     "Bedroom": "Bedroom",
     "Bathroom": "Bathroom",
     "Kitchen": "Kitchen",
+    "LivingRoom": "LivingRoom",
     "DrawingRoom": "LivingRoom",
     "DiningRoom": "DiningRoom",
     "Garage": "Garage",
@@ -51,6 +54,7 @@ CORE_ALGORITHMIC_ROOM_TYPES = {
     "Bedroom",
     "Bathroom",
     "Kitchen",
+    "LivingRoom",
     "DrawingRoom",
 }
 
@@ -79,6 +83,7 @@ ROOM_LABELS = {
     "Bedroom": ("bedroom", "bedrooms", "bed", "beds"),
     "Bathroom": ("bathroom", "bathrooms", "bath", "baths"),
     "Kitchen": ("kitchen", "kitchens"),
+    "LivingRoom": ("living room", "living rooms", "livingroom", "livingrooms"),
     "DrawingRoom": ("drawing room", "drawing rooms", "drawingroom", "drawingrooms"),
     "DiningRoom": ("dining room", "dining rooms", "diningroom", "diningrooms"),
     "Garage": ("garage", "garages"),
@@ -86,9 +91,6 @@ ROOM_LABELS = {
 }
 
 UNSUPPORTED_ROOM_LABELS = {
-    "living room": "LivingRoom",
-    "living rooms": "LivingRoom",
-    "livingroom": "LivingRoom",
     "toilet": "WC",
     "toilets": "WC",
     "wc": "WC",

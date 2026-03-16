@@ -37,12 +37,13 @@ from visualization.dimensions import draw_dimension, measure_room_dims
 from visualization.render_units import resolve_render_units
 
 # â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-SCALE = 40  # pixels per metre
-MARGIN = 60  # px margin around boundary
+SCALE = 80  # pixels per metre
+MARGIN = 70  # px margin around boundary
 WALL_WIDTH = 3.0
 INNER_WALL_WIDTH = 1.5
 DOOR_WIDTH_PX = 2.0
 WINDOW_WIDTH_PX = 1.8
+LEGEND_W = 160  # reserved px on right for legend
 
 # Zone-based fill colours (muted, architectural)
 ZONE_FILL = {
@@ -364,8 +365,8 @@ def _draw_room(g: Element, room, ox: float, oy: float, zone: str = "",
     label = SubElement(g, "text", {
         "x": f"{cx:.1f}", "y": f"{cy - 4:.1f}",
         "text-anchor": "middle",
-        "font-size": "10",
-        "font-weight": "600",
+        "font-size": "13",
+        "font-weight": "700",
         "fill": "#263238",
     })
     label.text = room.room_type
@@ -374,7 +375,7 @@ def _draw_room(g: Element, room, ox: float, oy: float, zone: str = "",
     dim = SubElement(g, "text", {
         "x": f"{cx:.1f}", "y": f"{cy + 10:.1f}",
         "text-anchor": "middle",
-        "font-size": "8",
+        "font-size": "10",
         "fill": "#546e7a",
     })
     dim.text = f"{area:.1f} mÂ²"
@@ -527,7 +528,7 @@ def _draw_entrance(g: Element, entrance_point, ox: float, oy: float, exit_width:
 
 def _draw_title_block(svg: Element, title: str, width_px: float, height_px: float,
                       total_area: float = 0, occupancy: str = "Residential"):
-    tb_h = 50
+    tb_h = 60
     tb_y = height_px - tb_h
     g = SubElement(svg, "g")
     SubElement(g, "rect", {
@@ -537,27 +538,27 @@ def _draw_title_block(svg: Element, title: str, width_px: float, height_px: floa
     })
     t = SubElement(g, "text", {
         "x": f"{MARGIN:.0f}", "y": f"{tb_y + 22:.0f}",
-        "font-size": "14", "font-weight": "bold", "fill": "white",
+        "font-size": "16", "font-weight": "bold", "fill": "white",
     })
     t.text = title
 
     info = SubElement(g, "text", {
         "x": f"{MARGIN:.0f}", "y": f"{tb_y + 38:.0f}",
-        "font-size": "9", "fill": "#b0bec5",
+        "font-size": "11", "fill": "#b0bec5",
     })
     info.text = (f"Occupancy: {occupancy}  |  Total Area: {total_area:.1f} mÂ²  |  "
                  f"Scale: 1:{SCALE}  |  GenAI Floor Plan Generator")
 
     # Scale bar
-    bar_x = width_px - MARGIN - _px(5)
-    bar_y = tb_y + 20
-    bar_w = _px(5)
+    bar_x = width_px - LEGEND_W - 20 - _px(3)
+    bar_y = tb_y + 28
+    bar_w = _px(3)
     SubElement(g, "line", {
         "x1": f"{bar_x:.0f}", "y1": f"{bar_y:.0f}",
         "x2": f"{bar_x + bar_w:.0f}", "y2": f"{bar_y:.0f}",
         "stroke": "white", "stroke-width": "2",
     })
-    for i in range(6):
+    for i in range(4):
         tx = bar_x + _px(i)
         SubElement(g, "line", {
             "x1": f"{tx:.0f}", "y1": f"{bar_y - 3:.0f}",
@@ -566,7 +567,7 @@ def _draw_title_block(svg: Element, title: str, width_px: float, height_px: floa
         })
         st = SubElement(g, "text", {
             "x": f"{tx:.0f}", "y": f"{bar_y + 12:.0f}",
-            "text-anchor": "middle", "font-size": "7", "fill": "#b0bec5",
+            "text-anchor": "middle", "font-size": "9", "fill": "#b0bec5",
         })
         st.text = f"{i}m"
 
@@ -636,7 +637,7 @@ def render_svg_blueprint(
         bh = max((r.polygon and max(p[1] for p in r.polygon) or 0) for r in building.rooms)
 
     title_block_h = 50
-    width_px = _px(bw) + 2 * MARGIN + 60  # extra for dim lines
+    width_px = _px(bw) + 2 * MARGIN + 100 + LEGEND_W  # extra for dim + legend
     height_px = _px(bh) + 2 * MARGIN + title_block_h + 60
     ox, oy = MARGIN, MARGIN
 
@@ -718,12 +719,18 @@ def render_svg_blueprint(
     _draw_title_block(svg, title, width_px, height_px, total_area, building.occupancy_type)
 
     # Compass
-    _draw_compass(svg, width_px - 40, 40)
+    _draw_compass(svg, width_px - LEGEND_W - 40, 40)
 
-    # Legend
+    # Legend -- top-right, outside the plan
+    legend_x = width_px - LEGEND_W + 6
     g_legend = SubElement(svg, "g", {"id": "legend",
-                                      "transform": f"translate({width_px - MARGIN - 100:.0f}, {MARGIN:.0f})"})
-    ly = 0
+                                      "transform": f"translate({legend_x:.0f}, {MARGIN:.0f})"})
+    hdr = SubElement(g_legend, "text", {
+        "x": "0", "y": "14",
+        "font-size": "13", "font-weight": "bold", "fill": "#263238",
+    })
+    hdr.text = "Legend"
+    ly = 28
     seen_types = set()
     for room in building.rooms:
         if room.room_type in seen_types:
@@ -732,15 +739,15 @@ def render_svg_blueprint(
         fill = ROOM_FILL.get(room.room_type, DEFAULT_FILL)
         SubElement(g_legend, "rect", {
             "x": "0", "y": f"{ly}",
-            "width": "12", "height": "12",
-            "fill": fill, "stroke": "#37474f", "stroke-width": "0.5",
+            "width": "20", "height": "20",
+            "fill": fill, "stroke": "#37474f", "stroke-width": "1",
         })
         lt = SubElement(g_legend, "text", {
-            "x": "16", "y": f"{ly + 10}",
-            "font-size": "8", "fill": "#263238",
+            "x": "28", "y": f"{ly + 14}",
+            "font-size": "12", "fill": "#263238",
         })
         lt.text = room.room_type
-        ly += 16
+        ly += 28
 
     xml_str = tostring(svg, encoding="unicode")
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_str

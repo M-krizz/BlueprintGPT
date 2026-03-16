@@ -12,10 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-
 from nl_interface.runner import execute_response
 from nl_interface.service import process_user_request
-from nl_interface.runner import run_algorithmic_backend, run_learned_backend
+from nl_interface.runner import run_algorithmic_backend, run_learned_backend, run_hybrid_backend
 
 
 class RoomSpec(BaseModel):
@@ -30,8 +29,9 @@ class Boundary(BaseModel):
 
 
 class GenerateRequest(BaseModel):
-    backend_target: Literal["algorithmic", "learned"] = "algorithmic"
+    backend_target: Literal["algorithmic", "learned", "hybrid"] = "hybrid"
     boundary: Boundary
+    boundary_polygon: Optional[List[List[float]]] = None
     entrance_point: Optional[List[float]] = Field(None, min_length=2, max_length=2)
     rooms: List[RoomSpec]
     preferences: Optional[dict] = Field(default=None, description="User preference weights")
@@ -57,6 +57,7 @@ class GenerateResponse(BaseModel):
 class ChatGenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
     boundary: Boundary
+    boundary_polygon: Optional[List[List[float]]] = None
     area: Optional[float] = None
     area_unit: str = "sq.m"
     entrance_point: Optional[List[float]] = Field(None, min_length=2, max_length=2)
@@ -103,15 +104,23 @@ async def root():
 async def health():
     return {"status": "ok"}
 
+@app.get("/favicon.ico", status_code=204)
+async def favicon():
+    # Eliminates the 404 console error on browser requests
+    return None
+
 
 def _spec_from_request(body: GenerateRequest) -> dict:
     boundary = body.boundary
-    polygon = [
-        (0.0, 0.0),
-        (boundary.width, 0.0),
-        (boundary.width, boundary.height),
-        (0.0, boundary.height),
-    ]
+    if body.boundary_polygon is not None:
+        polygon = body.boundary_polygon
+    else:
+        polygon = [
+            (0.0, 0.0),
+            (boundary.width, 0.0),
+            (boundary.width, boundary.height),
+            (0.0, boundary.height),
+        ]
     rooms = []
     for idx, room in enumerate(body.rooms, start=1):
         rooms.append({"name": room.name or f"Room_{idx}", "type": room.type, "area": room.area})
@@ -138,6 +147,12 @@ async def _run_backend(body: GenerateRequest):
     if body.backend_target == "learned":
         return await anyio.to_thread.run_sync(
             partial(run_learned_backend, spec, output_prefix=prefix),
+        )
+
+    if body.backend_target == "hybrid":
+        # Note: We will import run_hybrid_backend shortly
+        return await anyio.to_thread.run_sync(
+            partial(run_hybrid_backend, spec, output_prefix=prefix),
         )
 
     raise HTTPException(status_code=400, detail="Unsupported backend_target")
@@ -174,6 +189,8 @@ async def chat_generate(body: ChatGenerateRequest):
         "boundary_size": (body.boundary.width, body.boundary.height),
         "area_unit": body.area_unit,
     }
+    if body.boundary_polygon is not None:
+        resolution["boundary_polygon"] = body.boundary_polygon
     if body.area is not None:
         resolution["total_area"] = body.area
     if body.entrance_point is not None:

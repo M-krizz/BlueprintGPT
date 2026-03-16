@@ -1,4 +1,4 @@
-﻿"""Service layer for the additive natural-language residential spec interface."""
+"""Service layer for the additive natural-language residential spec interface."""
 
 from __future__ import annotations
 
@@ -61,6 +61,15 @@ def process_user_request(
     backend_spec = None
     backend_translation_warnings: List[str] = []
     if resolution:
+        # Canvas geometry fulfills plot and entrance if provided
+        if "plot_type" in missing_fields and (resolution.get("boundary_polygon") or resolution.get("boundary_size")):
+            normalized["plot_type"] = "Custom"
+            missing_fields.remove("plot_type")
+            
+        if "entrance_side" in missing_fields and resolution.get("entrance_point"):
+            normalized["entrance_side"] = "Custom"
+            missing_fields.remove("entrance_side")
+
         normalized_resolution, resolution_missing = validate_resolution(resolution)
         if resolution_missing:
             missing_fields.extend(field for field in resolution_missing if field not in missing_fields)

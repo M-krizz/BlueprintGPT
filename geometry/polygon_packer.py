@@ -152,9 +152,22 @@ def recursive_pack(poly, items, entrance_pt=None):
             recursive_pack(poly1, group1, entrance_pt)
             recursive_pack(poly2, group2, entrance_pt)
     else:
-        # Failsafe if bisection somehow collapses
-        recursive_pack(poly, items[:len(items)//2], entrance_pt)
-        recursive_pack(poly, items[len(items)//2:], entrance_pt)
+        # Failsafe if bisection somehow collapses: forcibly split the polygon down the middle mathematically
+        minx, miny, maxx, maxy = poly.bounds
+        if (maxx - minx) > (maxy - miny):
+            midx = (minx + maxx) / 2.0
+            p1 = poly.intersection(box(minx - 1, miny - 1, midx, maxy + 1))
+            p2 = poly.intersection(box(midx, miny - 1, maxx + 1, maxy + 1))
+        else:
+            midy = (miny + maxy) / 2.0
+            p1 = poly.intersection(box(minx - 1, miny - 1, maxx + 1, midy))
+            p2 = poly.intersection(box(minx - 1, midy, maxx + 1, maxy + 1))
+        
+        poly1 = _get_largest_polygon(p1) or poly
+        poly2 = _get_largest_polygon(p2) or poly
+
+        recursive_pack(poly1, items[:len(items)//2], entrance_pt)
+        recursive_pack(poly2, items[len(items)//2:], entrance_pt)
 
 
 class PolygonPacker:

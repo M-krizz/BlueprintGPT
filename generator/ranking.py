@@ -25,12 +25,16 @@ def _score_variant(variant):
 
     align = metrics.get("alignment_score", 0.0)
 
+    # Add a bonus if the layout came from the algorithmic packing engine
+    algo_bonus = 0.25 if variant.get("source") == "algorithmic" else 0.0
+
     final_score = (
         0.40 * hard_compliance
         + 0.18 * compactness
         + 0.18 * adjacency_score
         + 0.12 * (travel_margin + 1.0) / 2.0
         + 0.12 * align
+        + algo_bonus
     )
 
     return round(final_score, 4), {

@@ -22,8 +22,10 @@ def build_adjacency_intent(room_types=None, use_kg=True):
     return [
         ("Kitchen", "LivingRoom", 1.0),
         ("LivingRoom", "Bedroom", 0.5),
-        ("Bedroom", "Bathroom", 0.8),
-        ("Bedroom", "WC", 0.6),
+        ("Bedroom", "Bathroom", 1.0),
+        ("Bedroom", "WC", 0.8),
+        ("Kitchen", "Bathroom", -1.0),
+        ("Kitchen", "WC", -1.0),
     ]
 
 

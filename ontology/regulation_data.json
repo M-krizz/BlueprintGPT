@@ -7,27 +7,32 @@
       "Bedroom": {
         "min_area": 9.5,
         "min_width": 2.4,
-        "min_height": 2.75
+        "min_height": 2.75,
+        "default_weight": 1.5
       },
       "LivingRoom": {
         "min_area": 9.5,
         "min_width": 2.4,
-        "min_height": 2.75
+        "min_height": 2.75,
+        "default_weight": 2.5
       },
       "Kitchen": {
         "min_area": 4.5,
         "min_width": 1.5,
-        "min_height": 2.75
+        "min_height": 2.75,
+        "default_weight": 1.0
       },
       "Bathroom": {
         "min_area": 1.8,
         "min_width": 1.0,
-        "min_height": 2.2
+        "min_height": 2.2,
+        "default_weight": 0.5
       },
       "WC": {
         "min_area": 1.1,
         "min_width": 0.9,
-        "min_height": 2.2
+        "min_height": 2.2,
+        "default_weight": 0.3
       }
     },
     "corridor": {

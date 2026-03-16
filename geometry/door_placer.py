@@ -47,16 +47,39 @@ class DoorPlacer:
                     room.doors.append(door)
                     rooms_with_circulation_door.add(room.name)
 
+        # ── Room-to-room doors ────────────────────────────────────────────────
+        # Only add a room-to-room door if:
+        # a) One of the rooms has no door to the circulation (needs access).
+        # b) They share a strong adjacency requirement (>0.6 weight).
+        from geometry.adjacency_intent import build_adjacency_intent
+        intents = build_adjacency_intent()
+        intent_map = {}
+        for ta, tb, w in intents:
+            intent_map.setdefault(ta, {})[tb] = w
+            intent_map.setdefault(tb, {})[ta] = w
+
         for i in range(len(rooms)):
             for j in range(i+1, len(rooms)):
                 edge = shared_edge(rooms[i], rooms[j])
 
                 if edge:
-                    door_segment = self.create_door_segment(edge[0])
-                    door = Door(rooms[i], rooms[j], self.min_door_width, door_segment, door_type="room_to_room")
-                    self.building.add_door(door)
-                    rooms[i].doors.append(door)
-                    rooms[j].doors.append(door)
+                    r1, r2 = rooms[i], rooms[j]
+                    has_circ_1 = r1.name in rooms_with_circulation_door
+                    has_circ_2 = r2.name in rooms_with_circulation_door
+                    
+                    # Look up adjacency weight between r1.room_type and r2.room_type
+                    weight = intent_map.get(r1.room_type, {}).get(r2.room_type, 0.0)
+
+                    # Condition to add door
+                    needs_access = not (has_circ_1 and has_circ_2)
+                    strong_link = weight >= 0.6  # e.g., Bedroom <-> Bathroom
+
+                    if needs_access or strong_link:
+                        door_segment = self.create_door_segment(edge[0])
+                        door = Door(r1, r2, self.min_door_width, door_segment, door_type="room_to_room")
+                        self.building.add_door(door)
+                        r1.doors.append(door)
+                        r2.doors.append(door)
 
     # ── Bridge door (near-gap) ────────────────────────────────────────────
 

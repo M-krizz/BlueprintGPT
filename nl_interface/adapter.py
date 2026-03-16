@@ -1,4 +1,4 @@
-﻿"""Adapter and routing helpers for translating NL specs into backend specs."""
+"""Adapter and routing helpers for translating NL specs into backend specs."""
 
 from __future__ import annotations
 
@@ -21,11 +21,8 @@ def route_backend(current_spec: Dict) -> Optional[str]:
     room_types = {room.get("type") for room in current_spec.get("rooms", []) if room.get("type")}
     if not room_types:
         return None
-    if room_types & EXTENDED_LEARNED_ROOM_TYPES:
-        return "learned"
-    if room_types <= CORE_ALGORITHMIC_ROOM_TYPES:
-        return "algorithmic"
-    return None
+    # We now default to hybrid routing to run both backends
+    return "hybrid"
 
 
 def validate_resolution(resolution: Optional[Dict]) -> Tuple[Optional[Dict], List[str]]:
