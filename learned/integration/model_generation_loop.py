@@ -302,6 +302,28 @@ def generate_best_layout_from_model(
 
     best = top_k_candidates[0] if top_k_candidates else best_so_far
 
+    # ── Extract spatial hints from the transformer output ───────────────────
+    # The raw_rooms list contains RoomBox tokens with normalized [0,1] positions.
+    # Build a dict {room_type: (cx_norm, cy_norm)} for each unique room type.
+    # When multiple rooms of the same type exist, we average their centroids.
+    # These hints seed the PolygonPacker's bisection ordering (not room geometry).
+    raw_rooms = best.get("raw_rooms", [])
+    _hint_acc: dict = {}   # {room_type: [(cx, cy), ...]}
+    for rbox in raw_rooms:
+        rtype = getattr(rbox, "room_type", None)
+        if not rtype:
+            continue
+        cx = (getattr(rbox, "x_min", 0.0) + getattr(rbox, "x_max", 0.0)) / 2.0
+        cy = (getattr(rbox, "y_min", 0.0) + getattr(rbox, "y_max", 0.0)) / 2.0
+        _hint_acc.setdefault(rtype, []).append((cx, cy))
+    learned_spatial_hints = {
+        rtype: (
+            sum(c[0] for c in pts) / len(pts),
+            sum(c[1] for c in pts) / len(pts),
+        )
+        for rtype, pts in _hint_acc.items()
+    }
+
     best_variant = {
         "building": best["building"],
         "score": best["score"],
@@ -312,9 +334,11 @@ def generate_best_layout_from_model(
         "breakdown": best.get("breakdown", {}),
         "repair_trace": best.get("repair_trace", []),
         "all_candidates": top_k_candidates,
-        "raw_rooms": best.get("raw_rooms", []),
+        "raw_rooms": raw_rooms,
         "candidate_index": best["index"],
         "raw_valid": best.get("raw_valid", False),
+        # Spatial hints for the PolygonPacker: {room_type: (cx_norm, cy_norm)}
+        "learned_spatial_hints": learned_spatial_hints,
     }
     return best_variant, summary
 

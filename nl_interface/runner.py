@@ -440,28 +440,14 @@ def run_hybrid_backend(
     """Run both algorithmic and learned backends, pool variants, rank, and return the best."""
     output_paths = _output_paths(output_dir, output_prefix, "hybrid")
     all_variants = []
-    
-    # 1. GENERATE FROM ALGORITHMIC PACKING
-    try:
-        repaired = validate_and_repair_spec(spec, validate_spec, max_attempts=3)
-        working_spec = repaired["spec"]
-        working_spec["_spec_validation"] = repaired.get("validation", {})
-        working_spec["_repair"] = {"repair_attempts": repaired.get("repair_attempts", 0)}
-        working_spec["learned_checkpoint"] = "__disabled_checkpoint__.pt"
-        
-        algo_result = _quiet_call(generate_layout_from_spec, working_spec, regulation_file=regulation_file)
-        algo_variants = [v for v in algo_result.get("layout_variants", [algo_result]) if v.get("source") == "algorithmic"]
-        all_variants.extend(algo_variants)
-    except Exception as e:
-        print(f"Algorithmic packing failed: {e}")
-        algo_variants = []
+    learned_spatial_hints: dict = {}
 
-    # 2. GENERATE FROM LEARNED TRANSFORMER
+    # 1. GENERATE FROM LEARNED TRANSFORMER (run first to extract spatial hints)
     try:
         resolved_ckpt = _resolve_checkpoint(checkpoint_path)
         boundary = spec.get("boundary_polygon")
         entrance = spec.get("entrance_point")
-        
+
         best_learned, learned_summary = _quiet_call(
             generate_best_layout_from_model,
             spec=spec,
@@ -478,6 +464,9 @@ def run_hybrid_backend(
             pre_rank_top_m=max(1, top_m),
         )
         if best_learned and best_learned.get("building"):
+            # Collect spatial hints for the algorithmic packer
+            learned_spatial_hints = best_learned.get("learned_spatial_hints", {})
+
             # Format learned variant similarly to algorithmic variants
             learned_variant = {
                 "source": "learned",
@@ -494,6 +483,27 @@ def run_hybrid_backend(
             all_variants.append(learned_variant)
     except Exception as e:
         print(f"Learned generation failed: {e}")
+
+    # 2. GENERATE FROM ALGORITHMIC PACKING (seeded with learned spatial hints)
+    try:
+        repaired = validate_and_repair_spec(spec, validate_spec, max_attempts=3)
+        working_spec = repaired["spec"]
+        working_spec["_spec_validation"] = repaired.get("validation", {})
+        working_spec["_repair"] = {"repair_attempts": repaired.get("repair_attempts", 0)}
+        working_spec["learned_checkpoint"] = "__disabled_checkpoint__.pt"
+
+        # Inject transformer spatial hints so PolygonPacker can use them for
+        # bisection ordering (rooms still get polygon shapes, not rectangles)
+        if learned_spatial_hints:
+            working_spec["learned_spatial_hints"] = learned_spatial_hints
+
+        algo_result = _quiet_call(generate_layout_from_spec, working_spec, regulation_file=regulation_file)
+        algo_variants = [v for v in algo_result.get("layout_variants", [algo_result]) if v.get("source") == "algorithmic"]
+        all_variants.extend(algo_variants)
+    except Exception as e:
+        print(f"Algorithmic packing failed: {e}")
+        algo_variants = []
+
     
     if not all_variants:
         raise ValueError("Both Algorithmic and Learned generators failed to produce any variants.")

@@ -61,8 +61,14 @@ def _build_base(spec, regulation_file):
     # ── Geometry: pack rooms ──────────────────────────────────────────────────
     boundary_polygon = spec.get("boundary_polygon")
     entrance_point = spec.get("entrance_point")
+    # Transformer spatial hints (from hybrid pipeline): {room_type: (cx_norm, cy_norm)}
+    learned_hints = spec.get("learned_spatial_hints") or {}
     if boundary_polygon and len(boundary_polygon) >= 3:
-        packer = PolygonPacker(building, boundary_polygon, entrance_point=entrance_point)
+        packer = PolygonPacker(
+            building, boundary_polygon,
+            entrance_point=entrance_point,
+            learned_hints=learned_hints if learned_hints else None,
+        )
         width, height = packer.allocate()
     else:
         allocator = Allocator(building)

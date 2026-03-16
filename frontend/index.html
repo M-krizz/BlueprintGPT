@@ -975,7 +975,16 @@
           a.click();
         };
 
-        if (!vp.classList.contains('open')) toggleViewer();
+        // Close settings panel if open, then open blueprint viewer
+        const sp = document.getElementById('settingsPanel');
+        if (sp.classList.contains('open')) {
+          sp.classList.remove('open');
+          document.getElementById('settingsToggle').classList.remove('active');
+        }
+        if (!vp.classList.contains('open')) {
+          vp.classList.add('open');
+          document.getElementById('viewerToggle').classList.add('active');
+        }
       }
     }
 
