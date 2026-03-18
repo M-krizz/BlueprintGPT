@@ -1,8 +1,15 @@
 import json
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
-def build_compliance_report(result):
+def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None) -> Dict:
+	"""Build comprehensive compliance report including Chapter-4 checks.
+
+	Args:
+		result: Layout generation result dict
+		chapter4_check: Optional output from RuleEngine.check_chapter4_compliance()
+	"""
 	metrics = result["metrics"]
 	ontology = result.get("ontology")
 	spec_validation = result.get("spec_validation") or {}
@@ -34,6 +41,19 @@ def build_compliance_report(result):
 		)
 	if ontology is not None:
 		violations.extend(v["message"] for v in ontology.get("violations", []))
+
+	# Add Chapter-4 specific violations if provided
+	chapter4_violations = []
+	if chapter4_check:
+		checks["chapter4_compliant"] = chapter4_check.get("compliant", True)
+		for v in chapter4_check.get("violations", []):
+			chapter4_violations.append({
+				"rule": v.get("rule"),
+				"required": v.get("required"),
+				"actual": v.get("actual"),
+				"message": v.get("message"),
+			})
+			violations.append(v.get("message", str(v)))
 
 	report = {
 		"input": result.get("input_spec", {}),
@@ -81,6 +101,16 @@ def build_compliance_report(result):
 		"bounding_box": result["bounding_box"],
 	}
 
+	# Add Chapter-4 detailed report section
+	if chapter4_check:
+		report["chapter4"] = {
+			"compliant": chapter4_check.get("compliant", True),
+			"plot_bucket": chapter4_check.get("plot_bucket"),
+			"plot_area_sqm": chapter4_check.get("plot_area_sqm"),
+			"violations": chapter4_violations,
+			"checks": chapter4_check.get("checks", {}),
+		}
+
 	if ontology is not None:
 		report["ontology"] = {
 			"reasoner": ontology.get("reasoner"),
@@ -96,6 +126,20 @@ def build_compliance_report(result):
 		report["repair_trace"] = result.get("repair_trace", [])
 		report["generation_summary"] = result.get("generation_summary", {})
 		report["wall_pipeline"] = result.get("wall_pipeline", {})
+
+	return report
+
+
+def format_violation(violation: Dict) -> str:
+	"""Format a Chapter-4 violation for display."""
+	rule = violation.get("rule", "unknown")
+	required = violation.get("required")
+	actual = violation.get("actual")
+	msg = violation.get("message", "")
+
+	if required is not None and actual is not None:
+		return f"[{rule}] Required: {required}, Actual: {actual} — {msg}"
+	return f"[{rule}] {msg}"
 
 	return report
 

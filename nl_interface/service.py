@@ -42,15 +42,58 @@ def blank_current_spec() -> Dict:
     }
 
 
+def _extract_cli_args(text: str) -> Dict:
+    """Extract CLI-style arguments and natural language dimensions from text."""
+    result = {}
+
+    # Match --boundary X,Y or --boundary "X,Y"
+    boundary_match = re.search(r'--boundary\s+["\']?(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)["\']?', text)
+    if boundary_match:
+        result["boundary_size"] = [float(boundary_match.group(1)), float(boundary_match.group(2))]
+
+    # Match natural language: "10x12 meters", "10 by 12 m", "plot 10x12m", "10m x 12m"
+    if "boundary_size" not in result:
+        nl_boundary = re.search(
+            r'(\d+(?:\.\d+)?)\s*(?:m|meters?)?\s*(?:x|by)\s*(\d+(?:\.\d+)?)\s*(?:m|meters?)?',
+            text, re.IGNORECASE
+        )
+        if nl_boundary:
+            result["boundary_size"] = [float(nl_boundary.group(1)), float(nl_boundary.group(2))]
+
+    # Match --entrance-point X,Y or --entrance-point "X,Y"
+    entrance_match = re.search(r'--entrance-point\s+["\']?(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)["\']?', text)
+    if entrance_match:
+        result["entrance_point"] = [float(entrance_match.group(1)), float(entrance_match.group(2))]
+
+    return result
+
+
 def process_user_request(
     user_text: str,
     current_spec: Optional[Dict] = None,
     resolution: Optional[Dict] = None,
 ) -> Dict:
+    print(f"\n[PROCESS_REQUEST] Starting process_user_request")
+    print(f"[PROCESS_REQUEST] User text: '{user_text}'")
+    print(f"[PROCESS_REQUEST] Current spec has {len((current_spec or {}).get('rooms', []))} rooms")
+    print(f"[PROCESS_REQUEST] Resolution provided: {resolution is not None}")
+
     working = normalize_current_spec(current_spec or {})
+    print(f"[PROCESS_REQUEST] After normalization: {len(working.get('rooms', []))} rooms")
+
     extracted = _extract_from_text(user_text)
+    print(f"[PROCESS_REQUEST] Extracted from text: {len(extracted.get('rooms', []))} rooms")
+
     merged = _apply_extracted(working, extracted)
+    print(f"[PROCESS_REQUEST] After merging: {len(merged.get('rooms', []))} rooms")
+
     normalized = normalize_current_spec(merged)
+
+    # Extract CLI-style arguments from text and merge into resolution
+    cli_args = _extract_cli_args(user_text or "")
+    if cli_args:
+        resolution = dict(resolution or {})
+        resolution.update(cli_args)
 
     backend_target = route_backend(normalized)
     validation_errors = list(normalized.pop("_validation_errors", []))
@@ -85,6 +128,14 @@ def process_user_request(
         and not validation_errors
         and backend_spec is not None
     )
+
+    print(f"\n[PROCESS_REQUEST] Backend readiness check:")
+    print(f"  - backend_target: {backend_target}")
+    print(f"  - missing_fields: {missing_fields}")
+    print(f"  - validation_errors: {validation_errors}")
+    print(f"  - backend_spec is not None: {backend_spec is not None}")
+    print(f"  - BACKEND_READY: {backend_ready}")
+    print(f"[PROCESS_REQUEST] Final normalized spec has {len(normalized.get('rooms', []))} rooms\n")
 
     assistant_text = _build_assistant_text(
         current_spec=normalized,
@@ -167,6 +218,9 @@ def _extract_from_text(user_text: str) -> Dict:
     text = " ".join((user_text or "").strip().split())
     lowered = text.lower()
 
+    print(f"\n[EXTRACT_FROM_TEXT] Input: '{text}'")
+    print(f"[EXTRACT_FROM_TEXT] Lowercased: '{lowered}'")
+
     extracted = {
         "plot_type": None,
         "entrance_side": None,
@@ -194,6 +248,8 @@ def _extract_from_text(user_text: str) -> Dict:
 
     extracted["validation_errors"].extend(_find_unsupported_room_labels(lowered))
     extracted["validation_errors"].extend(_find_unsupported_relations(lowered))
+
+    print(f"[EXTRACT_FROM_TEXT] Results: plot_type={extracted['plot_type']}, entrance_side={extracted['entrance_side']}, rooms={len(extracted['rooms'])}")
     return extracted
 
 
@@ -270,7 +326,34 @@ def _extract_entrance_side(text: str) -> Optional[str]:
 
 
 def _extract_rooms(text: str) -> List[Dict]:
+    print(f"\n{'='*80}")
+    print(f"[NL_EXTRACT] Starting room extraction from text: '{text}'")
+    print(f"{'='*80}")
+
     room_counts = Counter()
+
+    # Handle Indian BHK format (e.g., "3BHK" = 3 Bedroom, 1 Hall, 1 Kitchen)
+    bhk_pattern = re.compile(r'\b(\d+)\s*bhk\b', re.IGNORECASE)
+    bhk_matches = list(bhk_pattern.finditer(text))
+
+    if bhk_matches:
+        print(f"[NL_EXTRACT] + Found BHK pattern! Matches: {len(bhk_matches)}")
+    else:
+        print(f"[NL_EXTRACT] - No BHK pattern found in text")
+
+    for match in bhk_matches:
+        num_bedrooms = int(match.group(1))
+        print(f"[NL_EXTRACT] Processing BHK: {match.group(0)} -> {num_bedrooms} bedrooms")
+        room_counts["Bedroom"] = num_bedrooms
+        room_counts["LivingRoom"] = 1  # Hall
+        room_counts["Kitchen"] = 1
+        # Typically includes bathroom(s)
+        if num_bedrooms >= 2:
+            room_counts["Bathroom"] = 2
+        else:
+            room_counts["Bathroom"] = 1
+        print(f"[NL_EXTRACT] BHK extracted rooms: Bedroom={num_bedrooms}, LivingRoom=1, Kitchen=1, Bathroom={room_counts['Bathroom']}")
+
     room_pattern = "|".join(
         sorted(
             {re.escape(label) for labels in ROOM_LABELS.values() for label in labels},
@@ -285,7 +368,11 @@ def _extract_rooms(text: str) -> List[Dict]:
         room_type = _canonical_room_label(match.group("room"))
         if room_type is None:
             continue
-        room_counts[room_type] += _to_count(match.group("count"))
+        # If BHK already set this room type, explicit mention replaces (not adds)
+        if bhk_matches and room_type in room_counts:
+            room_counts[room_type] = _to_count(match.group("count"))
+        else:
+            room_counts[room_type] += _to_count(match.group("count"))
 
     article_regex = re.compile(rf"\b(?:a|an)\s+(?P<room>{room_pattern})\b")
     for match in article_regex.finditer(text):
@@ -294,11 +381,18 @@ def _extract_rooms(text: str) -> List[Dict]:
             continue
         room_counts[room_type] += 1
 
-    return [
+    result = [
         {"type": room_type, "count": room_counts[room_type]}
         for room_type in ALLOWED_ROOM_TYPES
         if room_counts.get(room_type, 0) > 0
     ]
+
+    print(f"\n[NL_EXTRACT] Final extracted rooms ({len(result)} types):")
+    for room in result:
+        print(f"  - {room['type']}: {room['count']}")
+    print(f"{'='*80}\n")
+
+    return result
 
 
 def _extract_adjacency(text: str) -> List[List[str]]:
@@ -506,7 +600,8 @@ def _build_assistant_text(
         for room in current_spec.get("rooms", [])
     ) or "no rooms yet"
 
-    dominant_weight = max(current_spec.get("weights", {}), key=current_spec.get("weights", {}).get)
+    weights = current_spec.get("weights", {})
+    dominant_weight = max(weights, key=weights.get) if weights else "compactness"
     parts = [
         f"Current Spec captures {room_summary} for a {current_spec.get('building_type')} plan."
     ]

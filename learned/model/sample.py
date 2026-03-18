@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter
 from typing import Dict, List, Optional
 
@@ -38,6 +39,21 @@ from learned.data.tokenizer_layout import (
     ROOM_TYPES,
 )
 from learned.model.model import LayoutTransformer, LayoutTransformerConfig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Configuration: Overlap-Aware Logit Processor
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Master switch – default OFF for safe initial rollout; enable via env var
+OVERLAP_PROCESSOR_ENABLED = os.getenv("LEARNED_OVERLAP_PROCESSOR_ENABLED", "false").lower() == "true"
+
+# IoU above this threshold → mask the candidate y2 bin (very conservative default)
+IOU_BLOCK_THRESH = float(os.getenv("OVERLAP_PROCESSOR_IOU_THRESH", "0.8"))
+
+# Also check at x2 position (tail_len==3) with a wider threshold – experimental
+ALSO_CHECK_X2 = os.getenv("OVERLAP_PROCESSOR_CHECK_X2", "false").lower() == "true"
+IOU_BLOCK_THRESH_X2 = float(os.getenv("OVERLAP_PROCESSOR_IOU_THRESH_X2", "0.95"))
 
 
 def _normalize_room_boxes(rooms: List[RoomBox]) -> List[RoomBox]:
@@ -222,6 +238,181 @@ class SpecConstrainedProcessor:
         return logits
 
 
+# ── Overlap-Aware Logit Processor ─────────────────────────────────────────────
+
+class OverlapAwareProcessor:
+    """Logit processor that prevents generating boxes that heavily overlap existing ones.
+
+    Strategy
+    --------
+    Token groups have the fixed structure::
+
+        ROOM_TOKEN  type_tok  x1_bin  y1_bin  x2_bin  y2_bin
+
+    ``tail_len`` = number of tokens emitted **after** the last ROOM_TOKEN.
+
+    * **tail_len == 5** (about to sample ``y2_bin``): we already know
+      ``x1, y1, x2`` for the current room.  For every candidate ``y2_bin``
+      token we compute the IoU of the resulting box against all fully-placed
+      rooms.  Bins whose IoU > ``iou_block_thresh`` are masked.
+
+    * **tail_len == 4** (about to sample ``x2_bin``, optional): check a
+      proxy box ``(x1, y1, cand_x2, 1.0)`` – conservative worst-case height.
+      Uses a stricter threshold; disabled by default.
+
+    Design choices
+    --------------
+    * Conservative default (IoU > 0.8) avoids destroying diversity.
+    * Skips check when no complete room exists yet.
+    * Falls back silently on any parsing error.
+    * Feature-flagged: ``LEARNED_OVERLAP_PROCESSOR_ENABLED=true`` to activate.
+    """
+
+    _TAIL_Y2 = 5   # tail length when about to sample y2_bin
+    _TAIL_X2 = 4   # tail length when about to sample x2_bin (optional)
+
+    def __init__(
+        self,
+        tokenizer: LayoutTokenizer,
+        *,
+        iou_block_thresh: float = IOU_BLOCK_THRESH,
+        also_check_x2: bool = ALSO_CHECK_X2,
+        iou_block_thresh_x2: float = IOU_BLOCK_THRESH_X2,
+    ):
+        self.tok = tokenizer
+        self.iou_block_thresh = iou_block_thresh
+        self.also_check_x2 = also_check_x2
+        self.iou_block_thresh_x2 = iou_block_thresh_x2
+        self.coord_offset = tokenizer.coord_offset
+        self.num_bins = tokenizer.num_bins
+
+    # ── Internal helpers ──────────────────────────────────────────────────────
+
+    def _bin_to_norm(self, b: int) -> float:
+        return b / max(self.num_bins - 1, 1)
+
+    @staticmethod
+    def _iou(x1a: float, y1a: float, x2a: float, y2a: float,
+              x1b: float, y1b: float, x2b: float, y2b: float) -> float:
+        ix1 = max(x1a, x1b); iy1 = max(y1a, y1b)
+        ix2 = min(x2a, x2b); iy2 = min(y2a, y2b)
+        if ix2 <= ix1 or iy2 <= iy1:
+            return 0.0
+        inter = (ix2 - ix1) * (iy2 - iy1)
+        area_a = max(0.0, x2a - x1a) * max(0.0, y2a - y1a)
+        area_b = max(0.0, x2b - x1b) * max(0.0, y2b - y1b)
+        return inter / max(area_a + area_b - inter, 1e-9)
+
+    def _parse_complete_rooms(self, tokens: List[int]) -> List[tuple]:
+        """Return (x1,y1,x2,y2) tuples for every complete room group in *tokens*."""
+        rooms = []
+        i = 0
+        co = self.coord_offset
+        nb = self.num_bins
+        while i < len(tokens):
+            if tokens[i] == ROOM_TOKEN and i + 5 < len(tokens):
+                raw = [tokens[i + k] - co for k in range(2, 6)]
+                if all(0 <= b < nb for b in raw):
+                    x1, y1, x2, y2 = (self._bin_to_norm(b) for b in raw)
+                    if x2 > x1 and y2 > y1:
+                        rooms.append((x1, y1, x2, y2))
+                i += 6
+            else:
+                i += 1
+        return rooms
+
+    def _last_room_idx(self, tokens: List[int]) -> int:
+        for i in range(len(tokens) - 1, -1, -1):
+            if tokens[i] == ROOM_TOKEN:
+                return i
+        return -1
+
+    def _mask_overlap_bins(
+        self,
+        logits: torch.Tensor,
+        existing: List[tuple],
+        x1: float, y1: float,
+        x2: Optional[float],
+        thresh: float,
+    ) -> torch.Tensor:
+        """Mask coordinate bins that produce IoU > thresh with any existing room.
+
+        *x2=None* → x2 position (proxy box with y2=1.0);
+        *x2 given* → y2 position (full box check).
+        """
+        co = self.coord_offset
+        nb = self.num_bins
+        vcab = logits.shape[-1]
+
+        for cand_bin in range(nb):
+            tid = cand_bin + co
+            if tid >= vcab:
+                break
+            if logits[0, tid] == float("-inf"):
+                continue
+
+            v = self._bin_to_norm(cand_bin)
+
+            if x2 is None:           # x2 position
+                cx2, cy2 = v, 1.0
+                if cx2 <= x1:
+                    continue
+            else:                     # y2 position
+                cx2, cy2 = x2, v
+                if cy2 <= y1:
+                    continue
+
+            for (rx1, ry1, rx2, ry2) in existing:
+                if self._iou(x1, y1, cx2, cy2, rx1, ry1, rx2, ry2) > thresh:
+                    logits[0, tid] = float("-inf")
+                    break
+
+        return logits
+
+    # ── Main interface ────────────────────────────────────────────────────────
+
+    def __call__(self, logits: torch.Tensor, seq: torch.Tensor) -> torch.Tensor:
+        tokens = seq.squeeze(0).tolist()
+        room_idx = self._last_room_idx(tokens)
+        if room_idx < 0:
+            return logits
+
+        tail_len = len(tokens) - room_idx - 1
+
+        # ── y2 position ───────────────────────────────────────────────────
+        if tail_len == self._TAIL_Y2:
+            try:
+                co = self.coord_offset
+                x1 = self._bin_to_norm(tokens[room_idx + 2] - co)
+                y1 = self._bin_to_norm(tokens[room_idx + 3] - co)
+                x2 = self._bin_to_norm(tokens[room_idx + 4] - co)
+            except IndexError:
+                return logits
+            if x2 <= x1:
+                return logits
+            existing = self._parse_complete_rooms(tokens[:room_idx])
+            if not existing:
+                return logits
+            return self._mask_overlap_bins(logits, existing, x1, y1, x2, self.iou_block_thresh)
+
+        # ── x2 position (optional, conservative) ─────────────────────────
+        if self.also_check_x2 and tail_len == self._TAIL_X2:
+            try:
+                co = self.coord_offset
+                x1 = self._bin_to_norm(tokens[room_idx + 2] - co)
+                y1 = self._bin_to_norm(tokens[room_idx + 3] - co)
+            except IndexError:
+                return logits
+            existing = self._parse_complete_rooms(tokens[:room_idx])
+            if not existing:
+                return logits
+            return self._mask_overlap_bins(logits, existing, x1, y1, None, self.iou_block_thresh_x2)
+
+        return logits
+
+
+# ── Spec-Constrained Sampling ────────────────────────────────────────────────
+
 def constrained_sample_layout(
     model: LayoutTransformer,
     tokenizer: LayoutTokenizer,
@@ -235,6 +426,7 @@ def constrained_sample_layout(
     max_rooms: int = 20,
     min_x_bin_gap: int = 1,
     min_y_bin_gap: int = 1,
+    overlap_processor: bool = OVERLAP_PROCESSOR_ENABLED,
     device: str = "cpu",
 ) -> List[RoomBox]:
     """Sample a layout with spec-constrained decoding.
@@ -245,13 +437,27 @@ def constrained_sample_layout(
         Must contain ``"rooms"`` list with ``{"type": ...}`` entries.
         Room counts are inferred from the list (e.g., two ``"Bedroom"``
         entries → model must generate exactly two bedrooms).
+    overlap_processor : bool
+        When True (and ``LEARNED_OVERLAP_PROCESSOR_ENABLED=true``), chain
+        :class:`OverlapAwareProcessor` after the spec constraints to mask
+        coordinate bins that would produce IoU > ``IOU_BLOCK_THRESH`` with
+        already-placed rooms.
     """
     room_types = [r["type"] for r in spec.get("rooms", [])]
     prompt = build_prompt(tokenizer, building_type, room_types).to(device)
 
-    processor = SpecConstrainedProcessor(
+    spec_proc = SpecConstrainedProcessor(
         tokenizer, spec, max_rooms=max_rooms,
     )
+    if overlap_processor:
+        overlap_proc = OverlapAwareProcessor(tokenizer)
+        def _chained(logits: torch.Tensor, seq: torch.Tensor) -> torch.Tensor:
+            logits = spec_proc(logits, seq)
+            logits = overlap_proc(logits, seq)
+            return logits
+        processor = _chained
+    else:
+        processor = spec_proc
 
     output = model.generate(
         prompt,
@@ -267,7 +473,7 @@ def constrained_sample_layout(
         type_token_end=tokenizer.type_token_end,
         coord_token_start=tokenizer.coord_offset,
         coord_token_end=tokenizer.coord_token_end,
-        min_rooms=sum(processor.required.values()) if processor.required else 1,
+        min_rooms=sum(spec_proc.required.values()) if spec_proc.required else 1,
         min_x_bin_gap=min_x_bin_gap,
         min_y_bin_gap=min_y_bin_gap,
     )
@@ -313,6 +519,9 @@ def main():
                     help="Minimum x2-x1 gap in coordinate bins for constrained sampling")
     ap.add_argument("--min-y-bin-gap", type=int, default=1,
                     help="Minimum y2-y1 gap in coordinate bins for constrained sampling")
+    ap.add_argument("--overlap-processor", action="store_true",
+                    default=OVERLAP_PROCESSOR_ENABLED,
+                    help="Enable overlap-aware logit processor during constrained decoding")
     ap.add_argument("--device", default="cpu")
     args = ap.parse_args()
 
@@ -336,6 +545,7 @@ def main():
                 top_k=args.top_k,
                 min_x_bin_gap=args.min_x_bin_gap,
                 min_y_bin_gap=args.min_y_bin_gap,
+                overlap_processor=args.overlap_processor,
                 device=args.device,
             )
         else:

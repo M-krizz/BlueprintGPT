@@ -357,3 +357,193 @@ def suggest_window_segments(
     for w in windows:
         uniq[_canonical(w)] = w
     return list(uniq.values())
+
+
+# ─── Lighting & Ventilation Compliance (Chapter-4) ─────────────────────────
+
+# Default window height assumed for opening area estimation (meters)
+ASSUMED_WINDOW_HEIGHT = 1.2
+
+
+def _room_polygon_area(polygon: Sequence[Point]) -> float:
+    """Compute polygon area using shoelace formula."""
+    if not polygon or len(polygon) < 3:
+        return 0.0
+    area = 0.0
+    n = len(polygon)
+    for i in range(n):
+        x1, y1 = polygon[i]
+        x2, y2 = polygon[(i + 1) % n]
+        area += x1 * y2 - x2 * y1
+    return abs(area) / 2.0
+
+
+def compute_window_opening_area(window_seg: Seg, height: float = ASSUMED_WINDOW_HEIGHT) -> float:
+    """Estimate window opening area from segment length and assumed height."""
+    length = _seg_len(window_seg)
+    return round(length * height, 3)
+
+
+def check_lighting_ventilation_compliance(
+    rooms: Sequence,
+    window_segments: Sequence[Seg],
+    *,
+    opening_ratio_min: float = 0.10,
+    kitchen_window_min_sqm: float = 1.0,
+    bath_wc_vent_min_sqm: float = 0.37,
+    max_lighting_depth_m: float = 7.5,
+    assumed_window_height: float = ASSUMED_WINDOW_HEIGHT,
+    room_window_attach_tol: float = 0.35,
+) -> dict:
+    """Check rooms against Chapter-4 lighting & ventilation requirements.
+
+    Returns a dict with:
+      - compliant: bool (True if all requirements met)
+      - rooms: list of per-room compliance details
+      - violations: list of violation messages
+      - warnings: list of warning messages (soft failures)
+
+    Requirements (Chapter-4):
+      - Habitable rooms & kitchens: opening area >= 10% of floor area
+      - Kitchen: window opening >= 1.0 sq.m (to exterior, not shaft)
+      - Bathroom/WC: ventilation opening >= 0.37 sq.m
+      - No portion considered lighted if > 7.5m from opening
+    """
+    violations = []
+    warnings = []
+    room_details = []
+
+    # Build mapping of windows to rooms
+    window_list = list(window_segments or [])
+
+    for room in rooms:
+        polygon = getattr(room, "polygon", None)
+        room_type = getattr(room, "room_type", "")
+        room_name = getattr(room, "name", str(room))
+
+        if not polygon or len(polygon) < 3:
+            room_details.append({
+                "name": room_name,
+                "type": room_type,
+                "floor_area": 0,
+                "required_opening": 0,
+                "achieved_opening": 0,
+                "compliant": True,
+                "note": "No polygon defined",
+            })
+            continue
+
+        floor_area = _room_polygon_area(polygon)
+        room_edges = _iter_edges(polygon)
+
+        # Find windows attached to this room
+        attached_windows = []
+        for w in window_list:
+            wm = _midpoint(w)
+            if any(_point_to_seg_dist(wm, e) <= room_window_attach_tol for e in room_edges):
+                attached_windows.append(w)
+
+        # Compute total window opening area
+        total_opening = sum(
+            compute_window_opening_area(w, assumed_window_height)
+            for w in attached_windows
+        )
+
+        # Determine requirements based on room type
+        is_habitable = room_type in {
+            "Bedroom", "LivingRoom", "DrawingRoom", "DiningRoom", "Study", "Habitable"
+        }
+        is_kitchen = room_type == "Kitchen"
+        is_bath_wc = room_type in {"Bathroom", "WC", "BathWC"}
+
+        required_opening = 0.0
+        requirement_source = ""
+
+        if is_habitable or is_kitchen:
+            required_opening = floor_area * opening_ratio_min
+            requirement_source = f"10% of floor area ({floor_area:.2f} sq.m)"
+            if is_kitchen:
+                required_opening = max(required_opening, kitchen_window_min_sqm)
+                requirement_source = f"max(10% floor area, {kitchen_window_min_sqm} sq.m)"
+        elif is_bath_wc:
+            required_opening = bath_wc_vent_min_sqm
+            requirement_source = f"min {bath_wc_vent_min_sqm} sq.m vent"
+
+        compliant = total_opening >= required_opening - 0.01
+
+        detail = {
+            "name": room_name,
+            "type": room_type,
+            "floor_area": round(floor_area, 2),
+            "required_opening": round(required_opening, 3),
+            "achieved_opening": round(total_opening, 3),
+            "window_count": len(attached_windows),
+            "requirement_source": requirement_source,
+            "compliant": compliant,
+        }
+
+        if not compliant and required_opening > 0:
+            deficit = required_opening - total_opening
+            if is_habitable or is_kitchen:
+                violations.append(
+                    f"{room_name} ({room_type}): opening area {total_opening:.2f} sq.m < required {required_opening:.2f} sq.m"
+                )
+            elif is_bath_wc:
+                # Bath/WC can use shaft - record as warning
+                warnings.append(
+                    f"{room_name} ({room_type}): vent opening {total_opening:.2f} sq.m < required {required_opening:.2f} sq.m (may use shaft)"
+                )
+            detail["deficit"] = round(deficit, 3)
+
+        # Check lighting depth (only for habitable rooms)
+        if is_habitable and attached_windows:
+            # Simplified check: compute max distance from any room point to nearest window
+            # For now, use room bounding box diagonal as proxy
+            bbox = _bbox(polygon)
+            room_width = bbox[2] - bbox[0]
+            room_depth = bbox[3] - bbox[1]
+            max_dim = max(room_width, room_depth)
+            if max_dim > max_lighting_depth_m:
+                warnings.append(
+                    f"{room_name}: room dimension {max_dim:.1f}m > max lighting depth {max_lighting_depth_m}m"
+                )
+                detail["lighting_depth_warning"] = True
+
+        room_details.append(detail)
+
+    return {
+        "compliant": len(violations) == 0,
+        "rooms": room_details,
+        "violations": violations,
+        "warnings": warnings,
+        "parameters": {
+            "opening_ratio_min": opening_ratio_min,
+            "kitchen_window_min_sqm": kitchen_window_min_sqm,
+            "bath_wc_vent_min_sqm": bath_wc_vent_min_sqm,
+            "max_lighting_depth_m": max_lighting_depth_m,
+            "assumed_window_height": assumed_window_height,
+        },
+    }
+
+
+def summarize_lv_compliance(rooms: Sequence, window_segments: Sequence[Seg], **kwargs) -> dict:
+    """Return a summary dict suitable for inclusion in compliance reports."""
+    full = check_lighting_ventilation_compliance(rooms, window_segments, **kwargs)
+
+    total_floor = sum(r["floor_area"] for r in full["rooms"])
+    total_opening = sum(r["achieved_opening"] for r in full["rooms"])
+    rooms_checked = len(full["rooms"])
+    rooms_compliant = sum(1 for r in full["rooms"] if r["compliant"])
+
+    return {
+        "compliant": full["compliant"],
+        "rooms_checked": rooms_checked,
+        "rooms_compliant": rooms_compliant,
+        "total_floor_area_sqm": round(total_floor, 2),
+        "total_opening_area_sqm": round(total_opening, 3),
+        "opening_ratio_achieved": round(total_opening / total_floor, 3) if total_floor > 0 else 0,
+        "violation_count": len(full["violations"]),
+        "warning_count": len(full["warnings"]),
+        "violations": full["violations"],
+        "warnings": full["warnings"],
+    }
