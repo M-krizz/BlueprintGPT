@@ -237,7 +237,26 @@ def _build_circulation_from_boundary(boundary_poly, entrance_point, strategy_nam
     if len(points) < 2:
         return Polygon(), points, width, False
 
-    circulation = _orthogonal_strip_buffer(points, width).intersection(boundary_poly)
+    strip = _orthogonal_strip_buffer(points, width)
+    
+    # 1. Keep corridor strictly internal so it's surrounded by rooms
+    inward_poly = boundary_poly.buffer(-0.8)
+    if inward_poly.is_empty:
+        inward_poly = boundary_poly.buffer(-0.2)
+    if inward_poly.is_empty:
+        inward_poly = boundary_poly
+        
+    core_circulation = strip.intersection(inward_poly)
+    
+    # 2. Add an entrance stem so it touches the outer boundary precisely at the entrance
+    c = boundary_poly.centroid
+    centroid = (c.x, c.y)
+    entrance = entrance_point if entrance_point else centroid
+    stem = LineString([entrance, centroid]).buffer(width / 2.0, cap_style=2, join_style=2).intersection(boundary_poly)
+    
+    from shapely.ops import unary_union
+    circulation = unary_union([core_circulation, stem])
+
     connected = True
     if entrance_point is not None and not circulation.is_empty:
         connected = Point(entrance_point).distance(circulation) <= width
