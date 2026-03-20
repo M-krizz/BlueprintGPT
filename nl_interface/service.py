@@ -7,6 +7,7 @@ import re
 from collections import Counter
 from typing import Dict, List, Optional
 
+from utils.processing_logger import ProcessingLogger
 from nl_interface.adapter import build_backend_spec, route_backend, validate_resolution
 from nl_interface.constants import (
     ALLOWED_BUILDING_TYPE,
@@ -51,10 +52,10 @@ def _extract_cli_args(text: str) -> Dict:
     if boundary_match:
         result["boundary_size"] = [float(boundary_match.group(1)), float(boundary_match.group(2))]
 
-    # Match natural language: "10x12 meters", "10 by 12 m", "plot 10x12m", "10m x 12m"
+    # Match natural language: "10x12 meters", "10 by 12 m", "plot 10×12m", "10m x 12m", "20×25"
     if "boundary_size" not in result:
         nl_boundary = re.search(
-            r'(\d+(?:\.\d+)?)\s*(?:m|meters?)?\s*(?:x|by)\s*(\d+(?:\.\d+)?)\s*(?:m|meters?)?',
+            r'(\d+(?:\.\d+)?)\s*(?:m|meters?)?\s*(?:x|×|by)\s*(\d+(?:\.\d+)?)\s*(?:m|meters?)?',
             text, re.IGNORECASE
         )
         if nl_boundary:
@@ -73,19 +74,16 @@ def process_user_request(
     current_spec: Optional[Dict] = None,
     resolution: Optional[Dict] = None,
 ) -> Dict:
-    print(f"\n[PROCESS_REQUEST] Starting process_user_request")
-    print(f"[PROCESS_REQUEST] User text: '{user_text}'")
-    print(f"[PROCESS_REQUEST] Current spec has {len((current_spec or {}).get('rooms', []))} rooms")
-    print(f"[PROCESS_REQUEST] Resolution provided: {resolution is not None}")
+    ProcessingLogger.logger.debug(f"process_user_request: text='{user_text[:50]}...', spec_rooms={len((current_spec or {}).get('rooms', []))}")
 
     working = normalize_current_spec(current_spec or {})
-    print(f"[PROCESS_REQUEST] After normalization: {len(working.get('rooms', []))} rooms")
+    ProcessingLogger.logger.debug(f"After normalization: {len(working.get('rooms', []))} rooms")
 
     extracted = _extract_from_text(user_text)
-    print(f"[PROCESS_REQUEST] Extracted from text: {len(extracted.get('rooms', []))} rooms")
+    ProcessingLogger.logger.debug(f"Extracted from text: {len(extracted.get('rooms', []))} rooms")
 
     merged = _apply_extracted(working, extracted)
-    print(f"[PROCESS_REQUEST] After merging: {len(merged.get('rooms', []))} rooms")
+    ProcessingLogger.logger.debug(f"After merging: {len(merged.get('rooms', []))} rooms")
 
     normalized = normalize_current_spec(merged)
 
@@ -129,13 +127,7 @@ def process_user_request(
         and backend_spec is not None
     )
 
-    print(f"\n[PROCESS_REQUEST] Backend readiness check:")
-    print(f"  - backend_target: {backend_target}")
-    print(f"  - missing_fields: {missing_fields}")
-    print(f"  - validation_errors: {validation_errors}")
-    print(f"  - backend_spec is not None: {backend_spec is not None}")
-    print(f"  - BACKEND_READY: {backend_ready}")
-    print(f"[PROCESS_REQUEST] Final normalized spec has {len(normalized.get('rooms', []))} rooms\n")
+    ProcessingLogger.logger.debug(f"Backend readiness: ready={backend_ready}, target={backend_target}, missing={missing_fields}")
 
     assistant_text = _build_assistant_text(
         current_spec=normalized,
@@ -218,8 +210,7 @@ def _extract_from_text(user_text: str) -> Dict:
     text = " ".join((user_text or "").strip().split())
     lowered = text.lower()
 
-    print(f"\n[EXTRACT_FROM_TEXT] Input: '{text}'")
-    print(f"[EXTRACT_FROM_TEXT] Lowercased: '{lowered}'")
+    ProcessingLogger.logger.debug(f"_extract_from_text: '{text[:60]}...'")
 
     extracted = {
         "plot_type": None,
@@ -249,7 +240,7 @@ def _extract_from_text(user_text: str) -> Dict:
     extracted["validation_errors"].extend(_find_unsupported_room_labels(lowered))
     extracted["validation_errors"].extend(_find_unsupported_relations(lowered))
 
-    print(f"[EXTRACT_FROM_TEXT] Results: plot_type={extracted['plot_type']}, entrance_side={extracted['entrance_side']}, rooms={len(extracted['rooms'])}")
+    ProcessingLogger.logger.debug(f"Extraction result: plot_type={extracted['plot_type']}, entrance_side={extracted['entrance_side']}, rooms={len(extracted['rooms'])}")
     return extracted
 
 
@@ -326,9 +317,7 @@ def _extract_entrance_side(text: str) -> Optional[str]:
 
 
 def _extract_rooms(text: str) -> List[Dict]:
-    print(f"\n{'='*80}")
-    print(f"[NL_EXTRACT] Starting room extraction from text: '{text}'")
-    print(f"{'='*80}")
+    ProcessingLogger.logger.debug(f"Starting room extraction from: '{text[:50]}...'")
 
     room_counts = Counter()
 
@@ -337,13 +326,11 @@ def _extract_rooms(text: str) -> List[Dict]:
     bhk_matches = list(bhk_pattern.finditer(text))
 
     if bhk_matches:
-        print(f"[NL_EXTRACT] + Found BHK pattern! Matches: {len(bhk_matches)}")
-    else:
-        print(f"[NL_EXTRACT] - No BHK pattern found in text")
+        ProcessingLogger.logger.debug(f"Found BHK pattern: {len(bhk_matches)} matches")
 
     for match in bhk_matches:
         num_bedrooms = int(match.group(1))
-        print(f"[NL_EXTRACT] Processing BHK: {match.group(0)} -> {num_bedrooms} bedrooms")
+        ProcessingLogger.logger.debug(f"BHK: {match.group(0)} -> {num_bedrooms} bedrooms")
         room_counts["Bedroom"] = num_bedrooms
         room_counts["LivingRoom"] = 1  # Hall
         room_counts["Kitchen"] = 1
@@ -352,7 +339,6 @@ def _extract_rooms(text: str) -> List[Dict]:
             room_counts["Bathroom"] = 2
         else:
             room_counts["Bathroom"] = 1
-        print(f"[NL_EXTRACT] BHK extracted rooms: Bedroom={num_bedrooms}, LivingRoom=1, Kitchen=1, Bathroom={room_counts['Bathroom']}")
 
     room_pattern = "|".join(
         sorted(
@@ -387,10 +373,7 @@ def _extract_rooms(text: str) -> List[Dict]:
         if room_counts.get(room_type, 0) > 0
     ]
 
-    print(f"\n[NL_EXTRACT] Final extracted rooms ({len(result)} types):")
-    for room in result:
-        print(f"  - {room['type']}: {room['count']}")
-    print(f"{'='*80}\n")
+    ProcessingLogger.logger.debug(f"Extracted {len(result)} room types: {[(r['type'], r['count']) for r in result]}")
 
     return result
 

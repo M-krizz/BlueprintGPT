@@ -167,7 +167,7 @@ class TestParseCompleteRooms:
 class TestLastRoomIdx:
 
     def test_no_room_token_returns_minus_one(self):
-        assert _proc()._last_room_idx([1, 2, 3, 4]) == -1
+        assert _proc()._last_room_idx([1, 2, 4, 5]) == -1
 
     def test_single_room_token(self):
         tokens = [5, 6, ROOM_TOKEN, 4, 37, 37, 37, 37]

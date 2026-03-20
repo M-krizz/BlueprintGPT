@@ -1,10 +1,21 @@
 from __future__ import annotations
 
 import json
+import os
 from functools import partial
 from pathlib import Path
 from typing import List, Literal, Optional
 from uuid import uuid4
+
+# Load environment variables from .env file if available
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"[ENV] Loaded environment from {env_path}")
+except ImportError:
+    pass  # dotenv not installed, use system env vars
 
 import anyio
 from fastapi import FastAPI, HTTPException, Header, Request
@@ -21,9 +32,20 @@ from nl_interface.gemini_adapter import (
     extract_spec_from_nl,
     chat_response as gemini_chat,
     is_available as gemini_available,
+    process_message as process_nl_message,
+    INTENT_DESIGN,
+    INTENT_CORRECTION,
+    INTENT_QUESTION,
+    INTENT_CONVERSATION,
 )
 from nl_interface.explainer import explain_ranked_designs, generate_comparison_explanation
 from nl_interface.correction_handler import handle_correction_request
+
+# Import centralized configuration and logging
+from config.constants import (
+    RoomTypes, DefaultDimensions, IntentTypes, APIDefaults
+)
+from utils.processing_logger import ProcessingLogger, DetailedLogger, logger
 
 
 class RoomSpec(BaseModel):
@@ -226,6 +248,96 @@ def _artifact_urls(artifact_paths: Optional[dict]) -> dict:
     return urls
 
 
+def _explain_generation_error(error_str: str, spec: dict = None, resolution: dict = None) -> str:
+    """
+    Convert technical error messages into user-friendly explanations with suggestions.
+
+    This function is designed to never fail - it will always return a helpful message.
+    """
+    try:
+        spec = spec or {}
+        resolution = resolution or {}
+
+        rooms = spec.get("rooms", []) if isinstance(spec, dict) else []
+        room_count = sum(r.get("count", 1) for r in rooms) if rooms else 0
+
+        # Safely get boundary dimensions
+        boundary = resolution.get("boundary_size", (12, 15)) if isinstance(resolution, dict) else (12, 15)
+        if not isinstance(boundary, (tuple, list)) or len(boundary) < 2:
+            boundary = (12, 15)
+
+        try:
+            plot_area = float(boundary[0]) * float(boundary[1])
+        except (TypeError, ValueError):
+            plot_area = 180
+
+        # Build room summary
+        room_summary = ", ".join([f"{r.get('count', 1)} {r.get('type')}" for r in rooms]) if rooms else "the requested rooms"
+
+        explanation = "I wasn't able to generate a floor plan that meets all quality requirements. Let me explain:\n\n"
+
+        error_lower = error_str.lower() if error_str else ""
+
+        # Travel distance issue
+        if "travel distance" in error_lower:
+            explanation += "**Problem: Rooms are too far apart**\n"
+            if room_count > 0:
+                explanation += f"With {room_count} rooms in a {boundary[0]}m x {boundary[1]}m plot ({plot_area:.0f} sq.m), "
+            explanation += "the walking distance between important rooms (like bedroom to bathroom) would be too long.\n\n"
+
+        # Adjacency satisfaction issue
+        if "adjacency" in error_lower:
+            explanation += "**Problem: Room placement conflicts**\n"
+            explanation += "The rooms couldn't be arranged to satisfy the expected relationships "
+            explanation += "(e.g., kitchen near living room, bathrooms near bedrooms).\n\n"
+
+        # Quality gate rejection
+        if "quality gate" in error_lower or "rejected all variants" in error_lower:
+            explanation += "**What this means:** The system tried multiple layout configurations but none met the minimum quality standards for a functional home.\n\n"
+
+        # Provide suggestions based on the issue
+        explanation += "**Suggestions to fix this:**\n\n"
+
+        # Check if plot might be too small
+        min_area_per_room = 12  # rough estimate: 12 sq.m per room minimum
+        if room_count > 0 and plot_area < room_count * min_area_per_room:
+            min_dim = int((room_count * min_area_per_room) ** 0.5) + 2
+            explanation += f"1. **Increase plot size** - Your {room_count} rooms need approximately {room_count * min_area_per_room} sq.m minimum. "
+            explanation += f"Current plot is only {plot_area:.0f} sq.m. Try setting dimensions to at least {min_dim}m x {min_dim}m in Settings.\n\n"
+        else:
+            explanation += f"1. **Try a larger plot** - Increase the plot dimensions in Settings (currently {boundary[0]}m x {boundary[1]}m).\n\n"
+
+        # Suggest fewer rooms
+        if room_count > 5:
+            explanation += f"2. **Reduce room count** - You requested {room_count} rooms ({room_summary}). Try a simpler configuration like '2BHK' first.\n\n"
+        else:
+            explanation += "2. **Simplify requirements** - Try removing optional rooms or reducing the number of bathrooms.\n\n"
+
+        explanation += "3. **Remove adjacency constraints** - If you specified rooms that must be near each other, try without those requirements first.\n\n"
+
+        explanation += "**Would you like to try again with:**\n"
+        explanation += "- A larger plot size?\n"
+        explanation += "- Fewer rooms?\n"
+        explanation += "- A standard configuration like '2BHK' or '3BHK'?\n\n"
+        explanation += "Just let me know what you'd like to adjust!"
+
+        return explanation
+
+    except Exception as e:
+        # Ultimate fallback - should never happen, but just in case
+        print(f"[ERROR] _explain_generation_error failed: {e}")
+        return f"""I wasn't able to generate a floor plan for your request.
+
+**What happened:** {error_str}
+
+**Suggestions:**
+1. Try a larger plot size (click the Settings gear icon)
+2. Request fewer rooms (e.g., try '2BHK' instead of '3BHK')
+3. Remove specific room placement requirements
+
+Would you like to try again with different settings?"""
+
+
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(body: GenerateRequest):
     try:
@@ -374,35 +486,42 @@ class SessionExportResponse(BaseModel):
 @app.post("/conversation/message", response_model=ConversationMessageResponse)
 async def conversation_message(body: ConversationMessageRequest):
     """
-    Handle a conversation message with multi-turn support.
+    Handle a conversation message with multi-turn support and intelligent intent routing.
 
     This endpoint:
-    1. Maintains conversation state across turns
-    2. Extracts spec from natural language (using Gemini if available)
-    3. Generates multiple ranked designs when spec is complete
-    4. Provides AI explanations for each design
+    1. Classifies user intent (design, question, correction, conversation)
+    2. Routes to appropriate handler based on intent
+    3. Maintains conversation state across turns
+    4. Generates designs when spec is complete
+    5. Provides AI explanations for each design
     """
-    print(f"\n{'#'*100}")
-    print(f"[CONVERSATION] Received message endpoint request")
-    print(f"[CONVERSATION] Session ID: {body.session_id}")
-    print(f"[CONVERSATION] User message: '{body.message}'")
-    print(f"[CONVERSATION] Boundary: {body.boundary}")
-    print(f"[CONVERSATION] Generate flag: {body.generate}")
-    print(f"{'#'*100}\n")
+    # Log user interaction with centralized logging
+    ProcessingLogger.log_user_interaction(
+        body.message,
+        body.session_id,
+        body.boundary.dict() if body.boundary else None,
+        body.entrance_point,
+        body.generate
+    )
 
     # Get or create session
     session = conversation_manager.get_or_create_session(body.session_id)
-    print(f"[CONVERSATION] Session state: {session.state}")
-    print(f"[CONVERSATION] Current spec rooms: {session.current_spec.get('rooms', [])}")
+
+    if DetailedLogger.enabled():
+        DetailedLogger.log_detailed_state("SESSION", {
+            "state": session.state,
+            "current_rooms": session.current_spec.get('rooms', [])
+        })
 
     # Add user message to history
     session.add_message("user", body.message)
 
-    # Set resolution if provided
+    # Set initial resolution from frontend if provided
+    resolution = None
     if body.boundary:
         resolution = {
             "boundary_size": (body.boundary.width, body.boundary.height),
-            "area_unit": "sq.m",
+            "area_unit": APIDefaults.DEFAULT_AREA_UNIT,
         }
         if body.boundary_polygon:
             resolution["boundary_polygon"] = body.boundary_polygon
@@ -410,20 +529,226 @@ async def conversation_message(body: ConversationMessageRequest):
             resolution["entrance_point"] = tuple(body.entrance_point)
         session.set_resolution(resolution)
 
-    # Extract spec from message using Gemini
-    print(f"\n[CONVERSATION] Extracting spec from message using Gemini...")
-    extracted = extract_spec_from_nl(body.message, session.get_history(limit=10))
-    print(f"[CONVERSATION] Gemini extraction result:")
-    print(f"  - intent: {extracted.get('intent')}")
-    print(f"  - rooms: {extracted.get('rooms')}")
-    print(f"  - adjacency: {extracted.get('adjacency')}")
-    print(f"  - plot_type: {extracted.get('plot_type')}")
-    print(f"  - style_hints: {extracted.get('style_hints')}")
+    # Build context for intent classification
+    context = {
+        "state": session.state,
+        "num_designs": len(session.designs),
+        "spec": session.current_spec,
+        "selected_design": session.selected_design_index,
+        "current_rooms": [{"type": r.get("type"), "name": r.get("name")} for r in session.current_spec.get("rooms", [])],
+    }
 
-    # Check if this is a correction request
-    if extracted.get("intent") == "correction":
-        # Handle as correction
-        response_text = "I see you want to make changes. Please use the correction endpoint or specify which design to modify."
+    # Use the new intelligent message processing with intent classification
+    nl_result = process_nl_message(body.message, context, session.get_history(limit=10))
+
+    intent = nl_result.get("intent", IntentTypes.CONVERSATION)
+    confidence = nl_result.get('intent_confidence', 0)
+    should_generate = nl_result.get('should_generate', False)
+
+    # Log intent classification
+    ProcessingLogger.log_intent_classification(
+        intent, confidence,
+        nl_result.get('intent_reason', ''),
+        nl_result.get('design_keywords'),
+        nl_result.get('question_type')
+    )
+
+    if intent == IntentTypes.DESIGN:
+        extracted_spec = nl_result.get("spec", {})
+        rooms = extracted_spec.get("rooms", [])
+        total_rooms = sum(r.get('count', 1) for r in rooms)
+
+        ProcessingLogger.log_spec_extraction(
+            rooms, total_rooms,
+            extracted_spec.get('plot_type'),
+            extracted_spec.get('entrance_side'),
+            extracted_spec.get('adjacency')
+        )
+
+    # Check if natural language contained dimension override
+    if intent == INTENT_DESIGN and nl_result.get("should_generate"):
+        # Extract any CLI args that might override frontend settings
+        from nl_interface.service import _extract_cli_args
+        cli_overrides = _extract_cli_args(body.message)
+
+        # Log dimension processing for debugging
+        frontend_dims = resolution.get('boundary_size') if resolution else None
+        cli_dims = cli_overrides.get("boundary_size")
+        ProcessingLogger.logger.debug(f"Frontend dims: {frontend_dims}, CLI override: {cli_dims}")
+
+        if cli_overrides.get("boundary_size"):
+            ProcessingLogger.logger.info(f"Applied dimension override: {cli_overrides['boundary_size']} (from natural language)")
+            if resolution:
+                resolution["boundary_size"] = tuple(cli_overrides["boundary_size"])
+            else:
+                resolution = {
+                    "boundary_size": tuple(cli_overrides["boundary_size"]),
+                    "area_unit": "sq.m",
+                }
+            if body.entrance_point:
+                resolution["entrance_point"] = tuple(body.entrance_point)
+            session.set_resolution(resolution)
+        else:
+            ProcessingLogger.logger.debug(f"Using frontend dimensions: {resolution.get('boundary_size') if resolution else 'Default will be applied'}")
+
+    # Handle based on intent
+    if intent == INTENT_DESIGN and nl_result.get("should_generate") and body.generate:
+        ProcessingLogger.logger.info("Starting design generation pipeline")
+
+        # Extract and update spec
+        extracted = nl_result.get("spec", {})
+        ProcessingLogger.logger.debug(f"Extracted spec: {extracted}")
+        session.update_spec(extracted)
+
+        ProcessingLogger.logger.debug(f"Current session spec: {session.current_spec}")
+        ProcessingLogger.logger.debug(f"Current resolution: {session.resolution}")
+
+        # Auto-dimension selection if no dimensions specified
+        current_resolution = session.resolution or {}
+        boundary_size = current_resolution.get("boundary_size")
+
+        if not boundary_size or boundary_size == (12.0, 15.0):  # Default frontend dimensions
+            from nl_interface.auto_dimension_selector import recommend_dimensions, explain_dimension_choice
+
+            rooms = session.current_spec.get("rooms", [])
+            if rooms:
+                ProcessingLogger.logger.info("No custom dimensions specified - calculating optimal size")
+
+                width, height = recommend_dimensions(rooms, building_type="residential")
+                explanation = explain_dimension_choice(rooms, width, height)
+                ProcessingLogger.logger.info(explanation)
+
+                # Update resolution with auto-calculated dimensions
+                if current_resolution:
+                    current_resolution["boundary_size"] = (width, height)
+                else:
+                    current_resolution = {
+                        "boundary_size": (width, height),
+                        "area_unit": "sq.m",
+                    }
+
+                if body.entrance_point:
+                    current_resolution["entrance_point"] = tuple(body.entrance_point)
+                else:
+                    # Auto-center entrance on the shorter side
+                    if width <= height:
+                        current_resolution["entrance_point"] = (width / 2, 0)  # Bottom center
+                    else:
+                        current_resolution["entrance_point"] = (0, height / 2)  # Left center
+
+                session.set_resolution(current_resolution)
+                ProcessingLogger.logger.debug(f"Updated resolution: {current_resolution}")
+            else:
+                ProcessingLogger.logger.warning(f"No rooms specified - using default dimensions {boundary_size}")
+
+        # Check if spec is complete via process_user_request
+        nl_response = process_user_request(
+            body.message,
+            current_spec=session.current_spec,
+            resolution=session.resolution,
+        )
+
+        spec_complete = nl_response.get("backend_ready", False)
+        missing = nl_response.get("missing_fields", [])
+        backend_spec = nl_response.get("backend_spec")
+
+        ProcessingLogger.log_generation_pipeline(
+            spec_complete=spec_complete,
+            missing_fields=missing,
+            backend_target=nl_response.get('backend_target'),
+            backend_ready=bool(backend_spec)
+        )
+
+        if spec_complete:
+            response_text = nl_result.get("response", "Generating your floor plan designs...")
+            session.add_message("assistant", response_text)
+
+            # Generate designs
+            try:
+                session.clear_designs()
+                output_prefix = f"conv_{session.session_id[:8]}_{uuid4().hex[:4]}"
+
+                execution = await anyio.to_thread.run_sync(
+                    partial(
+                        execute_response,
+                        nl_response,
+                        output_dir="outputs",
+                        output_prefix=output_prefix,
+                    )
+                )
+
+                # Add design with explanation
+                design_data = dict(execution)
+                design_data["artifact_urls"] = _artifact_urls(design_data.get("artifact_paths"))
+                session.add_design(design_data, rank=1)
+
+                # Generate explanation
+                explained_designs = explain_ranked_designs([design_data], session.current_spec)
+                comparison = generate_comparison_explanation(explained_designs)
+
+                # Log successful generation
+                ProcessingLogger.log_generation_result(success=True, design_count=len(explained_designs))
+
+                # Add assistant response
+                final_response = f"I've generated {len(explained_designs)} design(s) for you.\n\n{comparison}"
+                session.add_message("assistant", final_response)
+
+                return ConversationMessageResponse(
+                    session_id=session.session_id,
+                    assistant_text=final_response,
+                    state=session.state,
+                    spec_complete=True,
+                    current_spec=session.current_spec,
+                    designs=[d for d in explained_designs],
+                    comparison=comparison,
+                    needs_info=None,
+                )
+
+            except Exception as exc:
+                # Parse error and provide user-friendly explanation
+                error_str = str(exc)
+                ProcessingLogger.log_generation_result(
+                    success=False,
+                    error_msg=error_str
+                )
+                ProcessingLogger.logger.debug(f"Generation error spec: {session.current_spec}")
+                ProcessingLogger.logger.debug(f"Generation error resolution: {session.resolution}")
+
+                error_explanation = _explain_generation_error(error_str, session.current_spec, session.resolution)
+                ProcessingLogger.logger.debug(f"User-friendly explanation generated ({len(error_explanation)} chars)")
+
+                session.add_message("assistant", error_explanation)
+                return ConversationMessageResponse(
+                    session_id=session.session_id,
+                    assistant_text=error_explanation,
+                    state=session.state,
+                    spec_complete=False,
+                    current_spec=session.current_spec,
+                    designs=None,
+                    comparison=None,
+                    needs_info=["generation_error"],
+                )
+        else:
+            # Need more info for design
+            response_text = nl_result.get("response", "")
+            if missing:
+                response_text += f"\n\nI still need: {', '.join(missing)}"
+            session.add_message("assistant", response_text)
+
+            return ConversationMessageResponse(
+                session_id=session.session_id,
+                assistant_text=response_text,
+                state=session.state,
+                spec_complete=False,
+                current_spec=session.current_spec,
+                designs=None,
+                comparison=None,
+                needs_info=missing or None,
+            )
+
+    elif intent == INTENT_CORRECTION:
+        # Handle correction request
+        response_text = nl_result.get("response", "I see you want to make changes. Please specify which design to modify.")
         session.add_message("assistant", response_text)
         return ConversationMessageResponse(
             session_id=session.session_id,
@@ -436,94 +761,12 @@ async def conversation_message(body: ConversationMessageRequest):
             needs_info=["design_selection"],
         )
 
-    # Update spec with extracted data
-    print(f"\n[CONVERSATION] Updating session spec with extracted data...")
-    session.update_spec(extracted)
-    print(f"[CONVERSATION] Updated spec rooms: {session.current_spec.get('rooms', [])}")
-
-    # Check if spec is complete
-    print(f"\n[CONVERSATION] Calling process_user_request to check completeness...")
-    nl_response = process_user_request(
-        body.message,
-        current_spec=session.current_spec,
-        resolution=session.resolution,
-    )
-
-    spec_complete = nl_response.get("backend_ready", False)
-    missing = nl_response.get("missing_fields", [])
-
-    print(f"[CONVERSATION] process_user_request result:")
-    print(f"  - backend_ready: {spec_complete}")
-    print(f"  - missing_fields: {missing}")
-    print(f"  - backend_target: {nl_response.get('backend_target')}")
-    print(f"  - rooms in nl_response: {nl_response.get('rooms', [])}")
-
-    # Generate response text
-    if spec_complete and body.generate:
-        response_text = "I have all the information I need. Generating your floor plan designs..."
-        session.add_message("assistant", response_text)
-
-        # Generate designs
-        try:
-            session.clear_designs()
-            output_prefix = f"conv_{session.session_id[:8]}_{uuid4().hex[:4]}"
-
-            execution = await anyio.to_thread.run_sync(
-                partial(
-                    execute_response,
-                    nl_response,
-                    output_dir="outputs",
-                    output_prefix=output_prefix,
-                )
-            )
-
-            # Add design with explanation
-            design_data = dict(execution)
-            design_data["artifact_urls"] = _artifact_urls(design_data.get("artifact_paths"))
-            session.add_design(design_data, rank=1)
-
-            # Generate explanation
-            explained_designs = explain_ranked_designs([design_data], session.current_spec)
-            comparison = generate_comparison_explanation(explained_designs)
-
-            # Add assistant response
-            final_response = f"I've generated {len(explained_designs)} design(s) for you.\n\n{comparison}"
-            session.add_message("assistant", final_response)
-
-            return ConversationMessageResponse(
-                session_id=session.session_id,
-                assistant_text=final_response,
-                state=session.state,
-                spec_complete=True,
-                current_spec=session.current_spec,
-                designs=[d for d in explained_designs],
-                comparison=comparison,
-                needs_info=None,
-            )
-
-        except Exception as exc:
-            error_text = f"I encountered an error while generating designs: {str(exc)}"
-            session.add_message("assistant", error_text)
-            return ConversationMessageResponse(
-                session_id=session.session_id,
-                assistant_text=error_text,
-                state=session.state,
-                spec_complete=False,
-                current_spec=session.current_spec,
-                designs=None,
-                comparison=None,
-                needs_info=["generation_error"],
-            )
-
     else:
-        # Need more information
-        context = session.get_context()
-        if gemini_available():
+        # INTENT_QUESTION or INTENT_CONVERSATION - use dynamic response
+        response_text = nl_result.get("response", "")
+        if not response_text:
+            # Fallback to gemini_chat if process_message didn't generate response
             response_text = gemini_chat(body.message, context, session.get_history(limit=10))
-        else:
-            response_text = nl_response.get("assistant_text", "")
-            if missing:
-                response_text += f"\n\nI still need: {', '.join(missing)}"
 
         session.add_message("assistant", response_text)
 
@@ -535,7 +778,7 @@ async def conversation_message(body: ConversationMessageRequest):
             current_spec=session.current_spec,
             designs=None,
             comparison=None,
-            needs_info=missing or None,
+            needs_info=None,
         )
 
 
@@ -703,3 +946,9 @@ async def status():
 
 
 # Development entrypoint: uvicorn api.server:app --reload
+
+if __name__ == "__main__":
+    import uvicorn
+    print(f"Starting BlueprintGPT server...")
+    print(f"Model checkpoint: {os.getenv('LAYOUT_MODEL_CHECKPOINT', 'learned/model/checkpoints/improved_v1.pt')}")
+    uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True)

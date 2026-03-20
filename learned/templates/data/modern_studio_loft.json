@@ -1,0 +1,65 @@
+{
+  "name": "Modern Studio Loft",
+  "style": "studio",
+  "building_type": "apartment",
+  "room_count_range": [3, 4],
+  "total_area_range": [35.0, 55.0],
+  "description": "Contemporary studio with open kitchen and dedicated workspace",
+  "tags": ["modern", "loft-style", "workspace", "open-plan"],
+  "quality_score": 87.0,
+  "usage_count": 0,
+  "rooms": [
+    {
+      "room_type": "living room",
+      "zone": "living",
+      "min_area_ratio": 0.40,
+      "max_area_ratio": 0.55,
+      "aspect_ratio_range": [1.5, 2.8],
+      "preferred_position": [0.6, 0.6],
+      "position_tolerance": 0.25,
+      "adjacency_preferences": ["kitchen", "bedroom"],
+      "separation_requirements": ["bathroom"],
+      "required": true,
+      "priority": 1
+    },
+    {
+      "room_type": "kitchen",
+      "zone": "service",
+      "min_area_ratio": 0.18,
+      "max_area_ratio": 0.28,
+      "aspect_ratio_range": [1.2, 2.5],
+      "preferred_position": [0.2, 0.4],
+      "position_tolerance": 0.2,
+      "adjacency_preferences": ["living room"],
+      "separation_requirements": ["bathroom"],
+      "required": true,
+      "priority": 2
+    },
+    {
+      "room_type": "bathroom",
+      "zone": "service",
+      "min_area_ratio": 0.10,
+      "max_area_ratio": 0.18,
+      "aspect_ratio_range": [0.8, 1.6],
+      "preferred_position": [0.1, 0.8],
+      "position_tolerance": 0.2,
+      "adjacency_preferences": [],
+      "separation_requirements": ["kitchen", "living room"],
+      "required": true,
+      "priority": 4
+    },
+    {
+      "room_type": "office",
+      "zone": "work",
+      "min_area_ratio": 0.08,
+      "max_area_ratio": 0.15,
+      "aspect_ratio_range": [0.8, 1.8],
+      "preferred_position": [0.8, 0.3],
+      "position_tolerance": 0.3,
+      "adjacency_preferences": ["living room"],
+      "separation_requirements": ["bathroom"],
+      "required": false,
+      "priority": 3
+    }
+  ]
+}

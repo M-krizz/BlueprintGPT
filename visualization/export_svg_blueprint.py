@@ -82,6 +82,32 @@ def _room_bbox(room) -> Tuple[float, float, float, float]:
     return min(xs), min(ys), max(xs), max(ys)
 
 
+def _polygon_path(polygon, ox: float, oy: float) -> str:
+    """Convert a polygon (list of [x, y] points) to SVG path string with offset."""
+    if polygon is None:
+        return ""
+
+    # Handle Shapely polygon objects
+    if hasattr(polygon, 'exterior'):
+        coords = list(polygon.exterior.coords)
+    else:
+        coords = polygon
+
+    if not coords:
+        return ""
+
+    parts = []
+    for i, (x, y) in enumerate(coords):
+        px = ox + _px(x)
+        py = oy + _px(y)
+        if i == 0:
+            parts.append(f"M{px:.1f},{py:.1f}")
+        else:
+            parts.append(f"L{px:.1f},{py:.1f}")
+    parts.append("Z")  # Close the path
+    return " ".join(parts)
+
+
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  SVG building blocks
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -103,6 +129,8 @@ def _svg_root(width_px: float, height_px: float) -> Element:
 
 def _add_defs(svg: Element, boundary_polygon):
     defs = SubElement(svg, "defs")
+
+    # ── Existing patterns ──────────────────────────────────────────────────
     # Hatch pattern for corridors
     patt = SubElement(defs, "pattern", {
         "id": "corridor-hatch",
@@ -116,6 +144,7 @@ def _add_defs(svg: Element, boundary_polygon):
         "d": "M0,8 l8,-8 M-2,2 l4,-4 M6,10 l4,-4",
         "stroke": "#bdbdbd", "stroke-width": "0.5",
     })
+
     # Drop shadow
     filt = SubElement(defs, "filter", {"id": "shadow", "x": "-2%", "y": "-2%",
                                         "width": "104%", "height": "104%"})
@@ -123,15 +152,422 @@ def _add_defs(svg: Element, boundary_polygon):
         "dx": "1", "dy": "1", "stdDeviation": "2", "flood-opacity": "0.15",
     })
 
+    # ── Symbol Library ─────────────────────────────────────────────────────
 
-def _polygon_path(polygon, ox: float, oy: float) -> str:
-    """Convert polygon [(x,y),...] to SVG path d string."""
-    parts = []
-    for i, (x, y) in enumerate(polygon):
-        cmd = "M" if i == 0 else "L"
-        parts.append(f"{cmd}{ox + _px(x):.1f},{oy + _px(y):.1f}")
-    parts.append("Z")
-    return " ".join(parts)
+    # Door swing arc symbol (reusable)
+    door_symbol = SubElement(defs, "symbol", {
+        "id": "door-swing",
+        "viewBox": "0 0 90 90",
+        "overflow": "visible"
+    })
+    SubElement(door_symbol, "path", {
+        "d": "M 0,0 Q 90,0 90,90",
+        "fill": "none",
+        "stroke": "#78909c",
+        "stroke-width": "0.8",
+        "stroke-dasharray": "3,2",
+    })
+
+    # Double door symbol
+    double_door = SubElement(defs, "symbol", {
+        "id": "door-double",
+        "viewBox": "0 0 180 90",
+        "overflow": "visible"
+    })
+    SubElement(double_door, "path", {
+        "d": "M 0,0 Q 90,0 90,90 M 180,0 Q 90,0 90,90",
+        "fill": "none",
+        "stroke": "#78909c",
+        "stroke-width": "0.8",
+        "stroke-dasharray": "3,2",
+    })
+
+    # Window symbol (double line)
+    window_symbol = SubElement(defs, "symbol", {
+        "id": "window",
+        "viewBox": "0 0 100 10",
+        "overflow": "visible"
+    })
+    SubElement(window_symbol, "rect", {
+        "x": "0", "y": "3", "width": "100", "height": "4",
+        "fill": "none", "stroke": "#2196f3", "stroke-width": "1.5"
+    })
+    SubElement(window_symbol, "line", {
+        "x1": "50", "y1": "3", "x2": "50", "y2": "7",
+        "stroke": "#2196f3", "stroke-width": "1"
+    })
+
+    # ── Furniture Symbols ──────────────────────────────────────────────────
+
+    # Double bed (1.5m x 2.0m)
+    bed_double = SubElement(defs, "symbol", {
+        "id": "bed-double",
+        "viewBox": "0 0 120 160",  # 1.5m x 2.0m at 80px/m
+        "overflow": "visible"
+    })
+    SubElement(bed_double, "rect", {
+        "x": "5", "y": "5", "width": "110", "height": "150",
+        "fill": "#e0e0e0", "stroke": "#666", "stroke-width": "1"
+    })
+    SubElement(bed_double, "rect", {  # Headboard
+        "x": "0", "y": "0", "width": "120", "height": "20",
+        "fill": "#bdbdbd", "stroke": "#666", "stroke-width": "1"
+    })
+
+    # Single bed (0.9m x 2.0m)
+    bed_single = SubElement(defs, "symbol", {
+        "id": "bed-single",
+        "viewBox": "0 0 72 160",  # 0.9m x 2.0m at 80px/m
+        "overflow": "visible"
+    })
+    SubElement(bed_single, "rect", {
+        "x": "5", "y": "5", "width": "62", "height": "150",
+        "fill": "#e0e0e0", "stroke": "#666", "stroke-width": "1"
+    })
+    SubElement(bed_single, "rect", {  # Headboard
+        "x": "0", "y": "0", "width": "72", "height": "20",
+        "fill": "#bdbdbd", "stroke": "#666", "stroke-width": "1"
+    })
+
+    # Kitchen counter with sink
+    kitchen_counter = SubElement(defs, "symbol", {
+        "id": "kitchen-counter",
+        "viewBox": "0 0 240 48",  # 3.0m x 0.6m counter
+        "overflow": "visible"
+    })
+    SubElement(kitchen_counter, "rect", {
+        "x": "0", "y": "0", "width": "240", "height": "48",
+        "fill": "#f5f5f5", "stroke": "#666", "stroke-width": "1"
+    })
+    # Sink
+    SubElement(kitchen_counter, "circle", {
+        "cx": "60", "cy": "24", "r": "15",
+        "fill": "none", "stroke": "#2196f3", "stroke-width": "1"
+    })
+    # Stove burners
+    for i, x in enumerate([140, 170, 200, 230]):
+        SubElement(kitchen_counter, "circle", {
+            "cx": str(x), "cy": "24", "r": "8",
+            "fill": "none", "stroke": "#ff5722", "stroke-width": "1"
+        })
+
+    # Dining table (1.2m x 0.8m)
+    dining_table = SubElement(defs, "symbol", {
+        "id": "dining-table",
+        "viewBox": "0 0 96 64",  # 1.2m x 0.8m
+        "overflow": "visible"
+    })
+    SubElement(dining_table, "rect", {
+        "x": "0", "y": "0", "width": "96", "height": "64",
+        "fill": "#ddd", "stroke": "#666", "stroke-width": "1"
+    })
+
+    # Chair (0.5m x 0.5m)
+    chair = SubElement(defs, "symbol", {
+        "id": "chair",
+        "viewBox": "0 0 40 40",  # 0.5m x 0.5m
+        "overflow": "visible"
+    })
+    SubElement(chair, "rect", {
+        "x": "5", "y": "5", "width": "30", "height": "30",
+        "fill": "#f0f0f0", "stroke": "#666", "stroke-width": "1"
+    })
+    SubElement(chair, "rect", {  # Backrest
+        "x": "5", "y": "0", "width": "30", "height": "10",
+        "fill": "#e0e0e0", "stroke": "#666", "stroke-width": "1"
+    })
+
+    # Sofa (2.0m x 0.9m)
+    sofa = SubElement(defs, "symbol", {
+        "id": "sofa",
+        "viewBox": "0 0 160 72",  # 2.0m x 0.9m
+        "overflow": "visible"
+    })
+    SubElement(sofa, "rect", {
+        "x": "0", "y": "10", "width": "160", "height": "52",
+        "fill": "#e8e8e8", "stroke": "#666", "stroke-width": "1"
+    })
+    SubElement(sofa, "rect", {  # Backrest
+        "x": "0", "y": "0", "width": "160", "height": "20",
+        "fill": "#d0d0d0", "stroke": "#666", "stroke-width": "1"
+    })
+
+    # Toilet
+    toilet = SubElement(defs, "symbol", {
+        "id": "toilet",
+        "viewBox": "0 0 56 72",  # 0.7m x 0.9m
+        "overflow": "visible"
+    })
+    SubElement(toilet, "rect", {
+        "x": "8", "y": "0", "width": "40", "height": "50",
+        "fill": "white", "stroke": "#2196f3", "stroke-width": "1"
+    })
+    SubElement(toilet, "rect", {  # Tank
+        "x": "12", "y": "52", "width": "32", "height": "20",
+        "fill": "white", "stroke": "#2196f3", "stroke-width": "1"
+    })
+
+    # Bathtub (1.7m x 0.7m)
+    bathtub = SubElement(defs, "symbol", {
+        "id": "bathtub",
+        "viewBox": "0 0 136 56",  # 1.7m x 0.7m
+        "overflow": "visible"
+    })
+    SubElement(bathtub, "rect", {
+        "x": "0", "y": "0", "width": "136", "height": "56",
+        "fill": "white", "stroke": "#2196f3", "stroke-width": "1.5"
+    })
+
+    # Wardrobe (1.2m x 0.6m)
+    wardrobe = SubElement(defs, "symbol", {
+        "id": "wardrobe",
+        "viewBox": "0 0 96 48",  # 1.2m x 0.6m
+        "overflow": "visible"
+    })
+    SubElement(wardrobe, "rect", {
+        "x": "0", "y": "0", "width": "96", "height": "48",
+        "fill": "#f8f8f8", "stroke": "#666", "stroke-width": "1"
+    })
+    # Door handles
+    SubElement(wardrobe, "circle", {
+        "cx": "24", "cy": "24", "r": "2",
+        "fill": "#666"
+    })
+    SubElement(wardrobe, "circle", {
+        "cx": "72", "cy": "24", "r": "2",
+        "fill": "#666"
+    })
+
+    # ── Directional arrow for layout orientation ──────────────────────────
+    north_arrow = SubElement(defs, "symbol", {
+        "id": "north-arrow",
+        "viewBox": "0 0 24 40",
+        "overflow": "visible"
+    })
+    SubElement(north_arrow, "path", {
+        "d": "M 12,4 L 8,16 L 12,12 L 16,16 Z",
+        "fill": "#333", "stroke": "#333", "stroke-width": "1"
+    })
+    SubElement(north_arrow, "text", {
+        "x": "12", "y": "32", "text-anchor": "middle",
+        "font-family": "Arial", "font-size": "8", "fill": "#333"
+    })
+    north_text = SubElement(north_arrow, "tspan")
+    north_text.text = "N"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Symbol Usage Helper Functions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _use_symbol(g: Element, symbol_id: str, x: float, y: float,
+                rotation: float = 0, scale: float = 1.0, **attrs) -> Element:
+    """Place a symbol from the library at specified coordinates.
+
+    Parameters
+    ----------
+    symbol_id : str
+        ID of the symbol to use (e.g., "bed-double", "kitchen-counter")
+    x, y : float
+        Position in SVG coordinates (pixels)
+    rotation : float
+        Rotation angle in degrees
+    scale : float
+        Scaling factor
+    """
+    transform_parts = [f"translate({x:.1f},{y:.1f})"]
+    if rotation != 0:
+        transform_parts.append(f"rotate({rotation})")
+    if scale != 1.0:
+        transform_parts.append(f"scale({scale})")
+
+    use_attrs = {
+        "href": f"#{symbol_id}",
+        "transform": " ".join(transform_parts)
+    }
+    use_attrs.update(attrs)
+
+    return SubElement(g, "use", use_attrs)
+
+
+def _place_furniture_in_room(g: Element, room, ox: float, oy: float,
+                           furniture_enabled: bool = True):
+    """Automatically place appropriate furniture in a room based on room type."""
+    if not furniture_enabled or not room.polygon or len(room.polygon) < 3:
+        return
+
+    # Calculate room bounds and center
+    xs = [p[0] for p in room.polygon]
+    ys = [p[1] for p in room.polygon]
+    room_left, room_right = min(xs), max(xs)
+    room_top, room_bottom = min(ys), max(ys)
+    room_width = room_right - room_left
+    room_height = room_bottom - room_top
+    center_x = (room_left + room_right) / 2
+    center_y = (room_top + room_bottom) / 2
+
+    # Convert to SVG coordinates
+    svg_center_x = ox + _px(center_x)
+    svg_center_y = oy + _px(center_y)
+    svg_left = ox + _px(room_left)
+    svg_top = oy + _px(room_top)
+    svg_width = _px(room_width)
+    svg_height = _px(room_height)
+
+    room_type = room.room_type
+
+    if room_type == "Bedroom":
+        # Place bed along longest wall, wardrobe on opposite side
+        if room_width > room_height:  # Horizontal layout
+            # Bed along top wall
+            bed_x = svg_center_x - 60  # Half bed width (120px / 2)
+            bed_y = svg_top + 10
+            _use_symbol(g, "bed-double", bed_x, bed_y)
+
+            # Wardrobe along bottom wall
+            if svg_height > 100:  # Room tall enough
+                wardrobe_x = svg_center_x - 48  # Half wardrobe width
+                wardrobe_y = svg_top + svg_height - 58  # 48px height + margin
+                _use_symbol(g, "wardrobe", wardrobe_x, wardrobe_y)
+        else:  # Vertical layout
+            # Bed along left wall
+            bed_x = svg_left + 10
+            bed_y = svg_center_y - 80  # Half bed height
+            _use_symbol(g, "bed-double", bed_x, bed_y)
+
+            # Wardrobe along right wall if room is wide enough
+            if svg_width > 150:
+                wardrobe_x = svg_left + svg_width - 58
+                wardrobe_y = svg_center_y - 24
+                _use_symbol(g, "wardrobe", wardrobe_x, wardrobe_y, rotation=90)
+
+    elif room_type == "Kitchen":
+        # Place counter along longest wall
+        if room_width > room_height and svg_width > 200:  # Horizontal kitchen
+            counter_x = svg_center_x - 120  # Half counter width
+            counter_y = svg_top + 10
+            _use_symbol(g, "kitchen-counter", counter_x, counter_y)
+        elif svg_height > 150:  # Vertical kitchen
+            counter_x = svg_left + 10
+            counter_y = svg_center_y - 24
+            _use_symbol(g, "kitchen-counter", counter_x, counter_y, rotation=90)
+
+    elif room_type == "LivingRoom" or room_type == "DrawingRoom":
+        # Place sofa and possibly dining table
+        if svg_width > 180 and svg_height > 100:
+            # Sofa against one wall
+            sofa_x = svg_center_x - 80  # Half sofa width
+            sofa_y = svg_top + 20
+            _use_symbol(g, "sofa", sofa_x, sofa_y)
+
+            # Dining table if room is large enough
+            if svg_width > 250 and svg_height > 150:
+                table_x = svg_center_x - 48  # Half table width
+                table_y = svg_top + svg_height - 84  # Table height + margin
+                _use_symbol(g, "dining-table", table_x, table_y)
+
+                # Chairs around table
+                for i, (dx, dy) in enumerate([(-60, -20), (60, -20), (-60, 44), (60, 44)]):
+                    if svg_left + dx + 20 > svg_left and svg_top + table_y + dy + 20 > svg_top:
+                        _use_symbol(g, "chair", table_x + dx, table_y + dy)
+
+    elif room_type == "DiningRoom":
+        # Dining table with chairs
+        if svg_width > 120 and svg_height > 100:
+            table_x = svg_center_x - 48
+            table_y = svg_center_y - 32
+            _use_symbol(g, "dining-table", table_x, table_y)
+
+            # Chairs around table
+            for i, (dx, dy) in enumerate([(-60, -20), (60, -20), (-60, 44), (60, 44)]):
+                chair_x = table_x + dx
+                chair_y = table_y + dy
+                # Check bounds
+                if (chair_x > svg_left + 10 and chair_x + 40 < svg_left + svg_width - 10 and
+                    chair_y > svg_top + 10 and chair_y + 40 < svg_top + svg_height - 10):
+                    _use_symbol(g, "chair", chair_x, chair_y)
+
+    elif room_type == "Bathroom" or room_type == "WC":
+        # Place toilet, and bathtub if space allows
+        if svg_width > 60 and svg_height > 80:
+            # Toilet in corner
+            toilet_x = svg_left + 10
+            toilet_y = svg_top + 10
+            _use_symbol(g, "toilet", toilet_x, toilet_y)
+
+            # Bathtub if room is large enough
+            if svg_width > 150 and svg_height > 100:
+                tub_x = svg_left + svg_width - 146  # 136px width + margin
+                tub_y = svg_top + 10
+                _use_symbol(g, "bathtub", tub_x, tub_y)
+
+
+def _enhanced_draw_door(g: Element, door, ox: float, oy: float, use_symbols: bool = True):
+    """Enhanced door rendering with optional symbol library usage."""
+    if door.segment is None:
+        return
+
+    (sx1, sy1), (sx2, sy2) = door.segment
+    px1 = ox + _px(sx1)
+    py1 = oy + _px(sy1)
+    px2 = ox + _px(sx2)
+    py2 = oy + _px(sy2)
+
+    # White gap (erase wall)
+    SubElement(g, "line", {
+        "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
+        "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
+        "stroke": "white", "stroke-width": str(WALL_WIDTH + 2),
+    })
+
+    # Door leaf lines
+    SubElement(g, "line", {
+        "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
+        "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
+        "stroke": "#37474f", "stroke-width": str(DOOR_WIDTH_PX),
+    })
+
+    if use_symbols:
+        # Use symbol for door swing arc
+        door_len = math.hypot(px2 - px1, py2 - py1)
+        if door_len >= 2:
+            # Determine rotation angle
+            dx = px2 - px1
+            dy = py2 - py1
+            angle = math.degrees(math.atan2(dy, dx))
+
+            # Check if it's wide enough for double door
+            if door_len > 120:  # > 1.5m door width
+                _use_symbol(g, "door-double", px1, py1, rotation=angle,
+                           scale=door_len/180)
+            else:
+                _use_symbol(g, "door-swing", px1, py1, rotation=angle,
+                           scale=door_len/90)
+    else:
+        # Fallback to original arc drawing
+        door_len = math.hypot(px2 - px1, py2 - py1)
+        if door_len < 2:
+            return
+        r = door_len
+        dx = px2 - px1
+        dy = py2 - py1
+
+        if abs(dy) > abs(dx):
+            arc_x = px1 + r
+            arc_y = py1
+        else:
+            arc_x = px1
+            arc_y = py1 - r
+
+        SubElement(g, "path", {
+            "d": f"M{px2:.1f},{py2:.1f} A{r:.1f},{r:.1f} 0 0 1 {arc_x:.1f},{arc_y:.1f}",
+            "fill": "none",
+            "stroke": "#78909c",
+            "stroke-width": "0.8",
+            "stroke-dasharray": "3,2",
+        })
+
+
 
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -611,6 +1047,10 @@ def render_svg_blueprint(
     window_gap_eps: float = 0.08,
     min_overlap_ratio: float = 0.8,
     show_room_dim_tags: bool = True,
+    # ── New symbol library parameters ──────────────────────────────────────
+    furniture_enabled: bool = False,
+    use_symbol_library: bool = True,
+    show_north_arrow: bool = True,
 ) -> str:
     """Render a Building into a professional SVG blueprint string.
 
@@ -620,6 +1060,14 @@ def render_svg_blueprint(
         Draw a light 1 m metric grid inside the boundary.
     merge_walls : bool
         Use the wall-merge engine so shared walls are drawn once.
+    furniture_enabled : bool
+        Automatically place furniture symbols in rooms based on room type.
+        Includes beds, sofas, kitchen counters, dining tables, toilets, etc.
+    use_symbol_library : bool
+        Use reusable SVG symbols for doors and furniture instead of inline SVG.
+        Reduces file size and enables consistent styling.
+    show_north_arrow : bool
+        Display a north arrow symbol for orientation reference.
     """
     units_cfg = resolve_render_units(unit=unit, wall_snap_step=wall_snap_step)
     wall_snap_step = units_cfg.wall_snap_step
@@ -708,7 +1156,18 @@ def render_svg_blueprint(
     # Doors (on top of walls â€” carve gap + draw leaf + arc)
     g_doors = SubElement(svg, "g", {"id": "doors"})
     for door in building.doors:
-        _draw_door(g_doors, door, ox, oy)
+        _enhanced_draw_door(g_doors, door, ox, oy, use_symbols=use_symbol_library)
+
+    # ── Furniture layer (optional) ─────────────────────────────────────────
+    if furniture_enabled:
+        g_furniture = SubElement(svg, "g", {"id": "furniture"})
+        for room in building.rooms:
+            _place_furniture_in_room(g_furniture, room, ox, oy, furniture_enabled=True)
+
+    # ── North arrow (optional) ─────────────────────────────────────────────
+    if show_north_arrow:
+        g_compass = SubElement(svg, "g", {"id": "compass"})
+        _use_symbol(g_compass, "north-arrow", width_px - LEGEND_W - 30, 30)
 
     # Overall boundary dimension strings
     g_dims = SubElement(svg, "g", {"id": "boundary-dims"})

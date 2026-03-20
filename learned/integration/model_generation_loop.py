@@ -20,15 +20,24 @@ Main entry point
 from __future__ import annotations
 
 import copy
+import os
+import logging
 from collections import Counter
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 from learned.model.sample import load_model, sample_layout, constrained_sample_layout
+from learned.model.model_cache import cached_load_model, get_cache_stats
+from learned.monitoring import log_generation_quality
+from learned.templates import find_layout_template, apply_layout_template
 from learned.integration.learned_to_building_adapter import adapt_generated_layout_to_building
 from learned.integration.prerank import prerank_samples
 from learned.integration.repair_gate import (
     validate_and_repair_generated_layout,
     evaluate_variant,
+    RepairReport,
 )
 from generator.ranking import _score_variant
 
@@ -118,6 +127,8 @@ def generate_best_layout_from_model(
     pre_rank_top_m: int = 3,
     pre_rank_gap_tolerance: float = 0.05,
     pre_rank_center_distance: float = 0.25,
+    use_templates: Optional[bool] = None,
+    template_threshold: float = 70.0,
 ) -> Tuple[Optional[Dict], Dict]:
     """
     Sample up to *max_attempts* layouts, repair each, keep top *K*, return best.
@@ -153,9 +164,9 @@ def generate_best_layout_from_model(
     building_type = spec.get("building_type", occupancy)
     room_types = [r["type"] for r in spec.get("rooms", [])]
 
-    # ── Load model if needed ──────────────────────────────────────────────
+    # ── Load model if needed (using cache for performance) ──────────────
     if model is None or tokenizer is None:
-        model, tokenizer = load_model(checkpoint_path, device=device)
+        model, tokenizer = cached_load_model(checkpoint_path, device=device)
 
     _sampler = sampler or sample_layout
 
@@ -184,6 +195,82 @@ def generate_best_layout_from_model(
         "collapse_severities": [],  # Track severity scores
         "final_best_was_jittered": False,  # Did the final best candidate get jitter?
     }
+
+    # ── Template-based generation (optional fast path) ─────────────────────────
+    template_used = None
+    if use_templates is None:
+        use_templates = os.getenv("LAYOUT_USE_TEMPLATES", "false").lower() == "true"
+
+    if use_templates:
+        try:
+            # Find best matching template
+            template = find_layout_template(spec)
+            if template:
+                compatibility = template.calculate_compatibility(spec)
+                diagnostics["template_compatibility"] = compatibility
+
+                if compatibility >= template_threshold:
+                    try:
+                        from shapely.geometry import Polygon
+
+                        # Convert boundary to polygon for template engine
+                        boundary_polygon = Polygon(boundary_poly)
+
+                        # Generate layout using template
+                        template_layout = apply_layout_template(template, boundary_polygon, spec)
+
+                        # Convert template layout to format expected by pipeline
+                        template_rooms = []
+                        for room_data in template_layout["rooms"]:
+                            x1, y1, x2, y2 = room_data["bounds"]
+                            # Create RoomBox-like structure
+                            room_box = {
+                                "type": room_data["type"],
+                                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+                                "area": room_data["area"]
+                            }
+                            template_rooms.append(room_box)
+
+                        if template_rooms:
+                            # Try to adapt the template rooms to Building format
+                            try:
+                                adapted_building = adapt_generated_layout_to_building(
+                                    decoded=template_rooms,
+                                    boundary_polygon=boundary_poly,
+                                    entrance_point=entrance,
+                                    spec=spec,
+                                )
+
+                                # Create template candidate
+                                template_candidate = {
+                                    "raw_rooms": template_rooms,
+                                    "building": adapted_building,
+                                    "raw_valid": True,
+                                    "index": -1,  # Special index for templates
+                                    "adjacency_proxy": 0.8,  # Templates have good adjacency by design
+                                    "template_source": template.name,
+                                }
+
+                                raw_candidates.append(template_candidate)
+                                template_used = template.name
+                                raw_valid_count += 1
+
+                                diagnostics["template_used"] = template.name
+                                diagnostics["template_quality"] = template.quality_score
+
+                                logger.info(f"Generated template candidate '{template.name}' (quality: {template.quality_score}, compatibility: {compatibility:.1f}%)")
+
+                            except Exception as e:
+                                logger.warning(f"Template adaptation failed: {e}")
+
+                    except ImportError:
+                        logger.warning("Shapely not available for template generation")
+                    except Exception as e:
+                        logger.warning(f"Template generation error: {e}")
+
+        except Exception as e:
+            logger.warning(f"Template system error: {e}")
+            diagnostics["template_error"] = str(e)
 
     # ── Stage A: sample + raw validity + collect for pre-rank ───────────────
     for attempt in range(max_attempts):
@@ -301,7 +388,7 @@ def generate_best_layout_from_model(
         adjacency_proxy = raw.get("adjacency_proxy", 0.0)
 
         # ── Repair gate ───────────────────────────────────────────────────
-        repaired, violations, status, repair_trace = validate_and_repair_generated_layout(
+        repaired, violations, status, repair_trace, repair_report = validate_and_repair_generated_layout(
             building,
             boundary_polygon=boundary_poly,
             entrance_point=entrance,
@@ -329,6 +416,7 @@ def generate_best_layout_from_model(
             "breakdown": breakdown,
             "metrics": metrics,
             "repair_trace": repair_trace,
+            "repair_report": repair_report,
         }
         candidates.append(cand)
 

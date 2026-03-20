@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,31 +8,71 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+    /* ═══════════════════════════════════════════════════════════════════════════
+       THEME VARIABLES
+       ═══════════════════════════════════════════════════════════════════════════ */
     :root {
+      --transition-theme: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    [data-theme="dark"] {
       --bg-primary: #0f0f0f;
       --bg-secondary: #1a1a1a;
       --bg-tertiary: #212121;
-      --bg-message-user: #2a2a2a;
+      --bg-sidebar: #171717;
+      --bg-message-user: #2f2f2f;
       --bg-message-bot: transparent;
       --bg-input: #1e1e1e;
+      --bg-hover: #2a2a2a;
       --border: #2e2e2e;
+      --border-light: #3a3a3a;
       --border-focus: #4a9eff;
       --text-primary: #e8e8e8;
       --text-secondary: #a0a0a0;
       --text-muted: #6b6b6b;
       --accent: #4a9eff;
       --accent-hover: #6cb3ff;
+      --accent-light: rgba(74, 158, 255, 0.1);
       --success: #34d399;
       --warn: #fbbf24;
       --danger: #f87171;
-      --gradient-accent: linear-gradient(135deg, #4a9eff, #7c5cfc);
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-      --radius: 12px;
-      --radius-lg: 20px;
-      --radius-full: 9999px;
+      --code-bg: #1e1e1e;
+      --scrollbar-track: transparent;
+      --scrollbar-thumb: #3a3a3a;
     }
+
+    [data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f7f7f8;
+      --bg-tertiary: #ececf1;
+      --bg-sidebar: #f9f9f9;
+      --bg-message-user: #f4f4f4;
+      --bg-message-bot: transparent;
+      --bg-input: #ffffff;
+      --bg-hover: #f0f0f0;
+      --border: #e5e5e5;
+      --border-light: #d9d9d9;
+      --border-focus: #4a9eff;
+      --text-primary: #1a1a1a;
+      --text-secondary: #6b6b6b;
+      --text-muted: #9ca3af;
+      --accent: #4a9eff;
+      --accent-hover: #3b8de8;
+      --accent-light: rgba(74, 158, 255, 0.1);
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --code-bg: #f4f4f4;
+      --scrollbar-track: #f0f0f0;
+      --scrollbar-thumb: #c1c1c1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       BASE STYLES
+       ═══════════════════════════════════════════════════════════════════════════ */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
@@ -40,49 +80,187 @@
       background: var(--bg-primary);
       color: var(--text-primary);
       display: flex;
+      overflow: hidden;
+      transition: var(--transition-theme);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       SIDEBAR - Conversation History
+       ═══════════════════════════════════════════════════════════════════════════ */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: var(--transition-theme), width 0.3s ease;
+    }
+    .sidebar.collapsed { width: 0; overflow: hidden; border: none; }
+
+    .sidebar-header {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .new-chat-btn {
+      width: 100%;
+      padding: 12px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .new-chat-btn:hover { background: var(--bg-hover); }
+    .new-chat-btn svg { width: 18px; height: 18px; }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .sidebar-content::-webkit-scrollbar { width: 4px; }
+    .sidebar-content::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    .sidebar-content::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+
+    .sidebar-section-title {
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .conversation-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 2px;
+      transition: background 0.15s;
+    }
+    .conversation-item:hover { background: var(--bg-hover); }
+    .conversation-item.active { background: var(--bg-tertiary); }
+    .conversation-item svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+    .conversation-item-text {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .conversation-item.active .conversation-item-text { color: var(--text-primary); }
+    .conversation-item-delete {
+      opacity: 0;
+      padding: 4px;
+      border-radius: 4px;
+      color: var(--text-muted);
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .conversation-item:hover .conversation-item-delete { opacity: 1; }
+    .conversation-item-delete:hover { background: var(--bg-primary); color: var(--danger); }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-footer-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+    }
+    .sidebar-footer-item:hover { background: var(--bg-hover); }
+    .sidebar-footer-item svg { width: 16px; height: 16px; }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       MAIN CONTENT AREA
+       ═══════════════════════════════════════════════════════════════════════════ */
+    .main-content {
+      flex: 1;
+      display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-width: 0;
     }
 
     /* ─── Top Nav ─────────────────────────────────── */
     .topnav {
-      height: 56px;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 16px;
       border-bottom: 1px solid var(--border);
-      background: var(--bg-secondary);
+      background: var(--bg-primary);
       flex-shrink: 0;
-      z-index: 10;
+      transition: var(--transition-theme);
     }
-    .topnav-left { display: flex; align-items: center; gap: 12px; }
-    .topnav-logo {
-      width: 32px; height: 32px;
-      background: var(--gradient-accent);
-      border-radius: 8px;
+    .topnav-left { display: flex; align-items: center; gap: 8px; }
+    .sidebar-toggle {
+      width: 36px; height: 36px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 700; color: white;
+      border-radius: 8px; border: none;
+      background: transparent; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.15s, color 0.15s;
     }
-    .topnav-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
-    .topnav-right { display: flex; align-items: center; gap: 8px; }
+    .sidebar-toggle:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .sidebar-toggle svg { width: 20px; height: 20px; }
+
+    .topnav-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topnav-right { display: flex; align-items: center; gap: 4px; }
     .icon-btn {
       width: 36px; height: 36px;
       display: flex; align-items: center; justify-content: center;
       border-radius: 8px; border: none;
       background: transparent; color: var(--text-secondary);
-      cursor: pointer; font-size: 18px;
-      transition: background 0.15s, color 0.15s;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
     }
-    .icon-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
-    .icon-btn.active { background: var(--accent); color: white; }
+    .icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .icon-btn svg { width: 18px; height: 18px; }
 
-    /* ─── Main Layout ─────────────────────────────── */
-    .main-wrap {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
+    /* Theme toggle */
+    .theme-toggle {
+      position: relative;
+      width: 36px; height: 36px;
     }
+    .theme-toggle input { display: none; }
+    .theme-toggle-btn {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; border: none;
+      background: transparent; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .theme-toggle-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .theme-toggle .sun-icon, .theme-toggle .moon-icon { width: 18px; height: 18px; }
+    [data-theme="dark"] .theme-toggle .sun-icon { display: block; }
+    [data-theme="dark"] .theme-toggle .moon-icon { display: none; }
+    [data-theme="light"] .theme-toggle .sun-icon { display: none; }
+    [data-theme="light"] .theme-toggle .moon-icon { display: block; }
 
     /* ─── Chat Area ───────────────────────────────── */
     .chat-area {
@@ -91,157 +269,264 @@
       flex-direction: column;
       overflow: hidden;
     }
+
     .messages {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 0;
+      padding: 0;
       scroll-behavior: smooth;
     }
-    .messages::-webkit-scrollbar { width: 6px; }
-    .messages::-webkit-scrollbar-track { background: transparent; }
-    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .messages::-webkit-scrollbar { width: 8px; }
+    .messages::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    .messages::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 
-    /* ─── Message Rows ────────────────────────────── */
+    /* ─── Message Components ────────────────────────────── */
     .msg-row {
-      display: flex;
-      gap: 16px;
-      padding: 16px 24px;
-      max-width: 800px;
-      margin: 0 auto;
-      width: 100%;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
       animation: fadeIn 0.3s ease;
     }
+    .msg-row:last-child { border-bottom: none; }
+    .msg-row.user-row { background: var(--bg-message-user); }
+    .msg-row.bot-row { background: var(--bg-message-bot); }
+
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .msg-container {
+      max-width: 768px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 16px;
+    }
+
     .msg-avatar {
-      width: 32px; height: 32px;
-      border-radius: 50%;
+      width: 36px; height: 36px;
+      border-radius: 6px;
       flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       font-size: 14px; font-weight: 600;
     }
     .msg-avatar.user-av {
-      background: var(--bg-tertiary);
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-    .msg-avatar.bot-av {
-      background: var(--gradient-accent);
+      background: var(--accent);
       color: white;
     }
+    .msg-avatar.bot-av {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
     .msg-body { flex: 1; min-width: 0; }
-    .msg-name {
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: var(--text-primary);
-    }
-    .msg-text {
-      font-size: 14px;
-      line-height: 1.65;
-      color: var(--text-primary);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .msg-links {
+
+    .msg-header {
       display: flex;
-      gap: 8px;
-      margin-top: 10px;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
     }
-    .msg-link {
+    .msg-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .msg-timestamp {
       font-size: 12px;
-      color: var(--accent);
-      text-decoration: none;
-      padding: 4px 10px;
-      border: 1px solid rgba(74,158,255,0.25);
-      border-radius: var(--radius-full);
-      background: rgba(74,158,255,0.06);
+      color: var(--text-muted);
+    }
+
+    .msg-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-primary);
+    }
+    .msg-text p { margin-bottom: 12px; }
+    .msg-text p:last-child { margin-bottom: 0; }
+    .msg-text ul, .msg-text ol { margin: 12px 0; padding-left: 24px; }
+    .msg-text li { margin-bottom: 8px; }
+    .msg-text code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    .msg-text pre {
+      background: var(--code-bg);
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    .msg-text pre code {
+      background: none;
+      padding: 0;
+    }
+    .msg-text strong { font-weight: 600; }
+    .msg-text a { color: var(--accent); text-decoration: none; }
+    .msg-text a:hover { text-decoration: underline; }
+
+    /* Message Actions */
+    .msg-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .msg-row:hover .msg-actions { opacity: 1; }
+
+    .msg-action-btn {
+      padding: 6px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
       transition: all 0.15s;
     }
-    .msg-link:hover { background: rgba(74,158,255,0.12); border-color: var(--accent); }
+    .msg-action-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-light);
+    }
+    .msg-action-btn svg { width: 14px; height: 14px; }
+    .msg-action-btn.copied {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
 
-    /* ─── Blueprint Preview in chat ───────────────── */
+    /* Blueprint Preview */
     .blueprint-preview {
-      margin-top: 12px;
-      border-radius: var(--radius);
+      margin-top: 16px;
+      border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--border);
       background: white;
     }
     .blueprint-preview img {
       display: block; width: 100%;
-      max-height: 400px; object-fit: contain;
+      max-height: 500px; object-fit: contain;
       cursor: pointer;
+      transition: transform 0.2s;
     }
+    .blueprint-preview img:hover { transform: scale(1.02); }
 
-    /* ─── Collapsible Blocks ──────────────────────── */
-    .collapse-block {
-      margin-top: 10px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      background: var(--bg-secondary);
+    /* ─── Typing Indicator ────────────────────────── */
+    .typing-indicator {
+      padding: 24px 0;
     }
-    .collapse-block summary {
-      cursor: pointer;
-      padding: 10px 14px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      list-style: none;
+    .typing-container {
+      max-width: 768px;
+      margin: 0 auto;
+      padding: 0 24px;
       display: flex;
+      gap: 16px;
+    }
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 12px 0;
+    }
+    .typing-dots span {
+      width: 8px; height: 8px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-6px); }
+    }
+
+    /* ─── Welcome Screen ──────────────────────────── */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      transition: color 0.15s;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
     }
-    .collapse-block summary:hover { color: var(--text-primary); }
-    .collapse-block summary::-webkit-details-marker { display:none; }
-    .collapse-block[open] summary { border-bottom: 1px solid var(--border); }
-    .collapse-content { padding: 10px 14px; font-size: 13px; }
+    .welcome-logo {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.25);
+    }
+    .welcome-logo svg { width: 40px; height: 40px; color: white; }
+    .welcome h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    .welcome p {
+      color: var(--text-secondary);
+      font-size: 16px;
+      max-width: 500px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
 
-    .ev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-    .ev-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .ev-label { color: var(--text-secondary); }
-    .ev-value { color: var(--text-primary); font-weight: 500; text-align: right; }
-
-    /* Repair trace */
-    .repair-list { max-height: 180px; overflow-y: auto; }
-    .repair-item {
+    .suggestion-grid {
       display: grid;
-      grid-template-columns: 90px 1fr auto;
-      gap: 6px;
-      padding: 4px 0;
-      font-size: 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 600px;
+      width: 100%;
     }
-    .repair-stage { color: var(--warn); font-weight: 500; }
-    .repair-action { color: var(--text-primary); }
-    .repair-room { color: var(--text-muted); font-style: italic; }
-
-    /* Variants table */
-    .var-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .var-table th { text-align: left; padding: 6px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
-    .var-table td { padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .var-table .selected-row { background: rgba(52,211,153,0.06); }
-
-    /* Confidence badge */
-    .conf-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 8px; border-radius: var(--radius-full);
-      font-size: 11px; font-weight: 600;
+    .suggestion-card {
+      padding: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
     }
-    .conf-high { background: rgba(52,211,153,0.12); color: var(--success); }
-    .conf-med  { background: rgba(251,191,36,0.12); color: var(--warn); }
-    .conf-low  { background: rgba(248,113,113,0.12); color: var(--danger); }
+    .suggestion-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-light);
+      transform: translateY(-2px);
+    }
+    .suggestion-card-icon {
+      width: 32px; height: 32px;
+      background: var(--accent-light);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    .suggestion-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .suggestion-card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
 
     /* ─── Input Area ──────────────────────────────── */
     .input-area {
       flex-shrink: 0;
-      padding: 12px 24px 20px;
+      padding: 16px 24px 24px;
       background: var(--bg-primary);
+      transition: var(--transition-theme);
     }
     .input-wrap {
-      max-width: 800px;
+      max-width: 768px;
       margin: 0 auto;
     }
     .input-box {
@@ -250,13 +535,13 @@
       gap: 0;
       background: var(--bg-input);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 8px 8px 8px 16px;
+      border-radius: 16px;
+      padding: 12px 12px 12px 20px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .input-box:focus-within {
       border-color: var(--border-focus);
-      box-shadow: 0 0 0 2px rgba(74,158,255,0.1);
+      box-shadow: 0 0 0 3px var(--accent-light);
     }
     .input-textarea {
       flex: 1;
@@ -264,18 +549,19 @@
       border: none;
       outline: none;
       color: var(--text-primary);
-      font-size: 14px;
+      font-size: 15px;
       font-family: inherit;
       line-height: 1.5;
       resize: none;
-      max-height: 140px;
+      max-height: 200px;
       min-height: 24px;
-      padding: 6px 0;
+      padding: 4px 0;
     }
     .input-textarea::placeholder { color: var(--text-muted); }
+
     .send-btn {
-      width: 36px; height: 36px;
-      border-radius: 50%;
+      width: 40px; height: 40px;
+      border-radius: 10px;
       border: none;
       background: var(--accent);
       color: white;
@@ -285,1483 +571,687 @@
       transition: background 0.15s, transform 0.1s;
     }
     .send-btn:hover { background: var(--accent-hover); }
-    .send-btn:active { transform: scale(0.94); }
+    .send-btn:active { transform: scale(0.95); }
     .send-btn:disabled { background: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; }
     .send-btn svg { width: 18px; height: 18px; }
 
     .input-footer {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 8px;
-      font-size: 11px;
+      justify-content: center;
+      margin-top: 10px;
+      font-size: 12px;
       color: var(--text-muted);
     }
 
-    /* ─── Side Panel ──────────────────────────────── */
+    /* ─── Side Panel (Settings/Blueprint Viewer) ──────────────────────────── */
     .side-panel {
-      width: 360px;
+      width: 400px;
       border-left: 1px solid var(--border);
       background: var(--bg-secondary);
       display: none;
       flex-direction: column;
       overflow: hidden;
       flex-shrink: 0;
+      transition: var(--transition-theme);
     }
     .side-panel.open { display: flex; }
+
     .side-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
       font-size: 14px; font-weight: 600;
     }
-    .side-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
-    .side-body::-webkit-scrollbar { width: 4px; }
-    .side-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .side-body { flex: 1; overflow-y: auto; padding: 16px; }
 
-    /* Spec editor */
-    .spec-editor {
-      width: 100%;
-      min-height: 200px;
-      background: var(--bg-primary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-      font-size: 12px;
-      padding: 12px;
-      outline: none;
-      resize: vertical;
-      line-height: 1.5;
-    }
-    .spec-editor:focus { border-color: var(--border-focus); }
-
-    /* Settings fields */
-    .setting-group { margin-bottom: 14px; }
-    .setting-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500; }
+    /* Settings */
+    .setting-group { margin-bottom: 16px; }
+    .setting-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500; }
     .setting-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .setting-input {
       width: 100%;
       background: var(--bg-primary);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px 10px;
+      padding: 10px 12px;
       color: var(--text-primary);
-      font-size: 13px;
+      font-size: 14px;
       font-family: inherit;
       outline: none;
       transition: border-color 0.15s;
     }
     .setting-input:focus { border-color: var(--border-focus); }
-    .setting-select {
-      appearance: none;
-      background: var(--bg-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6b6b' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 10px center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      color: var(--text-primary);
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    /* ─── Blueprint Viewer Panel ──────────────────── */
-    .viewer-panel {
-      width: 50%;
-      max-width: 600px;
-      border-left: 1px solid var(--border);
-      background: var(--bg-secondary);
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .viewer-panel.open { display: flex; }
-    .viewer-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f5f5f5;
-    }
-    .viewer-body img {
-      max-width: 100%; max-height: 100%; object-fit: contain;
-    }
-
-    /* ─── Welcome ─────────────────────────────────── */
-    .welcome {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      padding: 40px 24px;
-      text-align: center;
-    }
-    .welcome-icon {
-      width: 64px; height: 64px;
-      background: var(--gradient-accent);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px; margin-bottom: 20px;
-    }
-    .welcome h1 {
-      font-size: 28px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #4a9eff, #b47cff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 8px;
-    }
-    .welcome p { color: var(--text-secondary); font-size: 15px; max-width: 480px; line-height: 1.5; }
-    .suggestion-chips {
-      display: flex; flex-wrap: wrap;
-      gap: 8px; margin-top: 24px;
-      justify-content: center;
-      max-width: 600px;
-    }
-    .chip {
-      padding: 10px 16px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-full);
-      font-size: 13px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .chip:hover { border-color: var(--accent); color: var(--text-primary); background: var(--bg-tertiary); }
 
     /* ─── Responsive ──────────────────────────────── */
-    @media (max-width: 768px) {
-      .side-panel, .viewer-panel { display: none !important; }
-      .msg-row { padding: 12px 16px; }
-      .input-area { padding: 8px 12px 14px; }
-      .topnav { padding: 0 12px; }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .sidebar.mobile-open {
+        display: flex;
+        position: fixed;
+        left: 0; top: 0; bottom: 0;
+        z-index: 100;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+      }
+      .side-panel { display: none !important; }
     }
-
-    /* ─── Typing indicator ────────────────────────── */
-    .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
-    .typing-dots span {
-      width: 6px; height: 6px;
-      background: var(--text-muted);
-      border-radius: 50%;
-      animation: blink 1.4s infinite;
+    @media (max-width: 600px) {
+      .suggestion-grid { grid-template-columns: 1fr; }
+      .msg-container { padding: 0 16px; }
+      .input-area { padding: 12px 16px 16px; }
     }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes blink { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
-
-    /* ─── Design Gallery ─────────────────────────── */
-    .design-gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-      width: 100%;
-    }
-    .design-card {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      cursor: pointer;
-    }
-    .design-card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 4px 16px rgba(74,158,255,0.15);
-    }
-    .design-card.selected {
-      border-color: var(--success);
-      background: rgba(52,211,153,0.05);
-    }
-    .design-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      background: var(--bg-secondary);
-      border-bottom: 1px solid var(--border);
-    }
-    .design-rank {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .rank-badge {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .rank-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; }
-    .rank-2 { background: linear-gradient(135deg, #9ca3af, #6b7280); color: #fff; }
-    .rank-3 { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; }
-    .rank-default { background: var(--bg-tertiary); color: var(--text-secondary); }
-    .design-score {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    .design-score strong {
-      color: var(--text-primary);
-    }
-    .design-card-img {
-      width: 100%;
-      height: 180px;
-      object-fit: contain;
-      background: #f5f5f5;
-      border-bottom: 1px solid var(--border);
-    }
-    .design-card-body {
-      padding: 12px 14px;
-    }
-    .design-explanation {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      margin-bottom: 10px;
-    }
-    .design-strengths, .design-weaknesses {
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-    .design-strengths span { color: var(--success); }
-    .design-weaknesses span { color: var(--danger); }
-    .design-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .design-btn {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      font-size: 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .design-btn:hover {
-      border-color: var(--accent);
-      background: var(--bg-tertiary);
-    }
-    .design-btn.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
-    }
-    .design-btn.primary:hover {
-      background: var(--accent-hover);
-    }
-
-    /* ─── Correction UI ──────────────────────────── */
-    .correction-panel {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-top: 16px;
-    }
-    .correction-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-    .correction-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-    .correction-close {
-      width: 24px;
-      height: 24px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 16px;
-    }
-    .correction-close:hover {
-      color: var(--text-primary);
-    }
-    .correction-input {
-      width: 100%;
-      background: var(--bg-primary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      color: var(--text-primary);
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-      resize: vertical;
-      min-height: 60px;
-      margin-bottom: 12px;
-    }
-    .correction-input:focus {
-      border-color: var(--accent);
-    }
-    .correction-hints {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-    .correction-hint {
-      padding: 4px 10px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-full);
-      font-size: 11px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .correction-hint:hover {
-      border-color: var(--accent);
-      color: var(--text-primary);
-    }
-    .correction-submit {
-      width: 100%;
-      padding: 10px;
-      background: var(--accent);
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .correction-submit:hover {
-      background: var(--accent-hover);
-    }
-    .correction-submit:disabled {
-      background: var(--bg-tertiary);
-      color: var(--text-muted);
-      cursor: not-allowed;
-    }
-
-    /* Session indicator */
-    .session-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      background: var(--bg-tertiary);
-      border-radius: var(--radius-full);
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    .session-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--success);
-    }
-    .session-dot.offline { background: var(--danger); }
   </style>
 </head>
 <body>
-
-  <!-- Top Navigation -->
-  <nav class="topnav">
-    <div class="topnav-left">
-      <div class="topnav-logo">B</div>
-      <span class="topnav-title">BlueprintGPT</span>
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       SIDEBAR
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="new-chat-btn" onclick="startNewChat()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        New chat
+      </button>
     </div>
-    <div class="topnav-right">
-      <div class="session-badge" id="sessionBadge">
-        <span class="session-dot" id="sessionDot"></span>
-        <span id="sessionLabel">Connecting...</span>
+
+    <div class="sidebar-content" id="conversationList">
+      <div class="sidebar-section-title">Recent</div>
+      <!-- Conversations will be populated here -->
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-item" onclick="toggleSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        Settings
       </div>
-      <button class="icon-btn" id="newSessionBtn" title="New Session">🔄</button>
-      <button class="icon-btn" id="settingsToggle" title="Settings">⚙️</button>
-      <button class="icon-btn" id="viewerToggle" title="Blueprint Viewer">🖼️</button>
-      <button class="icon-btn" id="exportBtn" title="Export Session">💾</button>
-      <button class="icon-btn" id="importBtn" title="Import Session">📂</button>
-      <input type="file" id="importFile" accept=".json" style="display:none">
     </div>
-  </nav>
+  </aside>
 
-  <!-- Main Content -->
-  <div class="main-wrap">
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <main class="main-content">
+    <!-- Top Nav -->
+    <nav class="topnav">
+      <div class="topnav-left">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+          </svg>
+        </button>
+        <div class="topnav-title">
+          BlueprintGPT
+        </div>
+      </div>
+      <div class="topnav-right">
+        <label class="theme-toggle">
+          <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+          <button class="theme-toggle-btn" onclick="document.getElementById('themeToggle').click()">
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </label>
+        <button class="icon-btn" onclick="toggleSettings()" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
 
     <!-- Chat Area -->
-    <div class="chat-area">
-      <div class="messages" id="messages">
-        <div class="welcome" id="welcomeScreen">
-          <div class="welcome-icon">🏗️</div>
-          <h1>BlueprintGPT</h1>
-          <p>Describe your home requirements in natural language and I'll generate a professional architectural floor plan for you.</p>
-          <div class="suggestion-chips">
-            <div class="chip" onclick="useSuggestion(this)">2 bedrooms, 1 kitchen, 1 bathroom on a 10 marla plot</div>
-            <div class="chip" onclick="useSuggestion(this)">3BHK apartment with north entrance, minimize corridor</div>
-            <div class="chip" onclick="useSuggestion(this)">Small house: 1 bedroom, 1 bathroom, open kitchen-living</div>
+    <div class="chat-area" id="chatArea">
+      <!-- Welcome Screen (shown when no messages) -->
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <h1>BlueprintGPT</h1>
+        <p>AI-powered floor plan generator. Describe your dream home in natural language and I'll create professional architectural layouts.</p>
+
+        <div class="suggestion-grid">
+          <div class="suggestion-card" onclick="useSuggestion('Design a 3BHK apartment with north entrance')">
+            <div class="suggestion-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              </svg>
+            </div>
+            <div class="suggestion-card-title">3BHK Apartment</div>
+            <div class="suggestion-card-desc">Standard apartment with north entrance</div>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Create a 2 bedroom house with open kitchen near living room')">
+            <div class="suggestion-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              </svg>
+            </div>
+            <div class="suggestion-card-title">Open Plan Home</div>
+            <div class="suggestion-card-desc">2BR with connected kitchen & living</div>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('What room types do you support?')">
+            <div class="suggestion-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div class="suggestion-card-title">Learn More</div>
+            <div class="suggestion-card-desc">Ask about capabilities</div>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Generate a 10 marla house with 4 bedrooms')">
+            <div class="suggestion-card-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
+            <div class="suggestion-card-title">Large Family Home</div>
+            <div class="suggestion-card-desc">10 marla plot with 4 bedrooms</div>
           </div>
         </div>
       </div>
 
-      <!-- Input -->
-      <div class="input-area">
-        <div class="input-wrap">
-          <div class="input-box">
-            <textarea class="input-textarea" id="prompt" rows="1" placeholder="Describe your floor plan requirements..." ></textarea>
-            <button class="send-btn" id="submitBtn" title="Generate (Ctrl+Enter)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
-          <div class="input-footer">
-            <span>Ctrl+Enter to send</span>
-            <span id="statusIndicator">Ready</span>
-          </div>
+      <!-- Messages Container -->
+      <div class="messages" id="messages" style="display: none;"></div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="input-wrap">
+        <div class="input-box">
+          <textarea
+            class="input-textarea"
+            id="userInput"
+            placeholder="Describe your floor plan requirements..."
+            rows="1"
+            onkeydown="handleKeyDown(event)"
+            oninput="autoResize(this)"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          BlueprintGPT can make mistakes. Verify important design details.
         </div>
       </div>
     </div>
+  </main>
 
-    <!-- Settings Side Panel -->
-    <aside class="side-panel" id="settingsPanel">
-      <div class="side-header">
-        <span>⚙️ Settings & Spec</span>
-        <button class="icon-btn" onclick="toggleSettings()" style="width:28px;height:28px;font-size:14px;">✕</button>
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       SIDE PANEL (Settings/Blueprint)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <aside class="side-panel" id="sidePanel">
+    <div class="side-header">
+      <span>Settings</span>
+      <button class="icon-btn" onclick="toggleSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="side-body">
+      <div class="setting-group">
+        <div class="setting-label">Plot Dimensions (meters)</div>
+        <div class="setting-row">
+          <input type="number" class="setting-input" id="plotWidth" value="12" placeholder="Width">
+          <input type="number" class="setting-input" id="plotHeight" value="15" placeholder="Height">
+        </div>
       </div>
-      <div class="side-body">
-        <div class="setting-group">
-          <div class="setting-label" style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <span>Draw Boundary (Optional)</span>
-            <span id="canvasTools" style="display:flex; gap:6px;">
-              <button type="button" class="icon-btn" style="width:auto; height:24px; padding:0 6px; font-size:11px;" id="btnModePoly">Poly</button>
-              <button type="button" class="icon-btn" style="width:auto; height:24px; padding:0 6px; font-size:11px;" id="btnModeEntrance">Entr</button>
-              <button type="button" class="icon-btn" style="width:auto; height:24px; padding:0 6px; font-size:11px; color:var(--danger);" id="btnClearCanvas">Clear</button>
-            </span>
-          </div>
-          <div style="position:relative;">
-            <canvas id="polyCanvas" width="320" height="240" style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; width:100%; height:auto; aspect-ratio:4/3; cursor:crosshair;"></canvas>
-            <div id="canvasInstruction" style="position:absolute; top:10px; left:10px; color:var(--text-muted); font-size:11px; pointer-events:none;">Click to add points. 40px=1m.</div>
-          </div>
+      <div class="setting-group">
+        <div class="setting-label">Entrance Position</div>
+        <div class="setting-row">
+          <input type="number" class="setting-input" id="entranceX" value="6" placeholder="X">
+          <input type="number" class="setting-input" id="entranceY" value="0" placeholder="Y">
         </div>
-        <div class="setting-group">
-          <div class="setting-label">Boundary Size</div>
-          <div class="setting-row">
-            <input class="setting-input" id="width" type="number" step="0.1" value="15" placeholder="Width (m)" />
-            <input class="setting-input" id="height" type="number" step="0.1" value="10" placeholder="Height (m)" />
-          </div>
-        </div>
-        <div class="setting-group">
-          <div class="setting-label">Entrance Point</div>
-          <div class="setting-row">
-            <input class="setting-input" id="entranceX" type="number" step="0.1" placeholder="X" />
-            <input class="setting-input" id="entranceY" type="number" step="0.1" placeholder="Y" />
-          </div>
-        </div>
-        <div class="setting-group">
-          <div class="setting-label">Area</div>
-          <div class="setting-row">
-            <input class="setting-input" id="area" type="number" step="0.1" placeholder="Total area" />
-            <select class="setting-select setting-input" id="areaUnit">
-              <option value="sq.m">sq.m</option>
-              <option value="sq.ft">sq.ft</option>
-            </select>
-          </div>
-        </div>
-        <div class="setting-group">
-          <div class="setting-label">Output Prefix</div>
-          <input class="setting-input" id="prefix" placeholder="chat_run" />
-        </div>
-        <div class="setting-group">
-          <div class="setting-label">Gemini API Key</div>
-          <input class="setting-input" id="llmApiKey" type="password" placeholder="For AI explanations" />
-        </div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
-        <div class="setting-label" style="margin-bottom:8px;">📋 Current Spec</div>
-        <textarea class="spec-editor" id="specEditor" placeholder="Spec will populate after generation..."></textarea>
       </div>
-    </aside>
+    </div>
+  </aside>
 
-    <!-- Blueprint Viewer Panel -->
-    <aside class="viewer-panel" id="viewerPanel">
-      <div class="side-header">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span>🖼️ Blueprint Viewer</span>
-          <button class="icon-btn" id="downloadSvgBtn" title="Download SVG" style="width:28px;height:28px;font-size:14px;display:none;">⬇️</button>
-        </div>
-        <button class="icon-btn" onclick="toggleViewer()" style="width:28px;height:28px;font-size:14px;">✕</button>
-      </div>
-      <div class="viewer-body" id="viewerBody">
-        <p style="color:var(--text-muted);font-size:14px;">Generate a layout to see the blueprint here</p>
-      </div>
-    </aside>
-
-  </div>
-
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       JAVASCRIPT
+       ═══════════════════════════════════════════════════════════════════════════ -->
   <script>
-    const messagesEl = document.getElementById('messages');
-    const submitBtn = document.getElementById('submitBtn');
-    const promptEl = document.getElementById('prompt');
-    const welcomeScreen = document.getElementById('welcomeScreen');
-    let lastResponseData = null;
+    // ─── State ───────────────────────────────────────────────────────────────────
+    let sessionId = null;
+    let conversations = [];
+    let currentConversation = null;
+    let isWaiting = false;
 
-    // ─── Session state ───────────────────────────────
-    let currentSessionId = null;
-    let currentDesigns = [];
-    let selectedDesignIndex = null;
-    let isGeminiAvailable = false;
-
-    // ─── Version tag visible in console ──────────────
-    const BUILD_TS = new Date().toISOString();
-    console.log(`%c[BlueprintGPT] Frontend loaded at ${BUILD_TS}`, 'color:cyan;font-weight:bold');
-
-    async function initSession() {
-      console.log('[initSession] Starting — calling /status ...');
-      try {
-        // Check system status
-        const statusRes = await fetch('/status');
-        console.log(`[initSession] /status → HTTP ${statusRes.status}`);
-        if (statusRes.ok) {
-          const status = await statusRes.json();
-          console.log('[initSession] /status response:', status);
-          isGeminiAvailable = status.gemini_available || false;
-        }
-
-        // Create new session
-        console.log('[initSession] Calling /conversation/session/new ...');
-        const res = await fetch('/conversation/session/new', { method: 'POST' });
-        console.log(`[initSession] /conversation/session/new → HTTP ${res.status}`);
-        if (res.ok) {
-          const data = await res.json();
-          currentSessionId = data.session_id;
-          console.log(`[initSession] ✓ Session created: ${currentSessionId}`);
-          updateSessionUI(true);
-        } else {
-          console.warn(`[initSession] ✗ Session creation failed: HTTP ${res.status}`);
-          updateSessionUI(false);
-        }
-      } catch (err) {
-        console.error('[initSession] ✗ Exception:', err);
-        updateSessionUI(false);
-      }
+    // ─── Theme ───────────────────────────────────────────────────────────────────
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
     }
 
-    function updateSessionUI(connected) {
-      const dot = document.getElementById('sessionDot');
-      const label = document.getElementById('sessionLabel');
-      if (connected) {
-        dot.classList.remove('offline');
-        label.textContent = currentSessionId ? `Session: ${currentSessionId.slice(0, 8)}...` : 'Connected';
+    function loadTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('themeToggle').checked = savedTheme === 'light';
+    }
+
+    // ─── Sidebar ─────────────────────────────────────────────────────────────────
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      if (window.innerWidth <= 900) {
+        sidebar.classList.toggle('mobile-open');
       } else {
-        dot.classList.add('offline');
-        label.textContent = 'Offline';
+        sidebar.classList.toggle('collapsed');
       }
     }
 
-    document.getElementById('newSessionBtn').addEventListener('click', async () => {
-      if (confirm('Start a new session? Current conversation will be preserved on the server.')) {
-        currentDesigns = [];
-        selectedDesignIndex = null;
-        messagesEl.innerHTML = '';
-        if (welcomeScreen) welcomeScreen.style.display = 'flex';
-        await initSession();
-      }
-    });
-
-    // Initialize session on load
-    initSession();
-
-    // ─── Canvas Logic ────────────────────────────────
-    const cvs = document.getElementById('polyCanvas');
-    const ctx = cvs.getContext('2d');
-    let points = [];
-    let entrancePt = null;
-    let mode = 'poly';
-    let isClosed = false;
-
-    function drawCanvas() {
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-      ctx.strokeStyle = '#2e2e2e';
-      ctx.lineWidth = 1;
-      for(let x=0; x<=cvs.width; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,cvs.height); ctx.stroke(); }
-      for(let y=0; y<=cvs.height; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cvs.width,y); ctx.stroke(); }
-      if (points.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for(let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-        if (isClosed) { ctx.closePath(); ctx.fillStyle = 'rgba(74,158,255,0.1)'; ctx.fill(); }
-        ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = '#6cb3ff';
-        for(let p of points) { ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); }
-      }
-      if (entrancePt) {
-        ctx.fillStyle = '#f87171';
-        ctx.beginPath(); ctx.arc(entrancePt.x, entrancePt.y, 6, 0, Math.PI*2); ctx.fill();
-      }
-    }
-    
-    cvs.addEventListener('mousedown', (e) => {
-      const rect = cvs.getBoundingClientRect();
-      const scaleX = cvs.width / rect.width;
-      const scaleY = cvs.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
-      if (mode === 'poly') {
-        if (isClosed) return;
-        if (points.length > 2) {
-          if (Math.hypot(x - points[0].x, y - points[0].y) < 15) {
-            isClosed = true;
-            document.getElementById('canvasInstruction').innerText = "Polygon closed. Add entrance or generate.";
-            drawCanvas(); return;
-          }
-        }
-        points.push({x, y});
-      } else if (mode === 'entrance') {
-        entrancePt = {x, y};
-        document.getElementById('canvasInstruction').innerText = "Entrance set.";
-        document.getElementById('entranceX').value = (x / 40).toFixed(1);
-        document.getElementById('entranceY').value = ((cvs.height - y) / 40).toFixed(1);
-      }
-      drawCanvas();
-    });
-
-    document.getElementById('btnModePoly').onclick = () => { mode = 'poly'; };
-    document.getElementById('btnModeEntrance').onclick = () => { mode = 'entrance'; document.getElementById('canvasInstruction').innerText = "Click to set entrance."; };
-    document.getElementById('btnClearCanvas').onclick = () => { 
-      points=[]; entrancePt=null; isClosed=false; mode='poly'; 
-      document.getElementById('canvasInstruction').innerText = "Click to add points. 40px=1m."; 
-      document.getElementById('entranceX').value = "";
-      document.getElementById('entranceY').value = "";
-      drawCanvas(); 
-    };
-    drawCanvas();
-    // ──────────────────────────────────────────────────
-
-    // Auto-resize textarea
-    promptEl.addEventListener('input', () => {
-      promptEl.style.height = 'auto';
-      promptEl.style.height = Math.min(promptEl.scrollHeight, 140) + 'px';
-    });
-
-    function useSuggestion(el) {
-      promptEl.value = el.textContent;
-      promptEl.focus();
-      promptEl.style.height = 'auto';
-      promptEl.style.height = Math.min(promptEl.scrollHeight, 140) + 'px';
-    }
-
-    // ─── Toggle panels ──────────────────────────────
     function toggleSettings() {
-      const p = document.getElementById('settingsPanel');
-      p.classList.toggle('open');
-      document.getElementById('settingsToggle').classList.toggle('active', p.classList.contains('open'));
+      document.getElementById('sidePanel').classList.toggle('open');
     }
-    function toggleViewer() {
-      const p = document.getElementById('viewerPanel');
-      p.classList.toggle('open');
-      document.getElementById('viewerToggle').classList.toggle('active', p.classList.contains('open'));
+
+    // ─── Conversations ───────────────────────────────────────────────────────────
+    function loadConversations() {
+      const saved = localStorage.getItem('conversations');
+      if (saved) {
+        conversations = JSON.parse(saved);
+        renderConversationList();
+      }
     }
-    document.getElementById('settingsToggle').addEventListener('click', toggleSettings);
-    document.getElementById('viewerToggle').addEventListener('click', toggleViewer);
 
-    // ─── Message rendering ───────────────────────────
-    function addMessage(text, role = 'bot', extras = {}) {
-      if (welcomeScreen) welcomeScreen.style.display = 'none';
+    function saveConversations() {
+      localStorage.setItem('conversations', JSON.stringify(conversations));
+    }
 
-      const row = document.createElement('div');
-      row.className = 'msg-row';
+    function renderConversationList() {
+      const container = document.getElementById('conversationList');
+      container.innerHTML = '<div class="sidebar-section-title">Recent</div>';
 
-      const avatar = document.createElement('div');
-      avatar.className = `msg-avatar ${role === 'user' ? 'user-av' : 'bot-av'}`;
-      avatar.textContent = role === 'user' ? 'Y' : 'B';
+      conversations.slice().reverse().forEach((conv, idx) => {
+        const realIdx = conversations.length - 1 - idx;
+        const item = document.createElement('div');
+        item.className = 'conversation-item' + (currentConversation === realIdx ? ' active' : '');
+        item.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="conversation-item-text">${conv.title || 'New conversation'}</span>
+          <span class="conversation-item-delete" onclick="event.stopPropagation(); deleteConversation(${realIdx})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </span>
+        `;
+        item.onclick = () => loadConversation(realIdx);
+        container.appendChild(item);
+      });
+    }
 
-      const body = document.createElement('div');
-      body.className = 'msg-body';
-
-      const name = document.createElement('div');
-      name.className = 'msg-name';
-      name.textContent = role === 'user' ? 'You' : 'BlueprintGPT';
-
-      const msg = document.createElement('div');
-      msg.className = 'msg-text';
-      msg.textContent = text;
-
-      body.appendChild(name);
-      body.appendChild(msg);
-
-      // Links
-      if (extras.links && extras.links.length) {
-        const linksDiv = document.createElement('div');
-        linksDiv.className = 'msg-links';
-        for (const link of extras.links) {
-          const a = document.createElement('a');
-          a.href = link.href;
-          a.textContent = link.label;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          a.className = 'msg-link';
-          linksDiv.appendChild(a);
+    async function startNewChat() {
+      // Create new session
+      try {
+        const res = await fetch('/conversation/session/new', { method: 'POST' });
+        if (!res.ok) {
+          console.warn('Session creation failed:', res.status);
+          sessionId = 'local_' + Date.now();
+        } else {
+          const data = await res.json();
+          sessionId = data.session_id || ('local_' + Date.now());
         }
-        body.appendChild(linksDiv);
+      } catch (e) {
+        console.warn('Session creation error:', e);
+        sessionId = 'local_' + Date.now();
       }
 
-      // SVG preview
-      if (extras.svgUrl) {
-        const preview = document.createElement('div');
-        preview.className = 'blueprint-preview';
-        const img = document.createElement('img');
-        img.src = extras.svgUrl;
-        img.alt = 'Generated floor plan';
-        img.onclick = () => {
-          const vp = document.getElementById('viewerPanel');
-          const vb = document.getElementById('viewerBody');
-          vb.innerHTML = '';
-          const bigImg = document.createElement('img');
-          bigImg.src = extras.svgUrl;
-          bigImg.alt = 'Blueprint';
-          vb.appendChild(bigImg);
-          if (!vp.classList.contains('open')) toggleViewer();
-        };
-        preview.appendChild(img);
-        body.appendChild(preview);
-      }
+      // Create new conversation
+      const newConv = {
+        id: sessionId,
+        title: 'New conversation',
+        messages: [],
+        createdAt: new Date().toISOString()
+      };
+      conversations.push(newConv);
+      currentConversation = conversations.length - 1;
+      saveConversations();
+      renderConversationList();
 
-      // Explanation block (A3)
-      if (extras.explanation) {
-        body.appendChild(buildExplanationBlock(extras.explanation, extras.execution));
-      }
+      // Reset UI
+      document.getElementById('welcomeScreen').style.display = 'flex';
+      document.getElementById('messages').style.display = 'none';
+      document.getElementById('messages').innerHTML = '';
+      document.getElementById('userInput').value = '';
 
-      // Variants block (A2)
-      if (extras.variants) {
-        body.appendChild(buildVariantBlock(extras.variants, extras.chosen));
+      // Close sidebar on mobile
+      if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.remove('mobile-open');
       }
-
-      // Repair trace (C2)
-      if (extras.repairTrace && extras.repairTrace.length) {
-        body.appendChild(buildRepairBlock(extras.repairTrace, extras.rawConfidence));
-      }
-
-      // Design gallery (multi-design view)
-      if (extras.designGallery && extras.designGallery.length) {
-        currentDesigns = extras.designGallery;
-        body.appendChild(buildDesignGallery(extras.designGallery, extras.explanations || []));
-      }
-
-      row.appendChild(avatar);
-      row.appendChild(body);
-      messagesEl.appendChild(row);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-      return row;
     }
 
-    function addTypingIndicator() {
-      const row = document.createElement('div');
-      row.className = 'msg-row';
-      row.id = 'typingRow';
-      row.innerHTML = `
-        <div class="msg-avatar bot-av">B</div>
-        <div class="msg-body">
-          <div class="msg-name">BlueprintGPT</div>
-          <div class="typing-dots"><span></span><span></span><span></span></div>
+    function loadConversation(idx) {
+      currentConversation = idx;
+      const conv = conversations[idx];
+      sessionId = conv.id;
+
+      const messagesEl = document.getElementById('messages');
+      const welcomeEl = document.getElementById('welcomeScreen');
+
+      messagesEl.innerHTML = '';
+
+      if (conv.messages.length === 0) {
+        welcomeEl.style.display = 'flex';
+        messagesEl.style.display = 'none';
+      } else {
+        welcomeEl.style.display = 'none';
+        messagesEl.style.display = 'block';
+        conv.messages.forEach(msg => {
+          appendMessage(msg.role, msg.content, msg.timestamp, msg.blueprintUrl, false);
+        });
+      }
+
+      renderConversationList();
+
+      // Close sidebar on mobile
+      if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.remove('mobile-open');
+      }
+    }
+
+    function deleteConversation(idx) {
+      conversations.splice(idx, 1);
+      saveConversations();
+
+      if (currentConversation === idx) {
+        if (conversations.length > 0) {
+          loadConversation(conversations.length - 1);
+        } else {
+          startNewChat();
+        }
+      } else if (currentConversation > idx) {
+        currentConversation--;
+      }
+
+      renderConversationList();
+    }
+
+    // ─── Messages ────────────────────────────────────────────────────────────────
+    function formatTime(date) {
+      return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function appendMessage(role, content, timestamp, blueprintUrl, save = true) {
+      const messagesEl = document.getElementById('messages');
+      const welcomeEl = document.getElementById('welcomeScreen');
+
+      welcomeEl.style.display = 'none';
+      messagesEl.style.display = 'block';
+
+      const isUser = role === 'user';
+      const time = timestamp || new Date().toISOString();
+
+      const msgRow = document.createElement('div');
+      msgRow.className = `msg-row ${isUser ? 'user-row' : 'bot-row'}`;
+
+      // Parse markdown for bot messages
+      let htmlContent = content;
+      if (!isUser && typeof marked !== 'undefined') {
+        try {
+          htmlContent = marked.parse(content);
+        } catch (e) {
+          htmlContent = content.replace(/\n/g, '<br>');
+        }
+      } else {
+        htmlContent = content.replace(/\n/g, '<br>');
+      }
+
+      msgRow.innerHTML = `
+        <div class="msg-container">
+          <div class="msg-avatar ${isUser ? 'user-av' : 'bot-av'}">
+            ${isUser ? 'U' : 'B'}
+          </div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">${isUser ? 'You' : 'BlueprintGPT'}</span>
+              <span class="msg-timestamp">${formatTime(time)}</span>
+            </div>
+            <div class="msg-text">${htmlContent}</div>
+            ${blueprintUrl ? `
+              <div class="blueprint-preview">
+                <img src="${blueprintUrl}" alt="Floor Plan" onclick="window.open('${blueprintUrl}', '_blank')">
+              </div>
+            ` : ''}
+            <div class="msg-actions">
+              <button class="msg-action-btn" onclick="copyMessage(this, \`${content.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy
+              </button>
+              ${!isUser ? `
+                <button class="msg-action-btn" onclick="regenerateResponse()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                  </svg>
+                  Regenerate
+                </button>
+              ` : ''}
+            </div>
+          </div>
         </div>
       `;
-      messagesEl.appendChild(row);
+
+      messagesEl.appendChild(msgRow);
       messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
 
-    function removeTypingIndicator() {
-      const el = document.getElementById('typingRow');
-      if (el) el.remove();
-    }
-
-    // ─── A3: Explanation block ───────────────────────
-    function buildExplanationBlock(explanation, execution) {
-      const block = document.createElement('details');
-      block.className = 'collapse-block';
-      const sum = document.createElement('summary');
-      sum.textContent = '💡 Why this layout?';
-      block.appendChild(sum);
-
-      const content = document.createElement('div');
-      content.className = 'collapse-content';
-      const grid = document.createElement('div');
-      grid.className = 'ev-grid';
-
-      const ex = execution || {};
-      const m = ex.metrics || {};
-      const items = [];
-      if (ex.design_score != null) items.push(['Design Score', ex.design_score]);
-      if (ex.report_status) items.push(['Status', ex.report_status]);
-      if (ex.strategy_name) items.push(['Strategy', ex.strategy_name]);
-      if (m.adjacency_satisfaction != null) items.push(['Adjacency', m.adjacency_satisfaction]);
-      if (m.max_travel_distance != null) items.push(['Travel Dist', `${m.max_travel_distance} / ${m.max_allowed_travel_distance || '?'}`]);
-      if (m.alignment_score != null) items.push(['Alignment', m.alignment_score]);
-      if (m.fully_connected != null) items.push(['Connected', m.fully_connected ? '✅ Yes' : '❌ No']);
-      if (ex.design_reasons && ex.design_reasons.length) items.push(['Factors', ex.design_reasons.join(', ')]);
-      if (explanation.summary) items.push(['Summary', explanation.summary]);
-
-      for (const [l, v] of items) {
-        const item = document.createElement('div');
-        item.className = 'ev-item';
-        item.innerHTML = `<span class="ev-label">${l}</span><span class="ev-value">${v}</span>`;
-        grid.appendChild(item);
-      }
-      content.appendChild(grid);
-      block.appendChild(content);
-      return block;
-    }
-
-    // ─── A2: Variant comparison ──────────────────────
-    function buildVariantBlock(alternatives, chosen) {
-      if (!alternatives.length) return document.createElement('span');
-      const block = document.createElement('details');
-      block.className = 'collapse-block';
-      const sum = document.createElement('summary');
-      sum.textContent = `📊 Variant Comparison (${alternatives.length} alternatives)`;
-      block.appendChild(sum);
-
-      const content = document.createElement('div');
-      content.className = 'collapse-content';
-      const table = document.createElement('table');
-      table.className = 'var-table';
-      table.innerHTML = `<thead><tr><th>Strategy</th><th>Score</th><th>Adjacency</th><th>Travel</th><th>Diversity</th></tr></thead>`;
-      const tbody = document.createElement('tbody');
-
-      if (chosen) {
-        const tr = document.createElement('tr');
-        tr.className = 'selected-row';
-        const cm = chosen.metrics || {};
-        tr.innerHTML = `<td>✅ ${chosen.strategy_name||'Selected'}</td><td>${chosen.design_score||'—'}</td><td>${cm.adjacency_satisfaction ?? '—'}</td><td>${cm.max_travel_distance ?? '—'}</td><td>—</td>`;
-        tbody.appendChild(tr);
-      }
-      for (const alt of alternatives) {
-        const tr = document.createElement('tr');
-        const am = alt.metrics || {};
-        tr.innerHTML = `<td>${alt.strategy_name||'Alt'}</td><td>${alt.design_score||'—'}</td><td>${am.adjacency_satisfaction ?? '—'}</td><td>${am.max_travel_distance ?? '—'}</td><td>${alt.diversity_from_selected ?? '—'}</td>`;
-        tbody.appendChild(tr);
-      }
-      table.appendChild(tbody);
-      content.appendChild(table);
-      block.appendChild(content);
-      return block;
-    }
-
-    // ─── C2: Repair trace ────────────────────────────
-    function buildRepairBlock(trace, rawConf) {
-      const block = document.createElement('details');
-      block.className = 'collapse-block';
-      const sum = document.createElement('summary');
-      let label = '🔧 Repair Trace';
-      if (rawConf != null) label += ` (confidence: ${(rawConf * 100).toFixed(0)}%)`;
-      sum.textContent = label;
-      block.appendChild(sum);
-
-      const content = document.createElement('div');
-      content.className = 'collapse-content';
-
-      if (rawConf != null) {
-        const cls = rawConf >= 0.7 ? 'conf-high' : rawConf >= 0.4 ? 'conf-med' : 'conf-low';
-        content.innerHTML = `<div style="margin-bottom:8px"><span class="conf-badge ${cls}">Pre-repair: ${(rawConf*100).toFixed(1)}%</span></div>`;
-      }
-
-      const list = document.createElement('div');
-      list.className = 'repair-list';
-      for (const s of trace) {
-        const item = document.createElement('div');
-        item.className = 'repair-item';
-        item.innerHTML = `<span class="repair-stage">${s.stage||''}</span><span class="repair-action">${s.action||''}</span><span class="repair-room">${s.room||''}</span>`;
-        list.appendChild(item);
-      }
-      content.appendChild(list);
-      block.appendChild(content);
-      return block;
-    }
-
-    // ─── Design Gallery ──────────────────────────────
-    function buildDesignGallery(designs, explanations) {
-      const gallery = document.createElement('div');
-      gallery.className = 'design-gallery';
-
-      designs.forEach((design, idx) => {
-        const explanation = explanations[idx] || {};
-        const card = document.createElement('div');
-        card.className = 'design-card';
-        card.dataset.index = idx;
-
-        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : 'rank-default';
-
-        card.innerHTML = `
-          <div class="design-card-header">
-            <div class="design-rank">
-              <span class="rank-badge ${rankClass}">${idx + 1}</span>
-              <span>Design #${idx + 1}</span>
-            </div>
-            <div class="design-score">
-              Score: <strong>${(design.score || 0).toFixed(2)}</strong>
-            </div>
-          </div>
-          <img class="design-card-img" src="${design.svg_url || ''}" alt="Design ${idx + 1}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'">
-          <div class="design-card-body">
-            ${explanation.summary ? `<div class="design-explanation">${explanation.summary}</div>` : ''}
-            ${explanation.strengths?.length ? `<div class="design-strengths"><span>✓</span> ${explanation.strengths.slice(0,2).join(', ')}</div>` : ''}
-            ${explanation.weaknesses?.length ? `<div class="design-weaknesses"><span>✗</span> ${explanation.weaknesses.slice(0,2).join(', ')}</div>` : ''}
-            <div class="design-actions">
-              <button class="design-btn" onclick="viewDesign(${idx})">👁️ View</button>
-              <button class="design-btn primary" onclick="correctDesign(${idx})">✏️ Modify</button>
-            </div>
-          </div>
-        `;
-
-        card.addEventListener('click', (e) => {
-          if (e.target.tagName !== 'BUTTON') {
-            selectDesign(idx);
-          }
+      // Save to conversation
+      if (save && currentConversation !== null) {
+        conversations[currentConversation].messages.push({
+          role, content, timestamp: time, blueprintUrl
         });
 
-        gallery.appendChild(card);
-      });
+        // Update title from first user message
+        if (isUser && conversations[currentConversation].messages.length === 1) {
+          conversations[currentConversation].title = content.substring(0, 40) + (content.length > 40 ? '...' : '');
+          renderConversationList();
+        }
 
-      return gallery;
-    }
-
-    function selectDesign(idx) {
-      selectedDesignIndex = idx;
-      document.querySelectorAll('.design-card').forEach((card, i) => {
-        card.classList.toggle('selected', i === idx);
-      });
-    }
-
-    function viewDesign(idx) {
-      const design = currentDesigns[idx];
-      if (!design || !design.svg_url) return;
-
-      const vp = document.getElementById('viewerPanel');
-      const vb = document.getElementById('viewerBody');
-      vb.innerHTML = '';
-
-      const bigImg = document.createElement('img');
-      bigImg.src = design.svg_url;
-      bigImg.alt = `Design ${idx + 1}`;
-      vb.appendChild(bigImg);
-
-      const dlBtn = document.getElementById('downloadSvgBtn');
-      dlBtn.style.display = 'flex';
-      dlBtn.onclick = () => {
-        const a = document.createElement('a');
-        a.href = design.svg_url;
-        a.download = design.svg_url.split('/').pop() || `design_${idx + 1}.svg`;
-        a.click();
-      };
-
-      if (!vp.classList.contains('open')) {
-        vp.classList.add('open');
-        document.getElementById('viewerToggle').classList.add('active');
+        saveConversations();
       }
     }
 
-    function correctDesign(idx) {
-      selectedDesignIndex = idx;
-      selectDesign(idx);
-
-      // Remove existing correction panels
-      document.querySelectorAll('.correction-panel').forEach(p => p.remove());
-
-      // Create correction panel
-      const panel = document.createElement('div');
-      panel.className = 'correction-panel';
-      panel.innerHTML = `
-        <div class="correction-header">
-          <span class="correction-title">✏️ Modify Design #${idx + 1}</span>
-          <button class="correction-close" onclick="this.closest('.correction-panel').remove()">✕</button>
+    function showTypingIndicator() {
+      const messagesEl = document.getElementById('messages');
+      const indicator = document.createElement('div');
+      indicator.className = 'typing-indicator';
+      indicator.id = 'typingIndicator';
+      indicator.innerHTML = `
+        <div class="typing-container">
+          <div class="msg-avatar bot-av">B</div>
+          <div class="msg-body">
+            <div class="typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
         </div>
-        <div class="correction-hints">
-          <span class="correction-hint" onclick="insertCorrection(this, 'make the kitchen larger')">Make kitchen larger</span>
-          <span class="correction-hint" onclick="insertCorrection(this, 'move bedroom to the left')">Move bedroom left</span>
-          <span class="correction-hint" onclick="insertCorrection(this, 'swap living room and dining area')">Swap living/dining</span>
-          <span class="correction-hint" onclick="insertCorrection(this, 'add a bathroom')">Add bathroom</span>
-        </div>
-        <textarea class="correction-input" id="correctionInput" placeholder="Describe your changes... e.g., 'make the master bedroom larger' or 'move the kitchen away from the entrance'"></textarea>
-        <button class="correction-submit" onclick="submitCorrection(${idx})">Apply Changes</button>
       `;
-
-      // Insert after the design gallery
-      const gallery = document.querySelector('.design-gallery');
-      if (gallery) {
-        gallery.parentNode.insertBefore(panel, gallery.nextSibling);
-      } else {
-        messagesEl.appendChild(panel);
-      }
-
-      document.getElementById('correctionInput').focus();
+      messagesEl.appendChild(indicator);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function insertCorrection(el, text) {
-      const input = document.getElementById('correctionInput');
-      if (input) {
-        input.value = text;
-        input.focus();
+    function hideTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    function copyMessage(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied');
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Copied!
+        `;
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy
+          `;
+        }, 2000);
+      });
+    }
+
+    async function regenerateResponse() {
+      if (isWaiting || currentConversation === null) return;
+
+      const conv = conversations[currentConversation];
+      if (conv.messages.length < 2) return;
+
+      // Remove last bot message
+      conv.messages.pop();
+      saveConversations();
+
+      // Reload conversation
+      loadConversation(currentConversation);
+
+      // Get last user message and resend
+      const lastUserMsg = conv.messages[conv.messages.length - 1];
+      if (lastUserMsg && lastUserMsg.role === 'user') {
+        await sendToBackend(lastUserMsg.content);
       }
     }
 
-    async function submitCorrection(designIndex) {
-      const input = document.getElementById('correctionInput');
-      if (!input || !input.value.trim()) return;
+    // ─── Input Handling ──────────────────────────────────────────────────────────
+    function autoResize(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    }
 
-      const correction = input.value.trim();
-      const btn = document.querySelector('.correction-submit');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Applying...';
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function useSuggestion(text) {
+      document.getElementById('userInput').value = text;
+      sendMessage();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const message = input.value.trim();
+
+      if (!message || isWaiting) return;
+
+      // Ensure we have a conversation
+      if (currentConversation === null) {
+        await startNewChat();
       }
 
-      addMessage(`Modify design #${designIndex + 1}: ${correction}`, 'user');
-      addTypingIndicator();
+      // Add user message
+      appendMessage('user', message);
+      input.value = '';
+      input.style.height = 'auto';
+
+      await sendToBackend(message);
+    }
+
+    async function sendToBackend(message) {
+      isWaiting = true;
+      document.getElementById('sendBtn').disabled = true;
+      showTypingIndicator();
 
       try {
-        const res = await fetch('/conversation/correct', {
+        const plotWidth = parseFloat(document.getElementById('plotWidth').value) || 12;
+        const plotHeight = parseFloat(document.getElementById('plotHeight').value) || 15;
+        const entranceX = parseFloat(document.getElementById('entranceX').value) || plotWidth / 2;
+        const entranceY = parseFloat(document.getElementById('entranceY').value) || 0;
+
+        const response = await fetch('/conversation/message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            session_id: currentSessionId,
-            design_index: designIndex,
-            correction: correction,
-            regenerate: true,
-          }),
+            message: message,
+            session_id: sessionId,
+            boundary: { width: plotWidth, height: plotHeight },
+            entrance_point: [entranceX, entranceY],
+            generate: true
+          })
         });
 
-        removeTypingIndicator();
+        // Parse response JSON
+        const data = await response.json();
 
-        if (!res.ok) {
-          const detail = await res.json().catch(() => ({}));
-          addMessage(`Error: ${detail.detail || res.statusText}`, 'bot');
-        } else {
-          const data = await res.json();
-          handleCorrectionResponse(data);
-        }
-      } catch (err) {
-        removeTypingIndicator();
-        addMessage(`Correction failed: ${err}`, 'bot');
-      } finally {
-        // Remove correction panel
-        document.querySelectorAll('.correction-panel').forEach(p => p.remove());
-      }
-    }
+        hideTypingIndicator();
 
-    function handleCorrectionResponse(data) {
-      const lines = [];
-
-      if (data.success) {
-        lines.push('✅ ' + (data.message || 'Changes applied successfully!'));
-
-        if (data.changes_applied?.length) {
-          lines.push('');
-          lines.push('**Applied changes:**');
-          data.changes_applied.forEach(c => {
-            lines.push(`- ${c.type}: ${JSON.stringify(c)}`);
-          });
+        // Check for HTTP errors
+        if (!response.ok) {
+          // Server returned an error - show the detail message
+          const errorMessage = data.detail || `Server error (${response.status})`;
+          appendMessage('assistant', `An error occurred: ${errorMessage}`);
+          console.error('Server error:', response.status, data);
+          isWaiting = false;
+          document.getElementById('sendBtn').disabled = false;
+          return;
         }
 
-        if (data.needs_regeneration) {
-          lines.push('');
-          lines.push('🔄 Regenerating design with your modifications...');
-        }
-      } else {
-        lines.push('⚠️ ' + (data.message || 'Could not apply changes'));
-
-        if (data.clarification_needed) {
-          lines.push('');
-          lines.push(`❓ ${data.clarification_needed}`);
-        }
-      }
-
-      addMessage(lines.join('\n'), 'bot');
-
-      // If new designs were generated, update gallery
-      if (data.new_designs?.length) {
-        currentDesigns = data.new_designs;
-        addMessage('Here are your updated designs:', 'bot', {
-          designGallery: currentDesigns,
-          explanations: data.explanations || [],
-        });
-      }
-    }
-
-    // ─── Process API response ────────────────────────
-    function addChatResponse(data) {
-      lastResponseData = data;
-      const lines = [];
-      if (data.assistant_text) lines.push(data.assistant_text);
-
-      const ex = data.execution || {};
-      if (data.validation_errors && data.validation_errors.length) {
-        lines.push(`\n⚠️ Errors: ${data.validation_errors.join('; ')}`);
-      }
-
-      if (data.backend_ready && data.execution) {
-        lines.push('');
-        lines.push(`Status: ${ex.report_status || ex.status}`);
-        if (ex.strategy_name) lines.push(`Strategy: ${ex.strategy_name}`);
-        if (ex.metrics) {
-          const m = ex.metrics;
-          const parts = [];
-          if (m.max_travel_distance != null) parts.push(`Travel ${m.max_travel_distance}`);
-          if (m.adjacency_satisfaction != null) parts.push(`Adjacency ${m.adjacency_satisfaction}`);
-          if (parts.length) lines.push(parts.join(' · '));
-        }
-        if (ex.requested_rooms || ex.generated_rooms) {
-          lines.push('');
-          const req = ex.requested_rooms || {};
-          const got = ex.generated_rooms || {};
-          const keys = [...new Set([...Object.keys(req), ...Object.keys(got)])].sort();
-          for (const k of keys) lines.push(`${k}: ${got[k]||0}/${req[k]||0}`);
-        }
-        if (ex.room_coverage) {
-          const mis = ex.room_coverage.missing || [];
-          const ext = ex.room_coverage.extra || [];
-          if (!mis.length && !ext.length) lines.push('\n✅ All rooms matched');
-          else {
-            if (mis.length) lines.push(`\n⚠️ Missing: ${mis.join('; ')}`);
-            if (ext.length) lines.push(`Extra: ${ext.join('; ')}`);
-          }
-        }
-        if (Array.isArray(ex.violations) && ex.violations.length)
-          lines.push(`\n❌ Violations: ${ex.violations.join('; ')}`);
-      }
-
-      const links = [];
-      let svgUrl = null;
-      if (ex.artifact_urls) {
-        if (ex.artifact_urls.report) links.push({ label: '📄 Report', href: ex.artifact_urls.report });
-        if (ex.artifact_urls.svg) links.push({ label: '🏗️ Blueprint SVG', href: ex.artifact_urls.svg });
-        svgUrl = ex.artifact_urls.svg || null;
-      }
-
-      addMessage(lines.join('\n'), 'bot', {
-        links,
-        svgUrl,
-        explanation: (data.backend_ready && ex.explanation) ? ex.explanation : null,
-        execution: ex,
-        variants: ex.alternatives || [],
-        chosen: { strategy_name: ex.strategy_name, design_score: ex.design_score, metrics: ex.metrics },
-        repairTrace: ex.repair_trace || [],
-        rawConfidence: ex.raw_confidence,
-      });
-
-      // Update spec panel
-      updateSpecPanel(data);
-
-      // Auto-open viewer if an SVG was generated
-      if (svgUrl) {
-        const vp = document.getElementById('viewerPanel');
-        const vb = document.getElementById('viewerBody');
-        vb.innerHTML = '';
-        const bigImg = document.createElement('img');
-        bigImg.src = svgUrl;
-        bigImg.alt = 'Blueprint';
-        vb.appendChild(bigImg);
-        
-        const dlBtn = document.getElementById('downloadSvgBtn');
-        dlBtn.style.display = 'flex';
-        dlBtn.onclick = () => {
-          const a = document.createElement('a');
-          a.href = svgUrl;
-          a.download = svgUrl.split('/').pop() || 'blueprint.svg';
-          a.click();
-        };
-
-        // Close settings panel if open, then open blueprint viewer
-        const sp = document.getElementById('settingsPanel');
-        if (sp.classList.contains('open')) {
-          sp.classList.remove('open');
-          document.getElementById('settingsToggle').classList.remove('active');
-        }
-        if (!vp.classList.contains('open')) {
-          vp.classList.add('open');
-          document.getElementById('viewerToggle').classList.add('active');
-        }
-      }
-    }
-
-    function updateSpecPanel(data) {
-      const editor = document.getElementById('specEditor');
-      const spec = {};
-      if (data.execution) {
-        spec.backend = data.backend_target;
-        spec.rooms = data.execution.requested_rooms;
-        spec.metrics = data.execution.metrics;
-        spec.status = data.execution.report_status;
-        if (data.execution.generation_summary) spec.generation = data.execution.generation_summary;
-      } else {
-        if (data.missing_fields?.length) spec.missing = data.missing_fields;
-      }
-      editor.value = JSON.stringify(spec, null, 2);
-    }
-
-    // ─── Submit handler ──────────────────────────────
-    submitBtn.addEventListener('click', async () => {
-      const prompt = promptEl.value.trim();
-      if (!prompt) return;
-
-      const width = Number(document.getElementById('width').value || 0);
-      const height = Number(document.getElementById('height').value || 0);
-      const entranceX = document.getElementById('entranceX').value;
-      const entranceY = document.getElementById('entranceY').value;
-      const area = document.getElementById('area').value;
-      const areaUnit = document.getElementById('areaUnit').value;
-      const prefix = document.getElementById('prefix').value;
-      const llmApiKey = document.getElementById('llmApiKey').value;
-
-      let customPoly = undefined;
-      let targetEntrance = (entranceX !== '' && entranceY !== '') ? [Number(entranceX), Number(entranceY)] : null;
-
-      if (isClosed && points.length >= 3) {
-        customPoly = points.map(p => [p.x / 40, (cvs.height - p.y) / 40]);
-      }
-
-      addMessage(prompt, 'user');
-      promptEl.value = '';
-      promptEl.style.height = 'auto';
-
-      submitBtn.disabled = true;
-      document.getElementById('statusIndicator').textContent = 'Generating...';
-      addTypingIndicator();
-
-      // Use conversation API if session is available
-      const useConversationApi = currentSessionId !== null;
-      console.log(`[submit] useConversationApi=${useConversationApi}, sessionId=${currentSessionId}`);
-      console.log(`[submit] prompt='${prompt}'`);
-
-      try {
-        let res;
-        if (useConversationApi) {
-          // Conversation API for multi-turn with AI understanding
-          console.log('[submit] → POST /conversation/message');
-          res = await fetch('/conversation/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              session_id: currentSessionId,
-              message: prompt,
-              boundary: { width, height },
-              boundary_polygon: customPoly,
-              entrance_point: targetEntrance,
-              num_designs: 3,  // Request multiple designs
-            }),
-          });
-          console.log(`[submit] /conversation/message → HTTP ${res.status}`);
-        } else {
-          // Fallback to legacy API
-          console.log('[submit] → POST /chat/generate (legacy, no session)');
-          res = await fetch('/chat/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt,
-              boundary: { width, height },
-              boundary_polygon: customPoly,
-              entrance_point: targetEntrance,
-              area: area !== '' ? Number(area) : undefined,
-              area_unit: areaUnit,
-              output_prefix: prefix || undefined,
-              llm_api_key: llmApiKey || undefined,
-            }),
-          });
-          console.log(`[submit] /chat/generate → HTTP ${res.status}`);
-        }
-
-        removeTypingIndicator();
-
-        if (!res.ok) {
-          const detail = await res.json().catch(() => ({}));
-          console.error(`[submit] Server error ${res.status}:`, detail);
-          addMessage(`Error: ${detail.detail || res.statusText}`, 'bot');
-        } else {
-          const data = await res.json();
-          console.log('[submit] Response data:', data);
-
-          if (useConversationApi) {
-            handleConversationResponse(data);
-          } else {
-            addChatResponse(data);
-          }
-        }
-      } catch (err) {
-        removeTypingIndicator();
-        console.error('[submit] Fetch exception:', err);
-        addMessage(`Request failed: ${err}`, 'bot');
-      } finally {
-        submitBtn.disabled = false;
-        document.getElementById('statusIndicator').textContent = 'Ready';
-      }
-    });
-
-    // ─── Handle conversation API response ────────────
-    function handleConversationResponse(data) {
-      lastResponseData = data;
-      const lines = [];
-
-      // AI response text — server returns 'assistant_text'
-      if (data.assistant_text) {
-        lines.push(data.assistant_text);
-      }
-
-      // State indicators — server returns 'needs_info' (not 'missing_fields')
-      if (data.needs_info?.length) {
-        lines.push('');
-        lines.push('📝 **To generate a design, please provide:**');
-        data.needs_info.forEach(f => lines.push(`- ${f}`));
-      }
-
-      if (data.validation_errors?.length) {
-        lines.push('');
-        lines.push(`⚠️ Issues: ${data.validation_errors.join('; ')}`);
-      }
-
-      // Current spec summary
-      if (data.current_spec?.rooms?.length && data.state === 'specifying') {
-        lines.push('');
-        lines.push('📋 **Current specification:**');
-        data.current_spec.rooms.forEach(r => {
-          lines.push(`- ${r.count}x ${r.type}`);
-        });
-      }
-
-      // Check if we have designs
-      const hasDesigns = data.designs?.length > 0;
-
-      if (hasDesigns) {
-        // Store designs for correction
-        currentDesigns = data.designs.map((d, i) => ({
-          index: i,
-          svg_url: d.svg_url || d.artifact_urls?.svg,
-          score: d.score || d.design_score || 0,
-          rank: d.rank || i + 1,
-          metrics: d.metrics || {},
-          rooms: d.rooms || [],
-          violations: d.violations || [],
-        }));
-
-        const explanations = data.explanations || data.designs.map((d, i) => ({
-          rank: i + 1,
-          summary: d.explanation?.summary || `Design #${i + 1} - Score: ${(d.score || 0).toFixed(2)}`,
-          strengths: d.explanation?.strengths || [],
-          weaknesses: d.explanation?.weaknesses || [],
-          ranking_reason: d.explanation?.ranking_reason || '',
-        }));
-
-        addMessage(lines.join('\n'), 'bot', {
-          designGallery: currentDesigns,
-          explanations: explanations,
-        });
-
-        // Auto-view best design
-        if (currentDesigns.length > 0 && currentDesigns[0].svg_url) {
-          viewDesign(0);
-        }
-      } else {
-        // No designs yet, just show the response
-        addMessage(lines.join('\n') || data.assistant_text || 'Processing...', 'bot');
-      }
-
-      // Update spec panel
-      if (data.current_spec) {
-        document.getElementById('specEditor').value = JSON.stringify(data.current_spec, null, 2);
-      }
-    }
-
-    promptEl.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        submitBtn.click();
-      }
-    });
-
-    // ─── A4: Session export/import ───────────────────
-    document.getElementById('exportBtn').addEventListener('click', () => {
-      const session = {
-        version: 2,
-        timestamp: new Date().toISOString(),
-        sessionId: currentSessionId,
-        designs: currentDesigns,
-        selectedDesignIndex: selectedDesignIndex,
-        lastResponse: lastResponseData,
-        formState: {
-          width: document.getElementById('width').value,
-          height: document.getElementById('height').value,
-          entranceX: document.getElementById('entranceX').value,
-          entranceY: document.getElementById('entranceY').value,
-          area: document.getElementById('area').value,
-          areaUnit: document.getElementById('areaUnit').value,
-          prefix: document.getElementById('prefix').value,
-        }
-      };
-      const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `blueprintgpt_session_${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
-
-    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
-    document.getElementById('importFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const s = JSON.parse(ev.target.result);
-
-          // Restore session ID if version 2+
-          if (s.version >= 2 && s.sessionId) {
-            currentSessionId = s.sessionId;
-            updateSessionUI(true);
-          }
-
-          // Restore designs
-          if (s.designs) {
-            currentDesigns = s.designs;
-            selectedDesignIndex = s.selectedDesignIndex;
-          }
-
-          if (s.lastResponse) {
-            lastResponseData = s.lastResponse;
-            if (s.version >= 2 && s.designs?.length) {
-              // Use new design gallery
-              addMessage('Session restored. Here are your designs:', 'bot', {
-                designGallery: currentDesigns,
-                explanations: [],
-              });
-            } else {
-              addChatResponse(s.lastResponse);
+        // Check if the response has assistant_text (successful response)
+        if (data.assistant_text) {
+          // Extract blueprint URL if available
+          let blueprintUrl = null;
+          if (data.designs && data.designs.length > 0) {
+            const design = data.designs[0];
+            if (design.artifact_urls && design.artifact_urls.svg) {
+              blueprintUrl = design.artifact_urls.svg;
             }
           }
 
-          if (s.formState) {
-            for (const [k, v] of Object.entries(s.formState)) {
-              const el = document.getElementById(k);
-              if (el) el.value = v;
-            }
-          }
-
-          addMessage('✅ Session restored', 'bot');
-        } catch (err) {
-          addMessage(`Import failed: ${err}`, 'bot');
+          appendMessage('assistant', data.assistant_text, null, blueprintUrl);
+        } else {
+          // No assistant text in response - show a fallback
+          appendMessage('assistant', 'I processed your request but have no response to display.');
         }
-      };
-      reader.readAsText(file);
-      e.target.value = '';
+
+        // Update session ID if provided
+        if (data.session_id) {
+          sessionId = data.session_id;
+          if (currentConversation !== null) {
+            conversations[currentConversation].id = sessionId;
+            saveConversations();
+          }
+        }
+
+      } catch (error) {
+        hideTypingIndicator();
+        console.error('Network/Parse error:', error);
+        // Network or JSON parsing error - show helpful message
+        appendMessage('assistant', 'Unable to connect to the server. Please check that the server is running and try again.');
+      }
+
+      isWaiting = false;
+      document.getElementById('sendBtn').disabled = false;
+    }
+
+    // ─── Initialization ──────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTheme();
+      loadConversations();
+
+      if (conversations.length === 0) {
+        startNewChat();
+      } else {
+        loadConversation(conversations.length - 1);
+      }
     });
   </script>
 </body>
