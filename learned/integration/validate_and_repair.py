@@ -292,7 +292,8 @@ def carve_corridors_and_doors(
     """
     engine = RuleEngine(regulation_file)
     occ = building.occupancy_type
-    min_corridor_width = engine.data[occ].get("corridor", {}).get("min_width", 1.2)
+    # Use Chapter-4 Section 4.8.7 corridor width via proper method
+    min_corridor_width = engine.get_corridor_min_width(occ)
     min_door_width = engine.get_min_door_width(occ)
 
     violations = []

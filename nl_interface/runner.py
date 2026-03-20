@@ -448,6 +448,8 @@ def run_hybrid_backend(
     """Run both algorithmic and learned backends, pool variants, rank, and return the best."""
     output_paths = _output_paths(output_dir, output_prefix, "hybrid")
     all_variants = []
+    learned_variants = []  # Track learned variants separately for logging
+    algo_variants = []     # Track algorithmic variants separately for logging
     learned_spatial_hints: dict = {}
 
     # 1. GENERATE FROM LEARNED TRANSFORMER (run first to extract spatial hints)
@@ -488,6 +490,7 @@ def run_hybrid_backend(
                 "generation_summary": _json_safe_summary(learned_summary),
                 "wall_pipeline": getattr(best_learned["building"], "wall_render_stats", {}),
             }
+            learned_variants.append(learned_variant)
             all_variants.append(learned_variant)
     except Exception as e:
         print(f"Learned generation failed: {e}")
@@ -512,21 +515,25 @@ def run_hybrid_backend(
         print(f"Algorithmic packing failed: {e}")
         algo_variants = []
 
-    
+
     if not all_variants:
+        print(f"[GENERATION_ERROR] No variants produced. Learned: {len(learned_variants)}, Algo: {len(algo_variants)}")
         raise ValueError("Both Algorithmic and Learned generators failed to produce any variants.")
 
     # 3. RANK AND FILTER (Bonus is applied in rank_layout_variants)
+    print(f"[GENERATION] Ranking {len(all_variants)} total variants (Learned: {len(learned_variants)}, Algo: {len(algo_variants)})")
     ranked_variants, _ = rank_layout_variants(all_variants)
     passed, rejected, design_stats = _design_filter(ranked_variants)
-    debug_gate_bypassed = False
+
     if not passed:
-        if not rejected:
-            raise ValueError("Both Algorithmic and Learned generators failed to produce any variants.")
-        # Debug: fall back to best rejected variant instead of raising
-        print(f"[DEBUG] Design-quality gate rejected all hybrid variants — showing best anyway for debugging.")
-        passed = [rejected[0]]
-        debug_gate_bypassed = True
+        top_rejection = rejected[0] if rejected else {"reasons": ["No variants generated"], "strategy_name": "n/a"}
+        print(f"[GENERATION_ERROR] All variants rejected. Top reasons: {top_rejection.get('reasons', [])}")
+        print(f"[GENERATION_ERROR] Design stats: {design_stats}")
+        if rejected:
+            print(f"[GENERATION_ERROR] First 3 rejections:")
+            for i, rej in enumerate(rejected[:3]):
+                print(f"  {i+1}. {rej.get('strategy_name', 'unknown')}: {', '.join(rej.get('reasons', []))}")
+        raise ValueError(f"Design-quality gate rejected all variants from both engines: {', '.join(top_rejection['reasons'])}")
 
     chosen = passed[0]
     building = chosen["building"]
@@ -647,14 +654,21 @@ def _output_paths(output_dir: str, output_prefix: Optional[str], backend_target:
 
 
 def _bbox_from_boundary(boundary: List[Tuple[float, float]]) -> Dict:
-    xs = [p[0] for p in boundary]
-    ys = [p[1] for p in boundary]
-    return {
-        "x_min": min(xs),
-        "y_min": min(ys),
-        "x_max": max(xs),
-        "y_max": max(ys),
-    }
+    """Compute bounding box from boundary polygon. Returns empty dict if boundary is invalid."""
+    if not boundary or len(boundary) < 3:
+        return {}
+    try:
+        xs = [p[0] for p in boundary]
+        ys = [p[1] for p in boundary]
+        return {
+            "x_min": min(xs),
+            "y_min": min(ys),
+            "x_max": max(xs),
+            "y_max": max(ys),
+        }
+    except (TypeError, IndexError, ValueError) as e:
+        print(f"[WARNING] Invalid boundary polygon: {e}")
+        return {}
 
 
 def _json_safe_summary(summary: Dict) -> Dict:
@@ -668,9 +682,23 @@ def _json_safe_summary(summary: Dict) -> Dict:
 
 
 def _quiet_call(func, *args, **kwargs):
-    sink = StringIO()
-    with redirect_stdout(sink), redirect_stderr(sink):
-        return func(*args, **kwargs)
+    """Call function with suppressed stdout, but preserve stderr for debugging."""
+    stdout_sink = StringIO()
+    stderr_sink = StringIO()
+    try:
+        with redirect_stdout(stdout_sink), redirect_stderr(stderr_sink):
+            result = func(*args, **kwargs)
+        # If there were errors, log them
+        stderr_content = stderr_sink.getvalue()
+        if stderr_content:
+            print(f"[DEBUG] {func.__name__} stderr: {stderr_content[:500]}")
+        return result
+    except Exception as e:
+        # Don't swallow exceptions - re-raise with context
+        stderr_content = stderr_sink.getvalue()
+        if stderr_content:
+            print(f"[ERROR] {func.__name__} failed with stderr: {stderr_content[:500]}")
+        raise
 
 
 def _resolve_checkpoint(checkpoint_path: str) -> Path:

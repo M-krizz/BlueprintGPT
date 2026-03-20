@@ -270,3 +270,122 @@ def get_shaft_min(building_height_m: float,
     if building_height_m <= 12.5:
         return dict(table.get("upto_12p5m", {"min_area_sqm": 3.0, "min_dimension_m": 1.2}))
     return dict(table.get("upto_15m", {"min_area_sqm": 4.0, "min_dimension_m": 1.5}))
+
+
+# ---------- Occupant load lookups ----------
+
+def get_occupant_load_per_100sqm(occupancy: str,
+                                  variant: str = "",
+                                  reg: Optional[Dict[str, Any]] = None) -> float:
+    """Return occupant load per 100 sq.m from Table 4.1.
+
+    For Assembly/Mercantile, use variant to select sub-type:
+      - Assembly: 'fixed_seats' or 'without_seating' (default)
+      - Mercantile: 'street_basement' or 'upper_sales'
+    """
+    if reg is None:
+        reg = load_regulation_data()
+    table = reg.get("chapter4_occupant_load", {})
+    value = table.get(occupancy)
+
+    if isinstance(value, dict):
+        # Handle nested values (Assembly, Mercantile)
+        if occupancy == "Assembly":
+            if variant == "fixed_seats":
+                return float(value.get("with_fixed_seats_and_dance_floor", 166.6))
+            return float(value.get("without_seating_incl_dining", 66.6))
+        if occupancy == "Mercantile":
+            if variant == "upper_sales":
+                return float(value.get("upper_sales", 16.6))
+            return float(value.get("street_and_sales_basement", 33.3))
+        # Fallback for unknown nested
+        return float(list(value.values())[0]) if value else 8.0
+
+    if value is not None:
+        return float(value)
+
+    # Fallback to per-occupancy top-level
+    occ_data = reg.get(occupancy, {})
+    return float(occ_data.get("occupant_load_per_100sqm", 8.0))
+
+
+# ---------- Wet area and open space lookups ----------
+
+def get_wet_area_rules(reg: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    """Return wet area construction rules (schematic enforcement)."""
+    if reg is None:
+        reg = load_regulation_data()
+    return dict(reg.get("chapter4_wet_area", {
+        "floor": "Impervious, slope to drain",
+        "wall_finish": "Impervious wall finish up to 1.0m",
+        "wc_exclusivity": "WC not used for any other purpose",
+        "sewage": "To municipal sewer or septic tank within plot where sewer absent",
+    }))
+
+
+def get_open_space_rules(reg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Return open space requirements."""
+    if reg is None:
+        reg = load_regulation_data()
+    return dict(reg.get("chapter4_open_space", {
+        "habitable_rooms_abut": "open space or verandah",
+        "interior_open_space_min_m": 3.0,
+        "applies_when": "building height <= 12.5m",
+    }))
+
+
+# ---------- Summary / all-rules accessor ----------
+
+def get_chapter4_summary(
+    occupancy: str = "Residential",
+    plot_area_sqm: float = 100.0,
+    building_height_m: float = 9.0,
+    reg: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Return a summary dict of all Chapter-4 rules for a given context.
+
+    Useful for compliance reports and ground_truth bridging.
+    """
+    if reg is None:
+        reg = load_regulation_data()
+
+    bucket = plot_bucket(plot_area_sqm)
+    bucket_rules = get_bucket_rules(plot_area_sqm, reg)
+
+    return {
+        "occupancy": occupancy,
+        "plot_area_sqm": plot_area_sqm,
+        "plot_bucket": bucket,
+        "building_height_m": building_height_m,
+
+        # Occupant load
+        "occupant_load_per_100sqm": get_occupant_load_per_100sqm(occupancy, reg=reg),
+
+        # Room minimums (for Residential by bucket)
+        "room_minimums": dict(bucket_rules.get("rooms", {})) if occupancy == "Residential" else {},
+
+        # Door minimums
+        "door_dims_habitable": dict(bucket_rules.get("doors", {}).get("habitable", {})),
+        "door_dims_service": dict(bucket_rules.get("doors", {}).get("service", {})),
+
+        # Egress
+        "max_travel_distance_m": get_travel_distance_limit(occupancy, reg),
+        "corridor_min_width_m": get_corridor_min_width(occupancy, reg=reg),
+        "stair_min_width_m": get_stair_min_width_by_occupancy(occupancy, reg=reg),
+        "stair_width_by_plot_m": bucket_rules.get("stair_width") if occupancy == "Residential" else None,
+        "exit_door_dims": get_exit_door_dims(occupancy, reg),
+        "exit_capacity_stair": get_exit_capacity(occupancy, "stair", reg),
+        "exit_capacity_ramp": get_exit_capacity(occupancy, "ramp", reg),
+        "exit_capacity_door": get_exit_capacity(occupancy, "door", reg),
+
+        # Lighting & ventilation
+        "opening_area_ratio": get_opening_ratio(reg),
+        "max_lighting_depth_m": get_max_lighting_depth(reg),
+        "kitchen_window_min_sqm": get_kitchen_window_min(reg),
+        "bathroom_vent_min_sqm": get_bathroom_vent_min(reg),
+        "shaft_min": get_shaft_min(building_height_m, reg),
+
+        # Wet area and open space
+        "wet_area_rules": get_wet_area_rules(reg),
+        "open_space_rules": get_open_space_rules(reg),
+    }

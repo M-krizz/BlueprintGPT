@@ -33,6 +33,25 @@ import math
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+
+
+@dataclass
+class RepairReport:
+    """Repair severity metrics for tracking quality and displacement."""
+    severity_score: float  # [0-1], 0.0=no repair, 1.0=major changes
+    overlap_fixes: int  # Number of overlap violations fixed
+    min_dim_violations_fixed: int  # Number of min-dim violations fixed
+    topology_changes: int  # Room merges, splits, drops
+    total_displacement_m: float  # Sum of centroid movements (meters)
+    stages_applied: List[str]  # List of stage names that made changes
+    original_room_count: int
+    final_room_count: int
+
+    @property
+    def room_count_changed(self) -> bool:
+        """Whether room count was modified during repair."""
+        return self.original_room_count != self.final_room_count
 
 # ── Phase 3: force-based push-apart feature flags ─────────────────────────────
 FORCE_PUSH_ENABLED    = os.getenv("REPAIR_FORCE_PUSH_ENABLED",    "false").lower() == "true"
@@ -509,7 +528,8 @@ def _stage4_corridor_planning(
     """Generate corridor variants via existing corridor_first_planner."""
     engine = RuleEngine(regulation_file)
     occ = building.occupancy_type
-    min_corr_w = engine.data[occ].get("corridor", {}).get("min_width", 1.2)
+    # Use Chapter-4 Section 4.8.7 corridor width via proper method
+    min_corr_w = engine.get_corridor_min_width(occ)
 
     violations = []
     variants = generate_corridor_first_variants(
@@ -723,7 +743,7 @@ def validate_and_repair_generated_layout(
     spec: Optional[Dict[str, Any]] = None,
     *,
     run_ontology: bool = True,
-) -> Tuple[Building, List[str], str, List[Dict]]:
+) -> Tuple[Building, List[str], str, List[Dict], RepairReport]:
     """
     Full 8-stage deterministic repair pipeline.
 
@@ -737,32 +757,82 @@ def validate_and_repair_generated_layout(
         ``"COMPLIANT"`` or ``"NON_COMPLIANT"``
     repair_trace : list[dict]
         Structured trace of every repair action (stage, action, room).
+    repair_report : RepairReport
+        Severity metrics and displacement tracking.
     """
     all_violations: List[str] = []
     repair_trace: List[Dict] = []
     engine = RuleEngine(regulation_file)
     occ = building.occupancy_type
 
+    # ── Initialize repair tracking ─────────────────────────────────────────
+    original_room_count = len(building.rooms)
+    original_centroids = {}  # room_name -> (x, y)
+    stages_with_changes = []
+    overlap_fixes = 0
+    min_dim_fixes = 0
+    topology_changes = 0
+
+    # Capture original centroids for displacement tracking
+    for room in building.rooms:
+        if room.polygon and len(room.polygon) >= 3:
+            # Compute centroid
+            xs = [p[0] for p in room.polygon]
+            ys = [p[1] for p in room.polygon]
+            original_centroids[room.name] = (sum(xs) / len(xs), sum(ys) / len(ys))
+
+    initial_trace_length = len(repair_trace)
+
     # ── Stage 1: Sanitize geometry ────────────────────────────────────────
+    stage1_violations_before = len(all_violations)
     all_violations.extend(_stage1_sanitize(building, boundary_polygon, repair_trace))
+    if len(all_violations) > stage1_violations_before:
+        stages_with_changes.append("sanitize_geometry")
+        # Count topology changes (room drops/merges in stage 1)
+        topology_changes += len([v for v in all_violations[stage1_violations_before:]
+                               if "dropped" in v or "merged" in v])
 
     if not building.rooms:
-        return building, all_violations + ["no rooms survived sanitization"], "NON_COMPLIANT", repair_trace
+        # Create empty repair report for failed case
+        repair_report = RepairReport(
+            severity_score=1.0,  # Complete failure = maximum severity
+            overlap_fixes=0,
+            min_dim_violations_fixed=0,
+            topology_changes=original_room_count,  # All rooms lost
+            total_displacement_m=0.0,
+            stages_applied=[],
+            original_room_count=original_room_count,
+            final_room_count=0,
+        )
+        return building, all_violations + ["no rooms survived sanitization"], "NON_COMPLIANT", repair_trace, repair_report
 
     # ── Stage 2: Enforce minimums ─────────────────────────────────────────
+    stage2_violations_before = len(all_violations)
     all_violations.extend(_stage2_enforce_minimums(building, regulation_file, repair_trace))
+    if len(all_violations) > stage2_violations_before:
+        stages_with_changes.append("enforce_minimums")
+        min_dim_fixes += len(all_violations) - stage2_violations_before
 
     # ── Stage 2b: Aspect-ratio enforcement ────────────────────────────────
+    aspect_fixes = 0
     for room in building.rooms:
         if enforce_aspect_ratio(room):
             all_violations.append(f"{room.name}: aspect ratio reshaped")
             repair_trace.append(_trace("aspect_ratio", "reshaped", room.name))
+            aspect_fixes += 1
+
+    if aspect_fixes > 0:
+        stages_with_changes.append("aspect_ratio_enforcement")
 
     # Re-clamp after growth / reshape (rooms may have expanded outside boundary)
     _stage1_sanitize(building, boundary_polygon, repair_trace)
 
     # ── Stage 3: Overlap repair ───────────────────────────────────────────
+    stage3_violations_before = len(all_violations)
     all_violations.extend(_stage3_overlap_repair(building, boundary_polygon, entrance_point, repair_trace))
+    if len(all_violations) > stage3_violations_before:
+        stages_with_changes.append("overlap_repair")
+        overlap_fixes += len(all_violations) - stage3_violations_before
 
     # ── Stage 4: Corridor planning ────────────────────────────────────────
     variants, corr_violations = _stage4_corridor_planning(
@@ -819,7 +889,18 @@ def validate_and_repair_generated_layout(
             best_variant_trace = vt
 
     if best_variant is None:
-        return building, all_violations + ["no viable variant"], "NON_COMPLIANT", repair_trace
+        # Create failure repair report
+        repair_report = RepairReport(
+            severity_score=1.0,  # Complete failure
+            overlap_fixes=overlap_fixes,
+            min_dim_violations_fixed=min_dim_fixes,
+            topology_changes=topology_changes,
+            total_displacement_m=0.0,
+            stages_applied=stages_with_changes,
+            original_room_count=original_room_count,
+            final_room_count=len(building.rooms),
+        )
+        return building, all_violations + ["no viable variant"], "NON_COMPLIANT", repair_trace, repair_report
 
     all_violations.extend(best_variant_violations)
     repair_trace.extend(best_variant_trace)
@@ -828,8 +909,81 @@ def validate_and_repair_generated_layout(
     n_snapped = snap_building_to_grid(best_variant, step=0.15)
     if n_snapped:
         repair_trace.append(_trace("grid_snap", f"snapped_{n_snapped}_polygons", ""))
+        if "grid_snap" not in stages_with_changes:
+            stages_with_changes.append("grid_snap")
 
     compliant = best_metrics.get("fully_connected", False) and best_metrics.get("travel_distance_compliant", False)
     status = "COMPLIANT" if compliant else "NON_COMPLIANT"
 
-    return best_variant, all_violations, status, repair_trace
+    # ── Compute repair severity metrics ────────────────────────────────────
+    final_room_count = len(best_variant.rooms)
+
+    # Compute total displacement
+    total_displacement = 0.0
+    displacement_count = 0
+
+    for room in best_variant.rooms:
+        if room.name in original_centroids and room.polygon and len(room.polygon) >= 3:
+            # Current centroid
+            xs = [p[0] for p in room.polygon]
+            ys = [p[1] for p in room.polygon]
+            current_centroid = (sum(xs) / len(xs), sum(ys) / len(ys))
+
+            # Distance moved
+            orig = original_centroids[room.name]
+            dist = ((current_centroid[0] - orig[0])**2 + (current_centroid[1] - orig[1])**2)**0.5
+            total_displacement += dist
+            displacement_count += 1
+
+    # Convert to physical units (assume boundary spans ~15m typical)
+    if boundary_polygon:
+        xs = [p[0] for p in boundary_polygon]
+        ys = [p[1] for p in boundary_polygon]
+        boundary_width = max(xs) - min(xs) if xs else 15.0
+        boundary_height = max(ys) - min(ys) if ys else 15.0
+        boundary_scale = max(boundary_width, boundary_height, 1.0)
+        total_displacement_m = total_displacement * boundary_scale
+    else:
+        total_displacement_m = total_displacement * 15.0  # Fallback estimate
+
+    # Severity score: [0-1] based on extent of changes
+    severity_components = []
+
+    # Room count change (major impact)
+    if original_room_count != final_room_count:
+        severity_components.append(0.4)  # 40% if room count changed
+
+    # Displacement severity (0-30% based on avg movement)
+    if displacement_count > 0:
+        avg_displacement = total_displacement
+        # Normalize to [0, 0.3]: displacement > 0.5 normalized units = 30% severity
+        displacement_severity = min(0.3, avg_displacement * 0.6)
+        severity_components.append(displacement_severity)
+
+    # Fixes applied (0-30% based on extent)
+    total_fixes = overlap_fixes + min_dim_fixes + topology_changes
+    if total_fixes > 0:
+        # Normalize: 10+ fixes = 30% severity
+        fixes_severity = min(0.3, total_fixes / 10.0 * 0.3)
+        severity_components.append(fixes_severity)
+
+    # Stages applied (0-20% based on breadth)
+    if len(stages_with_changes) > 0:
+        # Normalize: 5+ stages = 20% severity
+        stage_severity = min(0.2, len(stages_with_changes) / 5.0 * 0.2)
+        severity_components.append(stage_severity)
+
+    severity_score = min(1.0, sum(severity_components))
+
+    repair_report = RepairReport(
+        severity_score=round(severity_score, 3),
+        overlap_fixes=overlap_fixes,
+        min_dim_violations_fixed=min_dim_fixes,
+        topology_changes=topology_changes,
+        total_displacement_m=round(total_displacement_m, 2),
+        stages_applied=stages_with_changes,
+        original_room_count=original_room_count,
+        final_room_count=final_room_count,
+    )
+
+    return best_variant, all_violations, status, repair_trace, repair_report

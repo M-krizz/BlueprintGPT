@@ -27,12 +27,12 @@ def test_process_user_request_extracts_current_spec_and_missing_geometry():
 
 def test_validation_rejects_unsupported_room_mentions():
     response = process_user_request(
-        "Need a living room and one bedroom on a 5 marla plot with a south entrance."
+        "Need an office and one bedroom on a 5 marla plot with a south entrance."
     )
 
     assert _room_count(response["current_spec"], "Bedroom") == 1
-    assert _room_count(response["current_spec"], "DrawingRoom") == 0
-    assert any("Unsupported room type 'LivingRoom'" in error for error in response["validation_errors"])
+    assert _room_count(response["current_spec"], "Office") == 0
+    assert any("Unsupported room type 'Office'" in error for error in response["validation_errors"])
 
 
 def test_extracts_typed_adjacency_and_normalizes_weights():

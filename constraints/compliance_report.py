@@ -3,6 +3,29 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+def run_ground_truth_validation(
+	building,
+	plot_area_sqm: float,
+	corridor_width: Optional[float] = None,
+	travel_distance: Optional[float] = None,
+) -> Optional[Dict]:
+	"""Run ground_truth/chapter4_validator.py for strong floor-plan validation.
+
+	Returns None if ground_truth validator is not available.
+	"""
+	try:
+		from ground_truth.chapter4_validator import validate_floor_plan_chapter4
+		return validate_floor_plan_chapter4(
+			building,
+			plot_area_sqm=plot_area_sqm,
+			corridor_width=corridor_width,
+			travel_distance=travel_distance,
+		)
+	except (ImportError, Exception) as e:
+		# Gracefully fail if ground_truth validator not available
+		return None
+
+
 def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None) -> Dict:
 	"""Build comprehensive compliance report including Chapter-4 checks.
 
@@ -110,6 +133,11 @@ def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None)
 			"violations": chapter4_violations,
 			"checks": chapter4_check.get("checks", {}),
 		}
+
+	# Add ground_truth/chapter4_validator strong check (optional)
+	# This is a more comprehensive floor-plan-level validation
+	if chapter4_check and chapter4_check.get("ground_truth_validation"):
+		report["ground_truth_validation"] = chapter4_check["ground_truth_validation"]
 
 	if ontology is not None:
 		report["ontology"] = {

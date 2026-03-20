@@ -13,6 +13,8 @@ import json
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+from utils.processing_logger import ProcessingLogger
 from uuid import uuid4
 
 
@@ -113,11 +115,7 @@ class ConversationSession:
 
     def update_spec(self, extracted: Dict[str, Any]) -> None:
         """Merge extracted spec data into current spec."""
-        print(f"\n[UPDATE_SPEC] Merging extracted into session spec")
-        print(f"[UPDATE_SPEC] Extracted rooms: {extracted.get('rooms', [])}")
-        print(f"[UPDATE_SPEC] Extracted plot_type: {extracted.get('plot_type')}")
-        print(f"[UPDATE_SPEC] Extracted entrance_side: {extracted.get('entrance_side')}")
-        print(f"[UPDATE_SPEC] Existing spec rooms: {self.current_spec.get('rooms', [])}")
+        ProcessingLogger.logger.debug(f"update_spec: merging {len(extracted.get('rooms', []))} extracted rooms into {len(self.current_spec.get('rooms', []))} existing")
 
         # Merge rooms (replacement semantics: new values override existing)
         room_counts = {}
@@ -136,7 +134,7 @@ class ConversationSession:
             for rtype, count in room_counts.items()
         ]
 
-        print(f"[UPDATE_SPEC] After merge, spec rooms: {self.current_spec['rooms']}")
+        ProcessingLogger.logger.debug(f"update_spec: after merge, {len(self.current_spec['rooms'])} room types")
 
         # Merge adjacency (additive, deduplicated)
         existing_adj = set()

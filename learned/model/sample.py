@@ -88,6 +88,44 @@ def load_model(
     return model, tok
 
 
+def load_best_model(device: str = "cpu") -> tuple[LayoutTransformer, LayoutTokenizer]:
+    """Load the best available model checkpoint automatically.
+
+    Uses checkpoint selection algorithm if LAYOUT_MODEL_CHECKPOINT env var not set.
+
+    Returns
+    -------
+    model : LayoutTransformer
+        Loaded model in eval mode
+    tokenizer : LayoutTokenizer
+        Corresponding tokenizer
+    """
+    try:
+        from learned.model.checkpoint_selector import get_model_checkpoint_path
+        checkpoint_path = get_model_checkpoint_path()
+        print(f"Loading model from: {checkpoint_path}")
+        return load_model(checkpoint_path, device)
+    except Exception as e:
+        print(f"Warning: Automatic checkpoint selection failed: {e}")
+        print("Falling back to environment variable or default checkpoint...")
+
+        # Fallback to environment variable
+        import os
+        checkpoint_path = os.getenv("LAYOUT_MODEL_CHECKPOINT")
+
+        if not checkpoint_path:
+            # Final fallback: look for any checkpoint
+            from pathlib import Path
+            checkpoint_dir = Path("learned/model/checkpoints")
+            checkpoint_files = list(checkpoint_dir.glob("*.pt"))
+            if checkpoint_files:
+                checkpoint_path = str(checkpoint_files[0])
+            else:
+                raise FileNotFoundError("No model checkpoints found")
+
+        return load_model(checkpoint_path, device)
+
+
 # ── Prompt ────────────────────────────────────────────────────────────────────
 
 def build_prompt(
@@ -161,9 +199,10 @@ class SpecConstrainedProcessor:
         self.eos_boost = eos_boost
 
         # Build required counts from spec  e.g. {"Bedroom": 2, "Kitchen": 1}
+        # Spec format: [{"type": "Bedroom", "count": 3}, {"type": "Kitchen", "count": 1}]
         self.required: Counter = Counter()
         for r in spec.get("rooms", []):
-            self.required[r["type"]] += 1
+            self.required[r["type"]] += r.get("count", 1)
 
         # Allowed type token ids
         self._allowed_type_ids = set()
@@ -411,6 +450,164 @@ class OverlapAwareProcessor:
         return logits
 
 
+# ── Min-Dimension Logit Processor (Chapter-4) ─────────────────────────────────
+
+# Master switch – default OFF; enable via env var
+MINDIM_PROCESSOR_ENABLED = os.getenv("LEARNED_MINDIM_PROCESSOR_ENABLED", "false").lower() == "true"
+
+class MinDimProcessor:
+    """Logit processor that enforces Chapter-4 minimum dimensions during sampling.
+
+    Strategy
+    --------
+    Token groups have the fixed structure::
+
+        ROOM_TOKEN  type_tok  x1_bin  y1_bin  x2_bin  y2_bin
+
+    ``tail_len`` = number of tokens emitted **after** the last ROOM_TOKEN.
+
+    - tail_len == 4 (x2 position): mask bins that would create width < min_width
+    - tail_len == 5 (y2 position): mask bins that would create height < min_height
+      OR area < min_area
+
+    Uses Chapter-4 plot bucket (upto_50sqm / above_50sqm) to select minimums.
+    """
+
+    _TAIL_X2 = 4
+    _TAIL_Y2 = 5
+
+    def __init__(
+        self,
+        tokenizer: LayoutTokenizer,
+        plot_area_sqm: float = 100.0,
+        margin: float = 0.05,  # small margin in normalized coords to avoid edge cases
+        boundary_m: Optional[float] = None,  # Physical boundary size (meters)
+    ):
+        self.tok = tokenizer
+        self.plot_area_sqm = plot_area_sqm
+        self.margin = margin
+        self.coord_offset = tokenizer.coord_offset
+        self.num_bins = tokenizer.num_bins
+
+        # Estimate boundary size from plot area if not provided
+        # Training data analysis (5904 samples):
+        #   - Layouts use 98.85% of normalized [0,1] space (mean)
+        #   - 10 Marla (~250 sqm) plots: ~15-16m boundary typical
+        #   - 5 Marla (~125 sqm) plots: ~11-12m boundary typical
+        if boundary_m is None:
+            # Heuristic: sqrt(plot_area) gives approximate boundary edge
+            # Calibrated to match training data distributions
+            self.boundary_m = max(10.0, min(20.0, (plot_area_sqm ** 0.5)))
+        else:
+            self.boundary_m = boundary_m
+
+        # Load Chapter-4 minimums
+        from constraints.chapter4_helpers import load_regulation_data, plot_bucket
+        self.reg = load_regulation_data()
+        self.bucket = plot_bucket(plot_area_sqm)
+
+    def _bin_to_norm(self, bin_idx: int) -> float:
+        """Convert bin index to normalized coordinate [0,1]."""
+        if self.num_bins <= 1:
+            return 0.5
+        return float(bin_idx) / (self.num_bins - 1)
+
+    def _get_min_dims(self, room_type: str) -> tuple[float, float, float]:
+        """Return (min_width_m, min_height_m, min_area_m2) for a room type."""
+        from constraints.chapter4_helpers import get_min_room_dims
+        dims = get_min_room_dims(room_type, self.plot_area_sqm, self.reg)
+        return dims["min_width"], dims.get("min_height", 0), dims["min_area"]
+
+    def _last_room_idx(self, tokens: List[int]) -> int:
+        """Find index of last ROOM_TOKEN in sequence."""
+        for i in range(len(tokens) - 1, -1, -1):
+            if tokens[i] == ROOM_TOKEN:
+                return i
+        return -1
+
+    def __call__(self, logits: torch.Tensor, seq: torch.Tensor) -> torch.Tensor:
+        """Mask coordinate bins that violate Chapter-4 minimums."""
+        tokens = seq.squeeze(0).tolist()
+        room_idx = self._last_room_idx(tokens)
+        if room_idx < 0 or room_idx + 1 >= len(tokens):
+            return logits
+
+        # Get room type
+        type_tok = tokens[room_idx + 1]
+        room_type = self.tok._tok2type.get(type_tok)
+        if not room_type:
+            return logits
+
+        min_width, min_height, min_area = self._get_min_dims(room_type)
+        if min_width == 0 and min_area == 0:
+            return logits  # Room type not regulated
+
+        # Convert meters to normalized [0,1] using calibrated boundary size
+        # Training data shows layouts use ~98.85% of normalized space
+        # boundary_m is estimated from plot_area_sqm (10-20m range typical)
+        min_width_norm = (min_width + self.margin) / self.boundary_m
+        min_height_norm = (min_height + self.margin) / self.boundary_m if min_height > 0 else 0
+        min_area_norm = (min_area + self.margin) / (self.boundary_m ** 2)
+
+        tail_len = len(tokens) - room_idx - 1
+
+        # ── x2 position: enforce min width ───────────────────────────────────
+        if tail_len == self._TAIL_X2:
+            try:
+                co = self.coord_offset
+                x1 = self._bin_to_norm(tokens[room_idx + 2] - co)
+            except IndexError:
+                return logits
+
+            # Mask bins where x2 < x1 + min_width_norm
+            min_x2 = x1 + min_width_norm
+            for cand_bin in range(self.num_bins):
+                tid = cand_bin + co
+                if tid >= logits.shape[-1]:
+                    break
+                if logits[0, tid] == float("-inf"):
+                    continue
+                x2 = self._bin_to_norm(cand_bin)
+                if x2 < min_x2:
+                    logits[0, tid] = float("-inf")
+
+        # ── y2 position: enforce min height and min area ─────────────────────
+        elif tail_len == self._TAIL_Y2:
+            try:
+                co = self.coord_offset
+                x1 = self._bin_to_norm(tokens[room_idx + 2] - co)
+                y1 = self._bin_to_norm(tokens[room_idx + 3] - co)
+                x2 = self._bin_to_norm(tokens[room_idx + 4] - co)
+            except IndexError:
+                return logits
+
+            width_norm = x2 - x1
+            if width_norm <= 0:
+                return logits
+
+            # Mask bins where y2 < y1 + min_height_norm OR area < min_area_norm
+            for cand_bin in range(self.num_bins):
+                tid = cand_bin + co
+                if tid >= logits.shape[-1]:
+                    break
+                if logits[0, tid] == float("-inf"):
+                    continue
+                y2 = self._bin_to_norm(cand_bin)
+                height_norm = y2 - y1
+
+                # Height check
+                if min_height_norm > 0 and height_norm < min_height_norm:
+                    logits[0, tid] = float("-inf")
+                    continue
+
+                # Area check
+                area_norm = width_norm * height_norm
+                if area_norm < min_area_norm:
+                    logits[0, tid] = float("-inf")
+
+        return logits
+
+
 # ── Spec-Constrained Sampling ────────────────────────────────────────────────
 
 def constrained_sample_layout(
@@ -427,6 +624,8 @@ def constrained_sample_layout(
     min_x_bin_gap: int = 1,
     min_y_bin_gap: int = 1,
     overlap_processor: bool = OVERLAP_PROCESSOR_ENABLED,
+    mindim_processor: bool = MINDIM_PROCESSOR_ENABLED,
+    plot_area_sqm: float = 100.0,
     device: str = "cpu",
 ) -> List[RoomBox]:
     """Sample a layout with spec-constrained decoding.
@@ -442,22 +641,43 @@ def constrained_sample_layout(
         :class:`OverlapAwareProcessor` after the spec constraints to mask
         coordinate bins that would produce IoU > ``IOU_BLOCK_THRESH`` with
         already-placed rooms.
+    mindim_processor : bool
+        When True (and ``LEARNED_MINDIM_PROCESSOR_ENABLED=true``), chain
+        :class:`MinDimProcessor` to enforce Chapter-4 minimum dimensions.
+    plot_area_sqm : float
+        Plot area in sq.m for Chapter-4 bucket selection (default 100.0).
     """
-    room_types = [r["type"] for r in spec.get("rooms", [])]
+    # Build room_types list with proper counts: ["Bedroom", "Bedroom", "Bedroom", ...]
+    room_types = []
+    for r in spec.get("rooms", []):
+        count = r.get("count", 1)
+        room_types.extend([r["type"]] * count)
     prompt = build_prompt(tokenizer, building_type, room_types).to(device)
 
     spec_proc = SpecConstrainedProcessor(
         tokenizer, spec, max_rooms=max_rooms,
     )
+
+    # Chain processors: spec → mindim → overlap
+    processors = [spec_proc]
+
+    if mindim_processor:
+        mindim_proc = MinDimProcessor(tokenizer, plot_area_sqm=plot_area_sqm)
+        processors.append(mindim_proc)
+
     if overlap_processor:
         overlap_proc = OverlapAwareProcessor(tokenizer)
+        processors.append(overlap_proc)
+
+    # Create chained processor
+    if len(processors) == 1:
+        processor = processors[0]
+    else:
         def _chained(logits: torch.Tensor, seq: torch.Tensor) -> torch.Tensor:
-            logits = spec_proc(logits, seq)
-            logits = overlap_proc(logits, seq)
+            for proc in processors:
+                logits = proc(logits, seq)
             return logits
         processor = _chained
-    else:
-        processor = spec_proc
 
     output = model.generate(
         prompt,
@@ -481,7 +701,10 @@ def constrained_sample_layout(
     decoded = tokenizer.decode_rooms(tokens)
 
     # Final cleanup: keep only requested room types and cap counts.
-    required: Counter = Counter(r["type"] for r in spec.get("rooms", []))
+    # Build required counts properly: {"Bedroom": 3} not {"Bedroom": 1}
+    required: Counter = Counter()
+    for r in spec.get("rooms", []):
+        required[r["type"]] += r.get("count", 1)
     if not required:
         return decoded
 

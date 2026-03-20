@@ -5,6 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
+from utils.processing_logger import ProcessingLogger
 from nl_interface.constants import (
     ALLOWED_BUILDING_TYPE,
     CORE_ALGORITHMIC_ROOM_TYPES,
@@ -19,12 +20,12 @@ def make_room(name: str, room_type: str) -> Dict[str, str]:
 
 def route_backend(current_spec: Dict) -> Optional[str]:
     room_types = {room.get("type") for room in current_spec.get("rooms", []) if room.get("type")}
-    print(f"[ROUTE_BACKEND] Room types found: {room_types}")
+    ProcessingLogger.logger.debug(f"route_backend: room_types={room_types}")
     if not room_types:
-        print(f"[ROUTE_BACKEND] No room types -> returning None (no backend target)")
+        ProcessingLogger.logger.debug("route_backend: no room types, returning None")
         return None
     # We now default to hybrid routing to run both backends
-    print(f"[ROUTE_BACKEND] Routing to: hybrid")
+    ProcessingLogger.logger.debug("route_backend: routing to hybrid")
     return "hybrid"
 
 

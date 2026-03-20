@@ -441,7 +441,8 @@ def ablation_table(
         for _ in range(min(N, 5)):  # algorithmic is deterministic, fewer trials
             try:
                 b, eng, _, _, w, h, bp, _ = _build_base(algo_spec, regulation_file)
-                min_cw = eng.data[b.occupancy_type].get("corridor", {}).get("min_width", 1.2)
+                # Use Chapter-4 Section 4.8.7 corridor width via proper method
+                min_cw = eng.get_corridor_min_width(b.occupancy_type)
                 min_dw = eng.get_min_door_width(b.occupancy_type)
                 variants = generate_corridor_first_variants(b, bp, entrance_point, min_cw)
                 for vb, _ in variants:
