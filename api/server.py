@@ -191,13 +191,15 @@ def _spec_from_request(body: GenerateRequest) -> dict:
     boundary = body.boundary
     if body.boundary_polygon is not None:
         polygon = body.boundary_polygon
-    else:
+    elif boundary and boundary.width > 0 and boundary.height > 0:
         polygon = [
             (0.0, 0.0),
             (boundary.width, 0.0),
             (boundary.width, boundary.height),
             (0.0, boundary.height),
         ]
+    else:
+        polygon = None
     rooms = []
     for idx, room in enumerate(body.rooms, start=1):
         rooms.append({"name": room.name or f"Room_{idx}", "type": room.type, "area": room.area})

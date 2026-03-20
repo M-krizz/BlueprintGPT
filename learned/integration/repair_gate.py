@@ -173,8 +173,14 @@ def _stage1_sanitize(building: Building, boundary_polygon, trace: list) -> List[
     keep = []
     for room in building.rooms:
         if room.polygon is None:
-            violations.append(f"{room.name}: no polygon, dropped")
-            trace.append(_trace("sanitize", "dropped_no_polygon", room.name))
+            # KEEP placeholders so we can force a repack later
+            if room.provenance and room.provenance.get("source") == "placeholder":
+                keep.append(room)
+                violations.append(f"{room.name}: placeholder requires repacking")
+                trace.append(_trace("sanitize", "kept_placeholder_for_repack", room.name))
+            else:
+                violations.append(f"{room.name}: no polygon, dropped")
+                trace.append(_trace("sanitize", "dropped_no_polygon", room.name))
             continue
         x1, y1, x2, y2 = _bbox(room)
         w, h = x2 - x1, y2 - y1
@@ -486,10 +492,20 @@ def _stage3_overlap_repair(building, boundary_polygon, entrance_point, trace) ->
         except Exception as exc:
             trace.append(_trace("overlap_repair", f"box_opt_failed: {exc}", ""))
 
-    # Step 3: Fallback to full repack if overlaps remain
-    if remaining > 0:
-        violations.append(f"{remaining} overlap(s) after {push_label} → repacking")
-        trace.append(_trace("overlap_repair", f"{push_label}_incomplete_{remaining}_overlaps", ""))
+    # Step 3: Fallback to full repack if overlaps remain or any room lacks a polygon
+    needs_repack = remaining > 0
+    if not needs_repack:
+        for room in building.rooms:
+            if room.polygon is None:
+                needs_repack = True
+                violations.append(f"{room.name} missing geometry → forcing repack")
+                trace.append(_trace("overlap_repair", "placeholder_forced_repack", room.name))
+                break
+
+    if needs_repack:
+        if remaining > 0:
+            violations.append(f"{remaining} overlap(s) after {push_label} → repacking")
+            trace.append(_trace("overlap_repair", f"{push_label}_incomplete_{remaining}_overlaps", ""))
         ok = _repack_fallback(building, boundary_polygon, entrance_point, trace)
         if not ok:
             violations.append("repack fallback also failed")
