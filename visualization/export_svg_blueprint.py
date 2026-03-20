@@ -1,4 +1,4 @@
-﻿"""
+"""
 export_svg_blueprint.py â€“ CAD / SmartDraw-style SVG floor-plan renderer.
 
 Produces professional drafting-style output:
@@ -53,21 +53,36 @@ ZONE_FILL = {
 }
 
 ROOM_FILL = {
-    "Bedroom":    "#bbdefb",
-    "LivingRoom": "#c8e6c9",
-    "Kitchen":    "#ffe0b2",
-    "Bathroom":   "#b3e5fc",
-    "WC":         "#b3e5fc",
-    "DiningRoom": "#f0f4c3",
-    "Study":      "#d1c4e9",
-    "Storage":    "#d7ccc8",
-    "Balcony":    "#f9fbe7",
-    "Staircase":  "#e0e0e0",
-    "Garage":     "#efebe9",
-    "Corridor":   "#f5f5f5",
+    "Bedroom":    "#bfdbfe", # blue-200
+    "LivingRoom": "#bbf7d0", # green-200
+    "Kitchen":    "#fef08a", # yellow-200
+    "Bathroom":   "#e9d5ff", # purple-200
+    "WC":         "#fbcfe8", # pink-200
+    "DiningRoom": "#ffedd5", # orange-200
+    "Study":      "#ddd6fe", # violet-200
+    "Storage":    "#e5e7eb", # gray-200
+    "Balcony":    "#ccfbf1", # teal-200
+    "Staircase":  "#d1d5db", # gray-300
+    "Garage":     "#fecaca", # red-200
+    "Corridor":   "#f3f4f6", # gray-100
 }
 
 DEFAULT_FILL = "#f5f5f5"
+
+# Fallback cycling palette for unknown room types
+_FILL_PALETTE = [
+    "#bfdbfe", "#bbf7d0", "#fef08a", "#e9d5ff",
+    "#fbcfe8", "#ffedd5", "#ddd6fe", "#ccfbf1",
+    "#fecaca", "#d1fae5", "#fde68a", "#a7f3d0",
+]
+
+def _room_fill_color(room_type: str, zone: str = "") -> str:
+    """Return a distinct, stable fill color for a room type."""
+    if room_type in ROOM_FILL:
+        return ROOM_FILL[room_type]
+    # Hash-stable assignment for unknown types
+    idx = abs(hash(room_type)) % len(_FILL_PALETTE)
+    return _FILL_PALETTE[idx]
 
 
 def _px(metres: float) -> float:
@@ -260,15 +275,18 @@ def _draw_window(g: Element, segment, ox: float, oy: float):
 #  Overall boundary dimension strings
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-def _draw_boundary_dims(g: Element, boundary_polygon, ox: float, oy: float):
+def _draw_boundary_dims(g: Element, boundary_polygon, ox: float, oy: float, bw=None, bh=None):
     """Draw overall width / height dimension strings along boundary extents."""
-    if not boundary_polygon or len(boundary_polygon) < 3:
+    if boundary_polygon and len(boundary_polygon) >= 3:
+        xs = [p[0] for p in boundary_polygon]
+        ys = [p[1] for p in boundary_polygon]
+        x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+        bw = x1 - x0
+        bh = y1 - y0
+    elif bw is not None and bh is not None:
+        x0, y0, x1, y1 = 0, 0, bw, bh
+    else:
         return
-    xs = [p[0] for p in boundary_polygon]
-    ys = [p[1] for p in boundary_polygon]
-    x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
-    bw = x1 - x0
-    bh = y1 - y0
 
     # Bottom overall width
     dim_y = oy + _px(y1) + 28
@@ -290,9 +308,9 @@ def _draw_boundary_dims(g: Element, boundary_polygon, ox: float, oy: float):
     )
 
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# —————————————————————————————————————————————————————————————————————————————
 #  Metric grid overlay
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# —————————————————————————————————————————————————————————————————————————————
 
 def _draw_grid_overlay(g: Element, boundary_polygon, ox: float, oy: float,
                        step_m: float = 1.0):
@@ -338,7 +356,7 @@ def _draw_room(g: Element, room, ox: float, oy: float, zone: str = "",
     """
     if room.polygon is None:
         return
-    fill = ROOM_FILL.get(room.room_type, ZONE_FILL.get(zone, DEFAULT_FILL))
+    fill = _room_fill_color(room.room_type, zone)
 
     # Room filled polygon
     d = _polygon_path(room.polygon, ox, oy)
@@ -354,50 +372,45 @@ def _draw_room(g: Element, room, ox: float, oy: float, zone: str = "",
         attrs["stroke"] = "none"
     SubElement(g, "path", attrs)
 
-    # Label
-    x1, y1, x2, y2 = _room_bbox(room)
-    cx = ox + _px((x1 + x2) / 2)
-    cy = oy + _px((y1 + y2) / 2)
+
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+def _draw_room_label(g, room, ox: float, oy: float):
+    """Draw room name + area label drawn AFTER all wall layers so it is always visible."""
+    if room.polygon is None:
+        return
+    xs = [p[0] for p in room.polygon]
+    ys = [p[1] for p in room.polygon]
+    x1, y1, x2, y2 = min(xs), min(ys), max(xs), max(ys)
+    w_px = (x2 - x1) * 80  # SCALE=80
+    h_px = (y2 - y1) * 80
+    if w_px < 24 or h_px < 16:
+        return
+    cx = ox + (x1 + x2) / 2 * 80
+    cy = oy + (y1 + y2) / 2 * 80
+    from visualization.dimensions import measure_room_dims
     w_m, h_m = measure_room_dims(room.polygon)
     area = w_m * h_m
 
-    # Room name
-    label = SubElement(g, "text", {
+    from xml.etree.ElementTree import SubElement
+    lbl = SubElement(g, "text", {
         "x": f"{cx:.1f}", "y": f"{cy - 4:.1f}",
         "text-anchor": "middle",
         "font-size": "13",
         "font-weight": "700",
-        "fill": "#263238",
+        "fill": "#1a237e",
     })
-    label.text = room.room_type
+    lbl.text = room.name.replace("_", " ")
 
-    # Area dimension
     dim = SubElement(g, "text", {
-        "x": f"{cx:.1f}", "y": f"{cy + 10:.1f}",
+        "x": f"{cx:.1f}", "y": f"{cy + 12:.1f}",
         "text-anchor": "middle",
         "font-size": "10",
-        "fill": "#546e7a",
+        "fill": "#37474f",
     })
-    dim.text = f"{area:.1f} mÂ²"
+    dim.text = f"{area:.1f} m²"
 
-    # Width/height room dimension tags/lines
-    if show_room_dim_tags:
-        draw_dimension(
-            g,
-            (ox + _px(x1), oy + _px(y2) + 12),
-            (ox + _px(x2), oy + _px(y2) + 12),
-            text=f"{w_m:.1f}m",
-        )
-        draw_dimension(
-            g,
-            (ox + _px(x2) + 12, oy + _px(y1)),
-            (ox + _px(x2) + 12, oy + _px(y2)),
-            text=f"{h_m:.1f}m",
-            vertical=True,
-        )
-
-
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  Door rendering (opening + swing arc)
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
@@ -443,12 +456,17 @@ def _draw_door(g: Element, door, ox: float, oy: float):
         arc_x = px1
         arc_y = py1 - r
 
+    is_exit = getattr(door, "door_type", "") == "exit"
+    arc_stroke = "#d32f2f" if is_exit else "#455a64"
+    arc_width = "1.8" if is_exit else "1.5"
+    arc_dash = "5,3" if is_exit else "4,3"
+
     SubElement(g, "path", {
         "d": f"M{px2:.1f},{py2:.1f} A{r:.1f},{r:.1f} 0 0 1 {arc_x:.1f},{arc_y:.1f}",
         "fill": "none",
-        "stroke": "#78909c",
-        "stroke-width": "0.8",
-        "stroke-dasharray": "3,2",
+        "stroke": arc_stroke,
+        "stroke-width": arc_width,
+        "stroke-dasharray": arc_dash,
     })
 
 
@@ -698,21 +716,29 @@ def render_svg_blueprint(
     g_entrance = SubElement(svg, "g", {"id": "entrance"})
     exit_w = building.exit.width if building.exit else 1.0
     _draw_entrance(g_entrance, entrance_point, ox, oy, exit_w)
+    g_ent = SubElement(svg, "g", {"id": "entrance"})
+    ew = getattr(building.exit, "width", 1.0) if hasattr(building, "exit") and building.exit else 1.0
+    _draw_entrance(g_ent, entrance_point, ox, oy, ew)
 
-    # Doors (on top of walls â€” carve gap + draw leaf + arc)
-    if show_windows and merge_walls:
-        g_windows = SubElement(svg, "g", {"id": "windows"})
-        for win_seg in getattr(building, "window_segments", []):
-            _draw_window(g_windows, win_seg, ox, oy)
-
-    # Doors (on top of walls â€” carve gap + draw leaf + arc)
+    # Doors
     g_doors = SubElement(svg, "g", {"id": "doors"})
     for door in building.doors:
         _draw_door(g_doors, door, ox, oy)
+        
+    if hasattr(building, "exit") and building.exit and getattr(building.exit, "segment", None):
+        class ExitDoor:
+            segment = building.exit.segment
+            door_type = "exit"
+        _draw_door(g_doors, ExitDoor(), ox, oy)
+
+    # Room labels drawn AFTER all walls and doors so they are never obscured
+    g_labels = SubElement(svg, "g", {"id": "room-labels"})
+    for room in building.rooms:
+        _draw_room_label(g_labels, room, ox, oy)
 
     # Overall boundary dimension strings
     g_dims = SubElement(svg, "g", {"id": "boundary-dims"})
-    _draw_boundary_dims(g_dims, boundary_polygon, ox, oy)
+    _draw_boundary_dims(g_dims, boundary_polygon, ox, oy, bw=bw, bh=bh)
 
     # Title block
     total_area = building.total_area or sum(r.final_area for r in building.rooms if r.final_area)

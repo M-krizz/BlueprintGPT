@@ -758,8 +758,8 @@
         <div class="setting-group">
           <div class="setting-label">Boundary Size</div>
           <div class="setting-row">
-            <input class="setting-input" id="width" type="number" step="0.1" value="15" placeholder="Width (m)" />
-            <input class="setting-input" id="height" type="number" step="0.1" value="10" placeholder="Height (m)" />
+            <input class="setting-input" id="width" type="number" step="0.1" value="" placeholder="Width (m)" />
+            <input class="setting-input" id="height" type="number" step="0.1" value="" placeholder="Height (m)" />
           </div>
         </div>
         <div class="setting-group">
@@ -815,6 +815,14 @@
     const promptEl = document.getElementById('prompt');
     const welcomeScreen = document.getElementById('welcomeScreen');
     let lastResponseData = null;
+
+    // ─── Preset Shapes ───────────────────────────────
+    const PRESET_SHAPES = {
+      "Rectangle": [ {x: 80, y: 40}, {x: 240, y: 40}, {x: 240, y: 200}, {x: 80, y: 200} ],
+      "L-Shape": [ {x: 60, y: 40}, {x: 180, y: 40}, {x: 180, y: 120}, {x: 260, y: 120}, {x: 260, y: 200}, {x: 60, y: 200} ],
+      "T-Shape": [ {x: 40, y: 40}, {x: 280, y: 40}, {x: 280, y: 100}, {x: 200, y: 100}, {x: 200, y: 200}, {x: 120, y: 200}, {x: 120, y: 100}, {x: 40, y: 100} ],
+      "U-Shape": [ {x: 40, y: 40}, {x: 120, y: 40}, {x: 120, y: 140}, {x: 200, y: 140}, {x: 200, y: 40}, {x: 280, y: 40}, {x: 280, y: 200}, {x: 40, y: 200} ]
+    };
 
     // ─── Session state ───────────────────────────────
     let currentSessionId = null;
@@ -890,6 +898,27 @@
     let mode = 'poly';
     let isClosed = false;
 
+    function loadPreset(shapeName) {
+      if (!PRESET_SHAPES[shapeName]) return;
+      mode = 'poly';
+      points = [...PRESET_SHAPES[shapeName]];
+      isClosed = true;
+      document.getElementById('canvasInstruction').innerText = `Loaded ${shapeName}. Add entrance or generate.`;
+      
+      // Also update W/H fields bounding box
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (let p of points) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      document.getElementById('width').value = ((maxX - minX) / 40).toFixed(1);
+      document.getElementById('height').value = ((maxY - minY) / 40).toFixed(1);
+      
+      drawCanvas();
+    }
+
     function drawCanvas() {
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       ctx.strokeStyle = '#2e2e2e';
@@ -945,6 +974,25 @@
       document.getElementById('entranceY').value = "";
       drawCanvas(); 
     };
+    
+    // Add preset buttons row dynamically (or bind to existing if added in HTML)
+    const btnRow = document.createElement('div');
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '8px';
+    btnRow.style.marginTop = '8px';
+    btnRow.style.justifyContent = 'center';
+    for (let shape in PRESET_SHAPES) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'correction-hint';
+      btn.style.padding = '4px 8px';
+      btn.style.fontSize = '12px';
+      btn.textContent = shape;
+      btn.onclick = () => loadPreset(shape);
+      btnRow.appendChild(btn);
+    }
+    cvs.parentNode.insertBefore(btnRow, cvs.nextSibling);
+
     drawCanvas();
     // ──────────────────────────────────────────────────
 
@@ -1513,8 +1561,8 @@
       const prompt = promptEl.value.trim();
       if (!prompt) return;
 
-      const width = Number(document.getElementById('width').value || 0);
-      const height = Number(document.getElementById('height').value || 0);
+      let width = Number(document.getElementById('width').value || 0);
+      let height = Number(document.getElementById('height').value || 0);
       const entranceX = document.getElementById('entranceX').value;
       const entranceY = document.getElementById('entranceY').value;
       const area = document.getElementById('area').value;
@@ -1527,6 +1575,12 @@
 
       if (isClosed && points.length >= 3) {
         customPoly = points.map(p => [p.x / 40, (cvs.height - p.y) / 40]);
+      } else {
+        // Fallback to 15x10 ONLY if user provided neither custom polygon nor explicit dimensions
+        if (width === 0 && height === 0) {
+           width = 15;
+           height = 10;
+        }
       }
 
       addMessage(prompt, 'user');

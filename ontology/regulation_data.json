@@ -6,48 +6,56 @@
     "rooms": {
       "Bedroom": {
         "min_area": 9.5,
+        "max_area": 16.0,
         "min_width": 2.4,
         "min_height": 2.75,
         "default_weight": 1.5
       },
       "LivingRoom": {
-        "min_area": 9.5,
+        "min_area": 12.0,
+        "max_area": 25.0,
         "min_width": 2.4,
         "min_height": 2.75,
         "default_weight": 2.5
       },
       "Kitchen": {
         "min_area": 4.5,
+        "max_area": 10.0,
         "min_width": 1.5,
         "min_height": 2.75,
         "default_weight": 1.0
       },
       "Bathroom": {
         "min_area": 1.8,
+        "max_area": 4.5,
         "min_width": 1.2,
         "min_height": 2.2,
         "default_weight": 0.5
       },
       "WC": {
         "min_area": 1.1,
+        "max_area": 2.5,
         "min_width": 0.9,
         "min_height": 2.2,
         "default_weight": 0.3
       },
       "BathWC": {
         "min_area": 2.8,
+        "max_area": 6.0,
         "min_width": 1.2,
         "min_height": 2.2,
         "default_weight": 0.5
       },
       "Pantry": {
         "min_area": 3.0,
+        "max_area": 6.0,
         "min_width": 1.4,
         "min_height": 2.75,
         "default_weight": 0.4
       },
       "Garage": {
         "min_area": 14.85,
+        "max_area": 25.0,
         "min_width": 2.75,
         "min_length": 5.4,
         "min_height": 2.4,
