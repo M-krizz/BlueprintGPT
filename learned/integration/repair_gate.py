@@ -30,8 +30,19 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+# ── Phase 3: force-based push-apart feature flags ─────────────────────────────
+FORCE_PUSH_ENABLED    = os.getenv("REPAIR_FORCE_PUSH_ENABLED",    "false").lower() == "true"
+FORCE_PUSH_MAX_ITERS  = int(os.getenv("REPAIR_FORCE_PUSH_MAX_ITERS",  "120"))
+FORCE_PUSH_STEP       = float(os.getenv("REPAIR_FORCE_PUSH_STEP",       "0.5"))
+FORCE_PUSH_DAMPING    = float(os.getenv("REPAIR_FORCE_PUSH_DAMPING",    "0.85"))
+FORCE_PUSH_MIN_OV     = float(os.getenv("REPAIR_FORCE_PUSH_MIN_OV",     "0.01"))
+
+# ── Phase 4: box optimizer feature flag ───────────────────────────────────────
+BOX_OPT_ENABLED = os.getenv("BOX_OPT_ENABLED", "false").lower() == "true"
 
 from shapely.geometry import Polygon, Point, box as shapely_box
 from shapely.ops import unary_union
@@ -299,6 +310,117 @@ def _push_apart(building: Building, boundary_polygon, max_iters: int = 50) -> in
     return remaining
 
 
+def _force_push_apart(
+    building: Building,
+    boundary_polygon,
+    max_iters: int = FORCE_PUSH_MAX_ITERS,
+    initial_step: float = FORCE_PUSH_STEP,
+    damping: float = FORCE_PUSH_DAMPING,
+) -> int:
+    """Force-based spring push-apart optimizer (Phase 3).
+
+    Improvements over the greedy ``_push_apart``:
+
+    * **Simultaneous updates** — forces for all pairs are accumulated first,
+      then applied at once; prevents the greedy oscillation where moving room A
+      to fix pair (A,B) breaks pair (A,C).
+    * **Proportional force split** — larger rooms move less (force shared
+      inversely proportional to area, like elastic collision).
+    * **Damped step size** — step shrinks by ``damping`` each iteration so the
+      optimizer settles rather than overshooting.
+
+    Returns the number of remaining overlapping pairs after the run.
+    """
+    bx0, by0, bx1, by1 = _boundary_bbox(boundary_polygon)
+    rooms = [r for r in building.rooms if r.polygon is not None]
+    n = len(rooms)
+    if n < 2:
+        return 0
+
+    step = initial_step
+
+    for _ in range(max_iters):
+        forces: List[List[float]] = [[0.0, 0.0] for _ in range(n)]
+        has_overlap = False
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                if rooms[i].polygon is None or rooms[j].polygon is None:
+                    continue
+                ov = _overlap_area(rooms[i], rooms[j])
+                if ov < FORCE_PUSH_MIN_OV:
+                    continue
+                has_overlap = True
+
+                ax1, ay1, ax2, ay2 = _bbox(rooms[i])
+                bx1r, by1r, bx2r, by2r = _bbox(rooms[j])
+
+                # Overlap region dimensions
+                ox1 = max(ax1, bx1r);  ox2 = min(ax2, bx2r)
+                oy1 = max(ay1, by1r);  oy2 = min(ay2, by2r)
+                dx_ov = max(ox2 - ox1, 0.0)
+                dy_ov = max(oy2 - oy1, 0.0)
+
+                # Push along the axis with the smaller overlap (cheaper to resolve)
+                if dx_ov <= dy_ov:
+                    a_cx = (ax1 + ax2) / 2;  b_cx = (bx1r + bx2r) / 2
+                    sign = 1.0 if a_cx >= b_cx else -1.0
+                    fx_i, fy_i = sign * dx_ov, 0.0
+                    fx_j, fy_j = -sign * dx_ov, 0.0
+                else:
+                    a_cy = (ay1 + ay2) / 2;  b_cy = (by1r + by2r) / 2
+                    sign = 1.0 if a_cy >= b_cy else -1.0
+                    fx_i, fy_i = 0.0, sign * dy_ov
+                    fx_j, fy_j = 0.0, -sign * dy_ov
+
+                # Split force inversely proportional to area
+                # (heavier room moves less — simulates elastic collision)
+                ai = max(rooms[i].final_area or 1e-6, 1e-6)
+                aj = max(rooms[j].final_area or 1e-6, 1e-6)
+                total = ai + aj
+                wi = aj / total   # room i gets the share driven by room j's mass
+                wj = ai / total
+
+                forces[i][0] += fx_i * wi;  forces[i][1] += fy_i * wi
+                forces[j][0] += fx_j * wj;  forces[j][1] += fy_j * wj
+
+        if not has_overlap:
+            break
+
+        # Apply accumulated forces simultaneously
+        for idx in range(n):
+            fx, fy = forces[idx]
+            if abs(fx) < 1e-9 and abs(fy) < 1e-9:
+                continue
+            if rooms[idx].polygon is None:
+                continue
+            x1, y1, x2, y2 = _bbox(rooms[idx])
+            w, h = x2 - x1, y2 - y1
+            nx1 = x1 + fx * step
+            ny1 = y1 + fy * step
+            nx2 = nx1 + w
+            ny2 = ny1 + h
+            # Clamp translate (preserve size)
+            if nx1 < bx0: nx2 += bx0 - nx1; nx1 = bx0
+            if ny1 < by0: ny2 += by0 - ny1; ny1 = by0
+            if nx2 > bx1: nx1 -= nx2 - bx1; nx2 = bx1
+            if ny2 > by1: ny1 -= ny2 - by1; ny2 = by1
+            nx1, ny1 = max(bx0, nx1), max(by0, ny1)
+            nx2, ny2 = min(bx1, nx2), min(by1, ny2)
+            if nx2 - nx1 > 0.3 and ny2 - ny1 > 0.3:
+                _set_rect(rooms[idx], nx1, ny1, nx2, ny2)
+
+        step *= damping
+
+    # Count remaining overlapping pairs
+    remaining = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            if rooms[i].polygon and rooms[j].polygon and _overlap_area(rooms[i], rooms[j]) > FORCE_PUSH_MIN_OV:
+                remaining += 1
+    return remaining
+
+
 def _repack_fallback(building: Building, boundary_polygon, entrance_point, trace: list):
     """Full repack via polygon_packer – throws away learned positions."""
     try:
@@ -320,17 +442,40 @@ def _repack_fallback(building: Building, boundary_polygon, entrance_point, trace
 
 
 def _stage3_overlap_repair(building, boundary_polygon, entrance_point, trace) -> List[str]:
-    """Push-apart first; fallback to full repack if overlaps remain."""
+    """Push-apart first; optionally refine with box optimizer; fallback to repack."""
     violations = []
-    remaining = _push_apart(building, boundary_polygon)
+
+    # Step 1: Push-apart (greedy or force-based)
+    if FORCE_PUSH_ENABLED:
+        remaining = _force_push_apart(building, boundary_polygon)
+        push_label = "force_push_apart"
+    else:
+        remaining = _push_apart(building, boundary_polygon)
+        push_label = "push_apart"
+
+    # Step 2: Box optimizer refinement (Phase 4)
+    if remaining > 0 and BOX_OPT_ENABLED:
+        try:
+            from learned.integration.box_optimizer import optimize_box_placement
+            opt_result = optimize_box_placement(building, boundary_polygon)
+            if opt_result["success"]:
+                remaining = opt_result["remaining_overlaps"]
+                trace.append(_trace("overlap_repair", f"box_opt_{opt_result['solver']}_applied", ""))
+                if remaining == 0:
+                    trace.append(_trace("overlap_repair", "box_opt_resolved", ""))
+                    return violations
+        except Exception as exc:
+            trace.append(_trace("overlap_repair", f"box_opt_failed: {exc}", ""))
+
+    # Step 3: Fallback to full repack if overlaps remain
     if remaining > 0:
-        violations.append(f"{remaining} overlap(s) after push-apart → repacking")
-        trace.append(_trace("overlap_repair", f"push_apart_incomplete_{remaining}_overlaps", ""))
+        violations.append(f"{remaining} overlap(s) after {push_label} → repacking")
+        trace.append(_trace("overlap_repair", f"{push_label}_incomplete_{remaining}_overlaps", ""))
         ok = _repack_fallback(building, boundary_polygon, entrance_point, trace)
         if not ok:
             violations.append("repack fallback also failed")
     else:
-        trace.append(_trace("overlap_repair", "push_apart_resolved", ""))
+        trace.append(_trace("overlap_repair", f"{push_label}_resolved", ""))
     return violations
 
 

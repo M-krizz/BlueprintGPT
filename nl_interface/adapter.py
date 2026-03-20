@@ -19,9 +19,12 @@ def make_room(name: str, room_type: str) -> Dict[str, str]:
 
 def route_backend(current_spec: Dict) -> Optional[str]:
     room_types = {room.get("type") for room in current_spec.get("rooms", []) if room.get("type")}
+    print(f"[ROUTE_BACKEND] Room types found: {room_types}")
     if not room_types:
+        print(f"[ROUTE_BACKEND] No room types -> returning None (no backend target)")
         return None
     # We now default to hybrid routing to run both backends
+    print(f"[ROUTE_BACKEND] Routing to: hybrid")
     return "hybrid"
 
 
@@ -112,15 +115,13 @@ def build_backend_spec(current_spec: Dict, resolution: Optional[Dict] = None) ->
         },
     }
 
-    if backend_target == "algorithmic":
-        type_counts = {}
-        algorithmic_rooms = []
-        for room_type in room_sequence:
-            type_counts[room_type] = type_counts.get(room_type, 0) + 1
-            algorithmic_rooms.append(make_room(f"{room_type}_{type_counts[room_type]}", room_type))
-        base["rooms"] = algorithmic_rooms
-    else:
-        base["rooms"] = [{"type": room_type} for room_type in room_sequence]
+    # All backends need rooms with name and type fields for spec validation
+    type_counts = {}
+    expanded_rooms = []
+    for room_type in room_sequence:
+        type_counts[room_type] = type_counts.get(room_type, 0) + 1
+        expanded_rooms.append(make_room(f"{room_type}_{type_counts[room_type]}", room_type))
+    base["rooms"] = expanded_rooms
 
     return base, warnings
 
@@ -128,8 +129,10 @@ def build_backend_spec(current_spec: Dict, resolution: Optional[Dict] = None) ->
 def _expand_room_types(current_spec: Dict) -> List[str]:
     expanded = []
     for room in current_spec.get("rooms", []):
-        external_type = room["type"]
-        internal_type = EXTERNAL_TO_INTERNAL_ROOM[external_type]
+        external_type = room.get("type", "")
+        internal_type = EXTERNAL_TO_INTERNAL_ROOM.get(external_type)
+        if internal_type is None:
+            continue  # Skip unknown room types
         count = int(room.get("count", 1))
         for _ in range(max(count, 0)):
             expanded.append(internal_type)

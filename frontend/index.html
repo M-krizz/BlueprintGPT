@@ -456,6 +456,225 @@
     .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
     .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes blink { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
+
+    /* ─── Design Gallery ─────────────────────────── */
+    .design-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+      width: 100%;
+    }
+    .design-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .design-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px rgba(74,158,255,0.15);
+    }
+    .design-card.selected {
+      border-color: var(--success);
+      background: rgba(52,211,153,0.05);
+    }
+    .design-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+    .design-rank {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .rank-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .rank-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; }
+    .rank-2 { background: linear-gradient(135deg, #9ca3af, #6b7280); color: #fff; }
+    .rank-3 { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; }
+    .rank-default { background: var(--bg-tertiary); color: var(--text-secondary); }
+    .design-score {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .design-score strong {
+      color: var(--text-primary);
+    }
+    .design-card-img {
+      width: 100%;
+      height: 180px;
+      object-fit: contain;
+      background: #f5f5f5;
+      border-bottom: 1px solid var(--border);
+    }
+    .design-card-body {
+      padding: 12px 14px;
+    }
+    .design-explanation {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .design-strengths, .design-weaknesses {
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .design-strengths span { color: var(--success); }
+    .design-weaknesses span { color: var(--danger); }
+    .design-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .design-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .design-btn:hover {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+    }
+    .design-btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .design-btn.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ─── Correction UI ──────────────────────────── */
+    .correction-panel {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .correction-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .correction-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .correction-close {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .correction-close:hover {
+      color: var(--text-primary);
+    }
+    .correction-input {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      min-height: 60px;
+      margin-bottom: 12px;
+    }
+    .correction-input:focus {
+      border-color: var(--accent);
+    }
+    .correction-hints {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .correction-hint {
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .correction-hint:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+    .correction-submit {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .correction-submit:hover {
+      background: var(--accent-hover);
+    }
+    .correction-submit:disabled {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    /* Session indicator */
+    .session-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .session-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .session-dot.offline { background: var(--danger); }
   </style>
 </head>
 <body>
@@ -467,6 +686,11 @@
       <span class="topnav-title">BlueprintGPT</span>
     </div>
     <div class="topnav-right">
+      <div class="session-badge" id="sessionBadge">
+        <span class="session-dot" id="sessionDot"></span>
+        <span id="sessionLabel">Connecting...</span>
+      </div>
+      <button class="icon-btn" id="newSessionBtn" title="New Session">🔄</button>
       <button class="icon-btn" id="settingsToggle" title="Settings">⚙️</button>
       <button class="icon-btn" id="viewerToggle" title="Blueprint Viewer">🖼️</button>
       <button class="icon-btn" id="exportBtn" title="Export Session">💾</button>
@@ -591,6 +815,72 @@
     const promptEl = document.getElementById('prompt');
     const welcomeScreen = document.getElementById('welcomeScreen');
     let lastResponseData = null;
+
+    // ─── Session state ───────────────────────────────
+    let currentSessionId = null;
+    let currentDesigns = [];
+    let selectedDesignIndex = null;
+    let isGeminiAvailable = false;
+
+    // ─── Version tag visible in console ──────────────
+    const BUILD_TS = new Date().toISOString();
+    console.log(`%c[BlueprintGPT] Frontend loaded at ${BUILD_TS}`, 'color:cyan;font-weight:bold');
+
+    async function initSession() {
+      console.log('[initSession] Starting — calling /status ...');
+      try {
+        // Check system status
+        const statusRes = await fetch('/status');
+        console.log(`[initSession] /status → HTTP ${statusRes.status}`);
+        if (statusRes.ok) {
+          const status = await statusRes.json();
+          console.log('[initSession] /status response:', status);
+          isGeminiAvailable = status.gemini_available || false;
+        }
+
+        // Create new session
+        console.log('[initSession] Calling /conversation/session/new ...');
+        const res = await fetch('/conversation/session/new', { method: 'POST' });
+        console.log(`[initSession] /conversation/session/new → HTTP ${res.status}`);
+        if (res.ok) {
+          const data = await res.json();
+          currentSessionId = data.session_id;
+          console.log(`[initSession] ✓ Session created: ${currentSessionId}`);
+          updateSessionUI(true);
+        } else {
+          console.warn(`[initSession] ✗ Session creation failed: HTTP ${res.status}`);
+          updateSessionUI(false);
+        }
+      } catch (err) {
+        console.error('[initSession] ✗ Exception:', err);
+        updateSessionUI(false);
+      }
+    }
+
+    function updateSessionUI(connected) {
+      const dot = document.getElementById('sessionDot');
+      const label = document.getElementById('sessionLabel');
+      if (connected) {
+        dot.classList.remove('offline');
+        label.textContent = currentSessionId ? `Session: ${currentSessionId.slice(0, 8)}...` : 'Connected';
+      } else {
+        dot.classList.add('offline');
+        label.textContent = 'Offline';
+      }
+    }
+
+    document.getElementById('newSessionBtn').addEventListener('click', async () => {
+      if (confirm('Start a new session? Current conversation will be preserved on the server.')) {
+        currentDesigns = [];
+        selectedDesignIndex = null;
+        messagesEl.innerHTML = '';
+        if (welcomeScreen) welcomeScreen.style.display = 'flex';
+        await initSession();
+      }
+    });
+
+    // Initialize session on load
+    initSession();
 
     // ─── Canvas Logic ────────────────────────────────
     const cvs = document.getElementById('polyCanvas');
@@ -762,6 +1052,12 @@
         body.appendChild(buildRepairBlock(extras.repairTrace, extras.rawConfidence));
       }
 
+      // Design gallery (multi-design view)
+      if (extras.designGallery && extras.designGallery.length) {
+        currentDesigns = extras.designGallery;
+        body.appendChild(buildDesignGallery(extras.designGallery, extras.explanations || []));
+      }
+
       row.appendChild(avatar);
       row.appendChild(body);
       messagesEl.appendChild(row);
@@ -892,6 +1188,215 @@
       return block;
     }
 
+    // ─── Design Gallery ──────────────────────────────
+    function buildDesignGallery(designs, explanations) {
+      const gallery = document.createElement('div');
+      gallery.className = 'design-gallery';
+
+      designs.forEach((design, idx) => {
+        const explanation = explanations[idx] || {};
+        const card = document.createElement('div');
+        card.className = 'design-card';
+        card.dataset.index = idx;
+
+        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : 'rank-default';
+
+        card.innerHTML = `
+          <div class="design-card-header">
+            <div class="design-rank">
+              <span class="rank-badge ${rankClass}">${idx + 1}</span>
+              <span>Design #${idx + 1}</span>
+            </div>
+            <div class="design-score">
+              Score: <strong>${(design.score || 0).toFixed(2)}</strong>
+            </div>
+          </div>
+          <img class="design-card-img" src="${design.svg_url || ''}" alt="Design ${idx + 1}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'">
+          <div class="design-card-body">
+            ${explanation.summary ? `<div class="design-explanation">${explanation.summary}</div>` : ''}
+            ${explanation.strengths?.length ? `<div class="design-strengths"><span>✓</span> ${explanation.strengths.slice(0,2).join(', ')}</div>` : ''}
+            ${explanation.weaknesses?.length ? `<div class="design-weaknesses"><span>✗</span> ${explanation.weaknesses.slice(0,2).join(', ')}</div>` : ''}
+            <div class="design-actions">
+              <button class="design-btn" onclick="viewDesign(${idx})">👁️ View</button>
+              <button class="design-btn primary" onclick="correctDesign(${idx})">✏️ Modify</button>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'BUTTON') {
+            selectDesign(idx);
+          }
+        });
+
+        gallery.appendChild(card);
+      });
+
+      return gallery;
+    }
+
+    function selectDesign(idx) {
+      selectedDesignIndex = idx;
+      document.querySelectorAll('.design-card').forEach((card, i) => {
+        card.classList.toggle('selected', i === idx);
+      });
+    }
+
+    function viewDesign(idx) {
+      const design = currentDesigns[idx];
+      if (!design || !design.svg_url) return;
+
+      const vp = document.getElementById('viewerPanel');
+      const vb = document.getElementById('viewerBody');
+      vb.innerHTML = '';
+
+      const bigImg = document.createElement('img');
+      bigImg.src = design.svg_url;
+      bigImg.alt = `Design ${idx + 1}`;
+      vb.appendChild(bigImg);
+
+      const dlBtn = document.getElementById('downloadSvgBtn');
+      dlBtn.style.display = 'flex';
+      dlBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = design.svg_url;
+        a.download = design.svg_url.split('/').pop() || `design_${idx + 1}.svg`;
+        a.click();
+      };
+
+      if (!vp.classList.contains('open')) {
+        vp.classList.add('open');
+        document.getElementById('viewerToggle').classList.add('active');
+      }
+    }
+
+    function correctDesign(idx) {
+      selectedDesignIndex = idx;
+      selectDesign(idx);
+
+      // Remove existing correction panels
+      document.querySelectorAll('.correction-panel').forEach(p => p.remove());
+
+      // Create correction panel
+      const panel = document.createElement('div');
+      panel.className = 'correction-panel';
+      panel.innerHTML = `
+        <div class="correction-header">
+          <span class="correction-title">✏️ Modify Design #${idx + 1}</span>
+          <button class="correction-close" onclick="this.closest('.correction-panel').remove()">✕</button>
+        </div>
+        <div class="correction-hints">
+          <span class="correction-hint" onclick="insertCorrection(this, 'make the kitchen larger')">Make kitchen larger</span>
+          <span class="correction-hint" onclick="insertCorrection(this, 'move bedroom to the left')">Move bedroom left</span>
+          <span class="correction-hint" onclick="insertCorrection(this, 'swap living room and dining area')">Swap living/dining</span>
+          <span class="correction-hint" onclick="insertCorrection(this, 'add a bathroom')">Add bathroom</span>
+        </div>
+        <textarea class="correction-input" id="correctionInput" placeholder="Describe your changes... e.g., 'make the master bedroom larger' or 'move the kitchen away from the entrance'"></textarea>
+        <button class="correction-submit" onclick="submitCorrection(${idx})">Apply Changes</button>
+      `;
+
+      // Insert after the design gallery
+      const gallery = document.querySelector('.design-gallery');
+      if (gallery) {
+        gallery.parentNode.insertBefore(panel, gallery.nextSibling);
+      } else {
+        messagesEl.appendChild(panel);
+      }
+
+      document.getElementById('correctionInput').focus();
+    }
+
+    function insertCorrection(el, text) {
+      const input = document.getElementById('correctionInput');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+
+    async function submitCorrection(designIndex) {
+      const input = document.getElementById('correctionInput');
+      if (!input || !input.value.trim()) return;
+
+      const correction = input.value.trim();
+      const btn = document.querySelector('.correction-submit');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Applying...';
+      }
+
+      addMessage(`Modify design #${designIndex + 1}: ${correction}`, 'user');
+      addTypingIndicator();
+
+      try {
+        const res = await fetch('/conversation/correct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: currentSessionId,
+            design_index: designIndex,
+            correction: correction,
+            regenerate: true,
+          }),
+        });
+
+        removeTypingIndicator();
+
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          addMessage(`Error: ${detail.detail || res.statusText}`, 'bot');
+        } else {
+          const data = await res.json();
+          handleCorrectionResponse(data);
+        }
+      } catch (err) {
+        removeTypingIndicator();
+        addMessage(`Correction failed: ${err}`, 'bot');
+      } finally {
+        // Remove correction panel
+        document.querySelectorAll('.correction-panel').forEach(p => p.remove());
+      }
+    }
+
+    function handleCorrectionResponse(data) {
+      const lines = [];
+
+      if (data.success) {
+        lines.push('✅ ' + (data.message || 'Changes applied successfully!'));
+
+        if (data.changes_applied?.length) {
+          lines.push('');
+          lines.push('**Applied changes:**');
+          data.changes_applied.forEach(c => {
+            lines.push(`- ${c.type}: ${JSON.stringify(c)}`);
+          });
+        }
+
+        if (data.needs_regeneration) {
+          lines.push('');
+          lines.push('🔄 Regenerating design with your modifications...');
+        }
+      } else {
+        lines.push('⚠️ ' + (data.message || 'Could not apply changes'));
+
+        if (data.clarification_needed) {
+          lines.push('');
+          lines.push(`❓ ${data.clarification_needed}`);
+        }
+      }
+
+      addMessage(lines.join('\n'), 'bot');
+
+      // If new designs were generated, update gallery
+      if (data.new_designs?.length) {
+        currentDesigns = data.new_designs;
+        addMessage('Here are your updated designs:', 'bot', {
+          designGallery: currentDesigns,
+          explanations: data.explanations || [],
+        });
+      }
+    }
+
     // ─── Process API response ────────────────────────
     function addChatResponse(data) {
       lastResponseData = data;
@@ -1019,21 +1524,10 @@
 
       let customPoly = undefined;
       let targetEntrance = (entranceX !== '' && entranceY !== '') ? [Number(entranceX), Number(entranceY)] : null;
-      
+
       if (isClosed && points.length >= 3) {
         customPoly = points.map(p => [p.x / 40, (cvs.height - p.y) / 40]);
       }
-
-      const body = {
-        prompt,
-        boundary: { width, height },
-        boundary_polygon: customPoly,
-        entrance_point: targetEntrance,
-        area: area !== '' ? Number(area) : undefined,
-        area_unit: areaUnit,
-        output_prefix: prefix || undefined,
-        llm_api_key: llmApiKey || undefined,
-      };
 
       addMessage(prompt, 'user');
       promptEl.value = '';
@@ -1043,27 +1537,148 @@
       document.getElementById('statusIndicator').textContent = 'Generating...';
       addTypingIndicator();
 
+      // Use conversation API if session is available
+      const useConversationApi = currentSessionId !== null;
+      console.log(`[submit] useConversationApi=${useConversationApi}, sessionId=${currentSessionId}`);
+      console.log(`[submit] prompt='${prompt}'`);
+
       try {
-        const res = await fetch('/chat/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
+        let res;
+        if (useConversationApi) {
+          // Conversation API for multi-turn with AI understanding
+          console.log('[submit] → POST /conversation/message');
+          res = await fetch('/conversation/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: currentSessionId,
+              message: prompt,
+              boundary: { width, height },
+              boundary_polygon: customPoly,
+              entrance_point: targetEntrance,
+              num_designs: 3,  // Request multiple designs
+            }),
+          });
+          console.log(`[submit] /conversation/message → HTTP ${res.status}`);
+        } else {
+          // Fallback to legacy API
+          console.log('[submit] → POST /chat/generate (legacy, no session)');
+          res = await fetch('/chat/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt,
+              boundary: { width, height },
+              boundary_polygon: customPoly,
+              entrance_point: targetEntrance,
+              area: area !== '' ? Number(area) : undefined,
+              area_unit: areaUnit,
+              output_prefix: prefix || undefined,
+              llm_api_key: llmApiKey || undefined,
+            }),
+          });
+          console.log(`[submit] /chat/generate → HTTP ${res.status}`);
+        }
+
         removeTypingIndicator();
+
         if (!res.ok) {
           const detail = await res.json().catch(() => ({}));
+          console.error(`[submit] Server error ${res.status}:`, detail);
           addMessage(`Error: ${detail.detail || res.statusText}`, 'bot');
         } else {
-          addChatResponse(await res.json());
+          const data = await res.json();
+          console.log('[submit] Response data:', data);
+
+          if (useConversationApi) {
+            handleConversationResponse(data);
+          } else {
+            addChatResponse(data);
+          }
         }
       } catch (err) {
         removeTypingIndicator();
+        console.error('[submit] Fetch exception:', err);
         addMessage(`Request failed: ${err}`, 'bot');
       } finally {
         submitBtn.disabled = false;
         document.getElementById('statusIndicator').textContent = 'Ready';
       }
     });
+
+    // ─── Handle conversation API response ────────────
+    function handleConversationResponse(data) {
+      lastResponseData = data;
+      const lines = [];
+
+      // AI response text — server returns 'assistant_text'
+      if (data.assistant_text) {
+        lines.push(data.assistant_text);
+      }
+
+      // State indicators — server returns 'needs_info' (not 'missing_fields')
+      if (data.needs_info?.length) {
+        lines.push('');
+        lines.push('📝 **To generate a design, please provide:**');
+        data.needs_info.forEach(f => lines.push(`- ${f}`));
+      }
+
+      if (data.validation_errors?.length) {
+        lines.push('');
+        lines.push(`⚠️ Issues: ${data.validation_errors.join('; ')}`);
+      }
+
+      // Current spec summary
+      if (data.current_spec?.rooms?.length && data.state === 'specifying') {
+        lines.push('');
+        lines.push('📋 **Current specification:**');
+        data.current_spec.rooms.forEach(r => {
+          lines.push(`- ${r.count}x ${r.type}`);
+        });
+      }
+
+      // Check if we have designs
+      const hasDesigns = data.designs?.length > 0;
+
+      if (hasDesigns) {
+        // Store designs for correction
+        currentDesigns = data.designs.map((d, i) => ({
+          index: i,
+          svg_url: d.svg_url || d.artifact_urls?.svg,
+          score: d.score || d.design_score || 0,
+          rank: d.rank || i + 1,
+          metrics: d.metrics || {},
+          rooms: d.rooms || [],
+          violations: d.violations || [],
+        }));
+
+        const explanations = data.explanations || data.designs.map((d, i) => ({
+          rank: i + 1,
+          summary: d.explanation?.summary || `Design #${i + 1} - Score: ${(d.score || 0).toFixed(2)}`,
+          strengths: d.explanation?.strengths || [],
+          weaknesses: d.explanation?.weaknesses || [],
+          ranking_reason: d.explanation?.ranking_reason || '',
+        }));
+
+        addMessage(lines.join('\n'), 'bot', {
+          designGallery: currentDesigns,
+          explanations: explanations,
+        });
+
+        // Auto-view best design
+        if (currentDesigns.length > 0 && currentDesigns[0].svg_url) {
+          viewDesign(0);
+        }
+      } else {
+        // No designs yet, just show the response
+        addMessage(lines.join('\n') || data.assistant_text || 'Processing...', 'bot');
+      }
+
+      // Update spec panel
+      if (data.current_spec) {
+        document.getElementById('specEditor').value = JSON.stringify(data.current_spec, null, 2);
+      }
+    }
 
     promptEl.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -1075,8 +1690,11 @@
     // ─── A4: Session export/import ───────────────────
     document.getElementById('exportBtn').addEventListener('click', () => {
       const session = {
-        version: 1,
+        version: 2,
         timestamp: new Date().toISOString(),
+        sessionId: currentSessionId,
+        designs: currentDesigns,
+        selectedDesignIndex: selectedDesignIndex,
         lastResponse: lastResponseData,
         formState: {
           width: document.getElementById('width').value,
@@ -1104,13 +1722,43 @@
       reader.onload = (ev) => {
         try {
           const s = JSON.parse(ev.target.result);
-          if (s.lastResponse) { lastResponseData = s.lastResponse; addChatResponse(s.lastResponse); }
-          if (s.formState) for (const [k, v] of Object.entries(s.formState)) {
-            const el = document.getElementById(k);
-            if (el) el.value = v;
+
+          // Restore session ID if version 2+
+          if (s.version >= 2 && s.sessionId) {
+            currentSessionId = s.sessionId;
+            updateSessionUI(true);
           }
+
+          // Restore designs
+          if (s.designs) {
+            currentDesigns = s.designs;
+            selectedDesignIndex = s.selectedDesignIndex;
+          }
+
+          if (s.lastResponse) {
+            lastResponseData = s.lastResponse;
+            if (s.version >= 2 && s.designs?.length) {
+              // Use new design gallery
+              addMessage('Session restored. Here are your designs:', 'bot', {
+                designGallery: currentDesigns,
+                explanations: [],
+              });
+            } else {
+              addChatResponse(s.lastResponse);
+            }
+          }
+
+          if (s.formState) {
+            for (const [k, v] of Object.entries(s.formState)) {
+              const el = document.getElementById(k);
+              if (el) el.value = v;
+            }
+          }
+
           addMessage('✅ Session restored', 'bot');
-        } catch (err) { addMessage(`Import failed: ${err}`, 'bot'); }
+        } catch (err) {
+          addMessage(`Import failed: ${err}`, 'bot');
+        }
       };
       reader.readAsText(file);
       e.target.value = '';

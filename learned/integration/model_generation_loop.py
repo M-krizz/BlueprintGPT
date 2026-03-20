@@ -32,6 +32,22 @@ from learned.integration.repair_gate import (
 )
 from generator.ranking import _score_variant
 
+# Import centroid collapse detection and jitter utilities
+from learned.integration.centroid_utils import (
+    compute_centroid,
+    compute_pairwise_iou_fraction,
+    detect_centroid_collapse,
+    jitter_centroids,
+    LEARNED_JITTER_ENABLED,
+    LEARNED_JITTER_SIGMA,
+    ADAPTIVE_JITTER_ENABLED,
+    DIRECTIONAL_JITTER_ENABLED,
+    LEARNED_OVERLAP_FILTER_ENABLED,
+    OVERLAP_DROP_FRAC,
+    MAX_RESAMPLE_ON_OVERLAP,
+    IOU_BAD_THRESH,
+)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Quick raw-validity check (no repair)
@@ -157,6 +173,18 @@ def generate_best_layout_from_model(
     repaired_valid_count = 0
     best_so_far: Optional[Dict] = None
 
+    # ── Diagnostics for centroid collapse & overlap filtering ─────────────
+    diagnostics = {
+        "jittered_count": 0,
+        "raw_overlap_dropped": 0,
+        "resample_attempts_on_overlap": 0,
+        "centroid_collapse_detected": 0,
+        "median_centroid_distances": [],
+        "pairwise_iou_fractions": [],
+        "collapse_severities": [],  # Track severity scores
+        "final_best_was_jittered": False,  # Did the final best candidate get jitter?
+    }
+
     # ── Stage A: sample + raw validity + collect for pre-rank ───────────────
     for attempt in range(max_attempts):
         # ── Sample ────────────────────────────────────────────────────────
@@ -184,6 +212,25 @@ def generate_best_layout_from_model(
         if not decoded_rooms:
             failure_reasons["empty_generation"] += 1
             continue
+
+        # ── Early overlap filtering ────────────────────────────────────────
+        # Drop samples with excessive overlaps before expensive adaptation
+        if LEARNED_OVERLAP_FILTER_ENABLED:
+            overlap_frac = compute_pairwise_iou_fraction(decoded_rooms, threshold=IOU_BAD_THRESH)
+            diagnostics["pairwise_iou_fractions"].append(overlap_frac)
+
+            if overlap_frac > OVERLAP_DROP_FRAC:
+                diagnostics["raw_overlap_dropped"] += 1
+                failure_reasons["raw_excessive_overlap"] += 1
+
+                # Optionally resample (limited attempts)
+                if diagnostics["resample_attempts_on_overlap"] < MAX_RESAMPLE_ON_OVERLAP:
+                    diagnostics["resample_attempts_on_overlap"] += 1
+                    # Decrement attempt counter to give it another try
+                    # (This is a simple retry strategy; more sophisticated approach would use while loop)
+                    continue
+                else:
+                    continue  # Skip this sample and move to next
 
         # ── Adapt ─────────────────────────────────────────────────────────
         building = adapt_generated_layout_to_building(
@@ -223,6 +270,16 @@ def generate_best_layout_from_model(
             "pre_ranked_count": 0,
             "top_failure_reasons": dict(failure_reasons.most_common(10)),
             "all_candidates": [],
+            "diagnostics": {
+                "jittered_count": 0,
+                "final_best_was_jittered": False,
+                "raw_overlap_dropped": diagnostics["raw_overlap_dropped"],
+                "resample_attempts_on_overlap": diagnostics["resample_attempts_on_overlap"],
+                "centroid_collapse_detected": 0,
+                "avg_median_centroid_distance": 0.0,
+                "avg_pairwise_iou_fraction": 0.0,
+                "avg_collapse_severity": 0.0,
+            },
         }
         return None, summary
 
@@ -295,6 +352,26 @@ def generate_best_layout_from_model(
         "pre_ranked_count": len(shortlisted),
         "top_failure_reasons": dict(failure_reasons.most_common(10)),
         "all_candidates": top_k_candidates,
+        # ── New diagnostics ────────────────────────────────────────────────
+        "diagnostics": {
+            "jittered_count": diagnostics["jittered_count"],
+            "final_best_was_jittered": diagnostics["final_best_was_jittered"],
+            "raw_overlap_dropped": diagnostics["raw_overlap_dropped"],
+            "resample_attempts_on_overlap": diagnostics["resample_attempts_on_overlap"],
+            "centroid_collapse_detected": diagnostics["centroid_collapse_detected"],
+            "avg_median_centroid_distance": round(
+                sum(diagnostics["median_centroid_distances"]) / len(diagnostics["median_centroid_distances"])
+                if diagnostics["median_centroid_distances"] else 0.0, 4
+            ),
+            "avg_pairwise_iou_fraction": round(
+                sum(diagnostics["pairwise_iou_fractions"]) / len(diagnostics["pairwise_iou_fractions"])
+                if diagnostics["pairwise_iou_fractions"] else 0.0, 4
+            ),
+            "avg_collapse_severity": round(
+                sum(diagnostics["collapse_severities"]) / len(diagnostics["collapse_severities"])
+                if diagnostics["collapse_severities"] else 0.0, 4
+            ),
+        },
     }
 
     if not best_so_far or best_so_far.get("building") is None:
@@ -308,21 +385,63 @@ def generate_best_layout_from_model(
     # When multiple rooms of the same type exist, we average their centroids.
     # These hints seed the PolygonPacker's bisection ordering (not room geometry).
     raw_rooms = best.get("raw_rooms", [])
-    _hint_acc: dict = {}   # {room_type: [(cx, cy), ...]}
-    for rbox in raw_rooms:
-        rtype = getattr(rbox, "room_type", None)
-        if not rtype:
-            continue
-        cx = (getattr(rbox, "x_min", 0.0) + getattr(rbox, "x_max", 0.0)) / 2.0
-        cy = (getattr(rbox, "y_min", 0.0) + getattr(rbox, "y_max", 0.0)) / 2.0
-        _hint_acc.setdefault(rtype, []).append((cx, cy))
-    learned_spatial_hints = {
-        rtype: (
-            sum(c[0] for c in pts) / len(pts),
-            sum(c[1] for c in pts) / len(pts),
-        )
-        for rtype, pts in _hint_acc.items()
-    }
+
+    # ── Centroid collapse detection & jitter ────────────────────────────────
+    is_collapsed = False
+    collapse_metrics = {}
+
+    if LEARNED_JITTER_ENABLED and raw_rooms:
+        is_collapsed, collapse_metrics = detect_centroid_collapse(raw_rooms)
+        diagnostics["median_centroid_distances"].append(collapse_metrics.get("median_centroid_distance", 1.0))
+
+        # Track collapse severity for adaptive jitter
+        collapse_severity = collapse_metrics.get("collapse_severity", 0.0)
+        diagnostics["collapse_severities"].append(collapse_severity)
+
+        if is_collapsed:
+            diagnostics["centroid_collapse_detected"] += 1
+            diagnostics["jittered_count"] += 1
+            diagnostics["final_best_was_jittered"] = True  # Mark that final best got jitter
+            # Apply adaptive + directional jitter to break ties
+            learned_spatial_hints = jitter_centroids(
+                raw_rooms,
+                sigma=LEARNED_JITTER_SIGMA,
+                adaptive=ADAPTIVE_JITTER_ENABLED,
+                collapse_severity=collapse_severity,
+                directional=DIRECTIONAL_JITTER_ENABLED,
+            )
+        else:
+            # No collapse: use normal centroid averaging
+            _hint_acc: dict = {}   # {room_type: [(cx, cy), ...]}
+            for rbox in raw_rooms:
+                rtype = getattr(rbox, "room_type", None)
+                if not rtype:
+                    continue
+                cx, cy = compute_centroid(rbox)
+                _hint_acc.setdefault(rtype, []).append((cx, cy))
+            learned_spatial_hints = {
+                rtype: (
+                    sum(c[0] for c in pts) / len(pts),
+                    sum(c[1] for c in pts) / len(pts),
+                )
+                for rtype, pts in _hint_acc.items()
+            }
+    else:
+        # Jitter disabled or no rooms: use normal averaging
+        _hint_acc: dict = {}   # {room_type: [(cx, cy), ...]}
+        for rbox in raw_rooms:
+            rtype = getattr(rbox, "room_type", None)
+            if not rtype:
+                continue
+            cx, cy = compute_centroid(rbox)
+            _hint_acc.setdefault(rtype, []).append((cx, cy))
+        learned_spatial_hints = {
+            rtype: (
+                sum(c[0] for c in pts) / len(pts),
+                sum(c[1] for c in pts) / len(pts),
+            )
+            for rtype, pts in _hint_acc.items()
+        }
 
     best_variant = {
         "building": best["building"],

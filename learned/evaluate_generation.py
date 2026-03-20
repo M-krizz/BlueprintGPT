@@ -49,6 +49,13 @@ from learned.integration.repair_gate import (
 from graph.connectivity import is_fully_connected
 from graph.manhattan_path import max_travel_distance
 from constraints.rule_engine import RuleEngine
+from learned.integration.prerank import (
+    score_aspect_ratio_quality,
+    score_min_dims_compliance,
+    score_corridor_simplicity,
+    compute_realism_score,
+    estimate_repair_severity,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -189,6 +196,37 @@ def _raw_validity(building, boundary_polygon, entrance, regulation_file) -> Dict
         }
 
 
+def _compute_realism_metrics(
+    decoded: List[RoomBox],
+    boundary_polygon: List[Tuple[float, float]],
+    plot_area_sqm: float = 100.0,
+) -> Dict:
+    """Compute Chapter-4 realism metrics for raw decoded layout."""
+    if not decoded:
+        return {"error": "empty"}
+
+    # Get boundary dimensions
+    xs = [p[0] for p in boundary_polygon]
+    ys = [p[1] for p in boundary_polygon]
+    bw = max(xs) - min(xs)
+    bh = max(ys) - min(ys)
+
+    aspect = score_aspect_ratio_quality(decoded)
+    dims = score_min_dims_compliance(decoded, bw, bh, plot_area_sqm)
+    corridor = score_corridor_simplicity(decoded)
+    repair = estimate_repair_severity(decoded, bw, bh, plot_area_sqm)
+
+    return {
+        "aspect_ratio_score": aspect,
+        "min_dims_score": dims,
+        "corridor_score": corridor,
+        "repair_severity": repair["severity"],
+        "sliver_rooms": repair["issues"]["sliver_rooms"],
+        "undersized_rooms": repair["issues"]["undersized_rooms"],
+        "overlapping_pairs": repair["issues"]["overlapping_pairs"],
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Main evaluation loop
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -237,6 +275,9 @@ def evaluate(
             )
             raw_chk = _raw_validity(raw_b, boundary_polygon, entrance_point, regulation_file)
 
+            # Compute realism metrics on raw decoded (before repair)
+            realism_raw = _compute_realism_metrics(decoded, boundary_polygon)
+
             # Post-repair
             rep_b = adapt_generated_layout_to_building(
                 decoded, boundary_polygon, entrance=entrance_point,
@@ -274,6 +315,8 @@ def evaluate(
                 "connected": post_m.get("fully_connected", False),
                 "fingerprint": fp,
                 "building": repaired,
+                # Chapter-4 realism metrics (raw, before repair)
+                "realism_raw": realism_raw,
             })
 
         results.append(trial_cands)
@@ -304,6 +347,25 @@ def evaluate(
     diversity_ratio = round(diversity_unique / max(len(all_fps), 1), 4)
     iou_diversity = _pairwise_iou_distance(flat[:50])  # cap for perf
 
+    # Chapter-4 realism metrics (aggregated)
+    realism_metrics_agg = {
+        "avg_aspect_ratio_score": round(
+            sum(c.get("realism_raw", {}).get("aspect_ratio_score", 0) for c in flat) / total, 4
+        ),
+        "avg_min_dims_score": round(
+            sum(c.get("realism_raw", {}).get("min_dims_score", 0) for c in flat) / total, 4
+        ),
+        "avg_corridor_score": round(
+            sum(c.get("realism_raw", {}).get("corridor_score", 0) for c in flat) / total, 4
+        ),
+        "avg_repair_severity": round(
+            sum(c.get("realism_raw", {}).get("repair_severity", 0) for c in flat) / total, 2
+        ),
+        "total_sliver_rooms": sum(c.get("realism_raw", {}).get("sliver_rooms", 0) for c in flat),
+        "total_undersized_rooms": sum(c.get("realism_raw", {}).get("undersized_rooms", 0) for c in flat),
+        "total_overlapping_pairs": sum(c.get("realism_raw", {}).get("overlapping_pairs", 0) for c in flat),
+    }
+
     report = {
         "N": N, "K": K,
         "total_samples": total,
@@ -322,6 +384,7 @@ def evaluate(
         "diversity_unique_fingerprints": diversity_unique,
         "diversity_ratio": diversity_ratio,
         "pairwise_iou_diversity": iou_diversity,
+        "realism": realism_metrics_agg,
     }
     return report
 
