@@ -133,14 +133,14 @@ def explain_dimension_choice(rooms: List[Dict], width: float, height: float) -> 
     room_summary = ", ".join([f"{r.get('count', 1)} {r.get('type')}" for r in rooms])
 
     explanation = f"""
-🏠 Layout Analysis for {layout_type}:
-   Rooms: {room_summary}
-   Required: {total_area:.0f} sq.m
-   Provided: {actual_area:.0f} sq.m ({efficiency:.1f}% efficiency)
+Layout analysis for {layout_type}:
+  Rooms: {room_summary}
+  Required: {total_area:.0f} sq.m
+  Provided: {actual_area:.0f} sq.m ({efficiency:.1f}% efficiency)
 
-📐 Dimension Choice: {width}m × {height}m
-   Reasoning: Balanced aspect ratio with adequate circulation space
-   Standard: Follows residential design guidelines
+Dimension choice: {width}m x {height}m
+  Reasoning: Balanced aspect ratio with adequate circulation space
+  Standard: Follows residential design guidelines
 """.strip()
 
     return explanation

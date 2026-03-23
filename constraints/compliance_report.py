@@ -39,6 +39,7 @@ def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None)
 	repair = result.get("repair") or {}
 	rule_preflight = result.get("rule_preflight") or {}
 	kg_precheck = result.get("kg_precheck") or {}
+	verification = result.get("verification") or {}
 
 	checks = {
 		"room_minimums": len(result["modifications"]) == 0,
@@ -52,6 +53,9 @@ def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None)
 		"kg_precheck_valid": kg_precheck.get("valid", True),
 	}
 
+	if verification:
+		checks["planner_verification"] = verification.get("passed", False)
+
 	if ontology is not None:
 		checks["ontology_validation"] = ontology.get("valid", False)
 
@@ -64,6 +68,8 @@ def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None)
 		)
 	if ontology is not None:
 		violations.extend(v["message"] for v in ontology.get("violations", []))
+	if verification and not checks.get("planner_verification", True):
+		violations.extend(verification.get("issues") or ["Planner verification failed"])
 
 	# Add Chapter-4 specific violations if provided
 	chapter4_violations = []
@@ -124,6 +130,9 @@ def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None)
 		"bounding_box": result["bounding_box"],
 	}
 
+	if verification:
+		report["verification"] = verification
+
 	# Add Chapter-4 detailed report section
 	if chapter4_check:
 		report["chapter4"] = {
@@ -148,7 +157,7 @@ def build_compliance_report(result: Dict, chapter4_check: Optional[Dict] = None)
 			"load_error": ontology.get("load_error"),
 		}
 
-	# ── Learned-generator specific fields ─────────────────────────────────
+	# Learned-generator specific fields
 	if result.get("source") == "learned":
 		report["raw_validity"] = result.get("raw_validity", False)
 		report["repair_trace"] = result.get("repair_trace", [])
@@ -166,10 +175,8 @@ def format_violation(violation: Dict) -> str:
 	msg = violation.get("message", "")
 
 	if required is not None and actual is not None:
-		return f"[{rule}] Required: {required}, Actual: {actual} — {msg}"
+		return f"[{rule}] Required: {required}, Actual: {actual} - {msg}"
 	return f"[{rule}] {msg}"
-
-	return report
 
 
 def save_compliance_report(report, output_file):

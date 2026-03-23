@@ -33,7 +33,7 @@ import math
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 
 @dataclass
@@ -52,6 +52,10 @@ class RepairReport:
     def room_count_changed(self) -> bool:
         """Whether room count was modified during repair."""
         return self.original_room_count != self.final_room_count
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to JSON-serializable dictionary."""
+        return asdict(self)
 
 # ── Phase 3: force-based push-apart feature flags ─────────────────────────────
 FORCE_PUSH_ENABLED    = os.getenv("REPAIR_FORCE_PUSH_ENABLED",    "false").lower() == "true"

@@ -47,6 +47,8 @@ class GeneratedDesign:
     rooms: List[Dict]
     violations: List[str]
     explanation: Optional[str] = None
+    report_status: Optional[str] = None
+    engine: Optional[str] = None
 
     def to_dict(self) -> Dict:
         return {
@@ -59,6 +61,8 @@ class GeneratedDesign:
             "rooms": self.rooms,
             "violations": self.violations,
             "explanation": self.explanation,
+            "report_status": self.report_status,
+            "engine": self.engine,
         }
 
 
@@ -89,10 +93,24 @@ class ConversationSession:
             "weights": {},
             "plot_type": None,
             "entrance_side": None,
+            "layout_type": None,
+            "constraint_metadata": {},
+            "auto_dimensions": {},
+            "style_hints": [],
+            "semantic_spec": None,
+            "room_program": None,
+            "zoning_plan": None,
         }
 
         # Resolution (boundary, etc.)
         self.resolution: Optional[Dict[str, Any]] = None
+
+        # Explicit planning / reply state for continuity
+        self.semantic_spec: Optional[Dict[str, Any]] = None
+        self.room_program: Optional[Dict[str, Any]] = None
+        self.zoning_plan: Optional[Dict[str, Any]] = None
+        self.latest_generation_outcome: Optional[Dict[str, Any]] = None
+        self.latest_reply_payload: Optional[Dict[str, Any]] = None
 
         # Generated designs
         self.designs: List[GeneratedDesign] = []
@@ -159,6 +177,15 @@ class ConversationSession:
             self.current_spec["plot_type"] = extracted["plot_type"]
 
         # Update style hints -> weights
+        if extracted.get("layout_type"):
+            self.current_spec["layout_type"] = extracted["layout_type"]
+        if extracted.get("constraint_metadata"):
+            self.current_spec["constraint_metadata"] = extracted.get("constraint_metadata", {})
+        if extracted.get("auto_dimensions"):
+            self.current_spec["auto_dimensions"] = extracted.get("auto_dimensions", {})
+        if extracted.get("style_hints"):
+            self.current_spec["style_hints"] = list(extracted.get("style_hints", []))
+
         for hint in extracted.get("style_hints", []):
             if "compact" in hint.lower():
                 self.current_spec.setdefault("weights", {})["compactness"] = 0.6
@@ -170,6 +197,30 @@ class ConversationSession:
                 self.current_spec.setdefault("weights", {})["privacy"] = 0.6
 
         self.state = "specifying"
+        self.updated_at = time.time()
+
+    def set_planning_context(
+        self,
+        *,
+        semantic_spec: Optional[Dict[str, Any]] = None,
+        room_program: Optional[Dict[str, Any]] = None,
+        zoning_plan: Optional[Dict[str, Any]] = None,
+        reply_payload: Optional[Dict[str, Any]] = None,
+        generation_outcome: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if semantic_spec is not None:
+            self.semantic_spec = semantic_spec
+            self.current_spec["semantic_spec"] = semantic_spec
+        if room_program is not None:
+            self.room_program = room_program
+            self.current_spec["room_program"] = room_program
+        if zoning_plan is not None:
+            self.zoning_plan = zoning_plan
+            self.current_spec["zoning_plan"] = zoning_plan
+        if reply_payload is not None:
+            self.latest_reply_payload = reply_payload
+        if generation_outcome is not None:
+            self.latest_generation_outcome = generation_outcome
         self.updated_at = time.time()
 
     def set_resolution(self, resolution: Dict[str, Any]) -> None:
@@ -189,8 +240,11 @@ class ConversationSession:
             rooms=[{"type": rtype, "count": count} for rtype, count in design_data.get("generated_rooms", {}).items()],
             violations=design_data.get("violations", []),
             explanation=design_data.get("explanation"),
+            report_status=design_data.get("report_status"),
+            engine=(design_data.get("winning_source") or design_data.get("backend_target")),
         )
         self.designs.append(design)
+        self.selected_design_index = design.index
         self.state = "generated"
         self.updated_at = time.time()
         return design
@@ -226,9 +280,15 @@ class ConversationSession:
             "session_id": self.session_id,
             "state": self.state,
             "spec": self.current_spec,
+            "semantic_spec": self.semantic_spec,
+            "room_program": self.room_program,
+            "zoning_plan": self.zoning_plan,
             "num_designs": len(self.designs),
             "selected_design": self.selected_design_index,
+            "latest_design": self.designs[-1].to_dict() if self.designs else None,
             "has_resolution": self.resolution is not None,
+            "latest_generation_outcome": self.latest_generation_outcome,
+            "latest_reply_payload": self.latest_reply_payload,
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -241,9 +301,14 @@ class ConversationSession:
             "messages": [m.to_dict() for m in self.messages],
             "current_spec": self.current_spec,
             "resolution": self.resolution,
+            "semantic_spec": self.semantic_spec,
+            "room_program": self.room_program,
+            "zoning_plan": self.zoning_plan,
             "designs": [d.to_dict() for d in self.designs],
             "selected_design_index": self.selected_design_index,
             "corrections": self.corrections,
+            "latest_generation_outcome": self.latest_generation_outcome,
+            "latest_reply_payload": self.latest_reply_payload,
         }
 
     @classmethod
@@ -255,8 +320,13 @@ class ConversationSession:
         session.state = data.get("state", "initial")
         session.current_spec = data.get("current_spec", {})
         session.resolution = data.get("resolution")
+        session.semantic_spec = data.get("semantic_spec")
+        session.room_program = data.get("room_program")
+        session.zoning_plan = data.get("zoning_plan")
         session.selected_design_index = data.get("selected_design_index")
         session.corrections = data.get("corrections", [])
+        session.latest_generation_outcome = data.get("latest_generation_outcome")
+        session.latest_reply_payload = data.get("latest_reply_payload")
 
         for msg_data in data.get("messages", []):
             try:
@@ -281,6 +351,8 @@ class ConversationSession:
                     rooms=design_data.get("rooms", []),
                     violations=design_data.get("violations", []),
                     explanation=design_data.get("explanation"),
+                    report_status=design_data.get("report_status"),
+                    engine=design_data.get("engine"),
                 ))
             except Exception:
                 continue  # Skip malformed designs
@@ -319,8 +391,14 @@ class ConversationManager:
         if session_id:
             session = self.get_session(session_id)
             if session:
+                ProcessingLogger.logger.debug(f"Found existing session {session_id[:8]}... with {len(session.current_spec.get('rooms', []))} rooms")
                 return session
-        return self.create_session()
+            ProcessingLogger.logger.debug(f"Session {session_id[:8]}... not found in {len(self.sessions)} active sessions")
+        else:
+            ProcessingLogger.logger.debug("No session_id provided, creating new session")
+        new_session = self.create_session()
+        ProcessingLogger.logger.debug(f"Created new session {new_session.session_id[:8]}...")
+        return new_session
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a session."""
@@ -369,3 +447,4 @@ class ConversationManager:
 
 # Global conversation manager instance
 conversation_manager = ConversationManager()
+

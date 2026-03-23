@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from utils.processing_logger import ProcessingLogger
 from nl_interface.adapter import build_backend_spec, route_backend, validate_resolution
+from nl_interface.program_planner import enrich_spec_with_planning
 from nl_interface.constants import (
     ALLOWED_BUILDING_TYPE,
     ALLOWED_ENTRANCE_SIDES,
@@ -34,12 +35,18 @@ def blank_current_spec() -> Dict:
         "plot_type": None,
         "entrance_side": None,
         "rooms": [],
+        "room_size_preferences": {},
+        "room_position_preferences": {},
+        "room_swaps": [],
         "preferences": {
             "adjacency": [],
             "privacy": {},
             "minimize_corridor": False,
         },
         "weights": dict(DEFAULT_WEIGHTS),
+        "semantic_spec": None,
+        "room_program": None,
+        "zoning_plan": None,
     }
 
 
@@ -52,19 +59,38 @@ def _extract_cli_args(text: str) -> Dict:
     if boundary_match:
         result["boundary_size"] = [float(boundary_match.group(1)), float(boundary_match.group(2))]
 
-    # Match natural language: "10x12 meters", "10 by 12 m", "plot 10×12m", "10m x 12m", "20×25"
+    # Match natural language: "10x12 meters", "10 by 12 m", "100m * 150m", "10m x 12m", "20x25"
     if "boundary_size" not in result:
         nl_boundary = re.search(
-            r'(\d+(?:\.\d+)?)\s*(?:m|meters?)?\s*(?:x|×|by)\s*(\d+(?:\.\d+)?)\s*(?:m|meters?)?',
+            r'(\d+(?:\.\d+)?)\s*(?:m|meters?)?\s*(?:x|\*|by)\s*(\d+(?:\.\d+)?)\s*(?:m|meters?)?',
             text, re.IGNORECASE
         )
         if nl_boundary:
             result["boundary_size"] = [float(nl_boundary.group(1)), float(nl_boundary.group(2))]
+            if re.search(r"\b(plot|site|land)\b", text, re.IGNORECASE):
+                result["boundary_role"] = "site"
+            else:
+                result["boundary_role"] = "footprint"
 
     # Match --entrance-point X,Y or --entrance-point "X,Y"
     entrance_match = re.search(r'--entrance-point\s+["\']?(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)["\']?', text)
     if entrance_match:
         result["entrance_point"] = [float(entrance_match.group(1)), float(entrance_match.group(2))]
+
+    area_match = re.search(
+        r'(\d+(?:\.\d+)?)\s*(sq\.?\s*m|sqm|square\s*meters?|m2|sq\.?\s*ft|sqft|square\s*feet)\b',
+        text,
+        re.IGNORECASE,
+    )
+    if area_match:
+        raw_area = float(area_match.group(1))
+        raw_unit = area_match.group(2).lower().replace(" ", "")
+        if raw_unit in {"sqft", "sq.ft", "squarefeet"}:
+            result["total_area"] = round(raw_area * 0.092903, 3)
+            result["area_unit"] = "sq.m"
+        else:
+            result["total_area"] = raw_area
+            result["area_unit"] = "sq.m"
 
     return result
 
@@ -93,7 +119,9 @@ def process_user_request(
         resolution = dict(resolution or {})
         resolution.update(cli_args)
 
-    backend_target = route_backend(normalized)
+    enriched = enrich_spec_with_planning(normalized, resolution=resolution, user_prompt=user_text)
+
+    backend_target = route_backend(enriched)
     validation_errors = list(normalized.pop("_validation_errors", []))
     feasibility_warnings = list(normalized.pop("_feasibility_warnings", []))
     missing_fields = list(normalized.pop("_missing_fields", []))
@@ -115,7 +143,7 @@ def process_user_request(
         if resolution_missing:
             missing_fields.extend(field for field in resolution_missing if field not in missing_fields)
         else:
-            backend_spec, backend_translation_warnings = build_backend_spec(normalized, normalized_resolution)
+            backend_spec, backend_translation_warnings = build_backend_spec(enriched, normalized_resolution)
     else:
         if "boundary_polygon" not in missing_fields:
             missing_fields.append("boundary_polygon")
@@ -142,7 +170,7 @@ def process_user_request(
 
     return {
         "assistant_text": assistant_text,
-        "current_spec": normalized,
+        "current_spec": enriched,
         "missing_fields": missing_fields,
         "validation_errors": validation_errors,
         "feasibility_warnings": feasibility_warnings,
@@ -159,6 +187,16 @@ def normalize_current_spec(spec: Dict) -> Dict:
         {
             "plot_type": spec.get("plot_type"),
             "entrance_side": spec.get("entrance_side"),
+            "layout_type": spec.get("layout_type"),
+            "constraint_metadata": copy.deepcopy(spec.get("constraint_metadata", {})),
+            "auto_dimensions": copy.deepcopy(spec.get("auto_dimensions", {})),
+            "style_hints": list(spec.get("style_hints", [])),
+            "room_size_preferences": copy.deepcopy(spec.get("room_size_preferences", {})),
+            "room_position_preferences": copy.deepcopy(spec.get("room_position_preferences", {})),
+            "room_swaps": copy.deepcopy(spec.get("room_swaps", [])),
+            "semantic_spec": copy.deepcopy(spec.get("semantic_spec")),
+            "room_program": copy.deepcopy(spec.get("room_program")),
+            "zoning_plan": copy.deepcopy(spec.get("zoning_plan")),
         }
     )
 

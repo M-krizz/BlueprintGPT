@@ -1,0 +1,50 @@
+[
+  {
+    "checkpoint_path": "learned\\model\\checkpoints\\improved_v1.pt",
+    "epoch": 0,
+    "val_loss": Infinity,
+    "compliance_rate": 0.0,
+    "realism_score": 0.0,
+    "overlap_rate": 1.0,
+    "repair_severity": 1.0,
+    "min_dim_violations": 999,
+    "generation_success_rate": 0.0,
+    "composite_score": 0.0
+  },
+  {
+    "checkpoint_path": "learned\\model\\checkpoints\\improved_v2.pt",
+    "epoch": 0,
+    "val_loss": Infinity,
+    "compliance_rate": 0.0,
+    "realism_score": 0.0,
+    "overlap_rate": 1.0,
+    "repair_severity": 1.0,
+    "min_dim_violations": 999,
+    "generation_success_rate": 0.0,
+    "composite_score": 0.0
+  },
+  {
+    "checkpoint_path": "learned\\model\\checkpoints\\kaggle_test.pt",
+    "epoch": 0,
+    "val_loss": Infinity,
+    "compliance_rate": 0.0,
+    "realism_score": 0.0,
+    "overlap_rate": 1.0,
+    "repair_severity": 1.0,
+    "min_dim_violations": 999,
+    "generation_success_rate": 0.0,
+    "composite_score": 0.0
+  },
+  {
+    "checkpoint_path": "learned\\model\\checkpoints\\test_quick.pt",
+    "epoch": 0,
+    "val_loss": Infinity,
+    "compliance_rate": 0.0,
+    "realism_score": 0.0,
+    "overlap_rate": 1.0,
+    "repair_severity": 1.0,
+    "min_dim_violations": 999,
+    "generation_success_rate": 0.0,
+    "composite_score": 0.0
+  }
+]

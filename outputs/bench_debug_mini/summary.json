@@ -1,0 +1,227 @@
+{
+  "summary": {
+    "case_count": 3,
+    "completed_case_count": 1,
+    "winner_counts": {
+      "planner": 0,
+      "algorithmic": 0,
+      "tie": 1
+    },
+    "acceptance_counts": {
+      "algorithmic": {
+        "accepted": 1,
+        "rejected": 0
+      },
+      "planner": {
+        "accepted": 1,
+        "rejected": 0
+      }
+    },
+    "planner_acceptance_delta": 0,
+    "planner_avg_score_delta": 0.0,
+    "planner_avg_adjacency_delta": 0.0,
+    "planner_avg_alignment_delta": 0.0
+  },
+  "cases": [
+    {
+      "name": "2bhk_north_minimum",
+      "prompt": "Design a 2BHK apartment with a north entrance, 2 bedrooms, 2 bathrooms, 1 kitchen, and 1 living room, and a total area near 55.1 sqm.",
+      "layout_type": "2BHK",
+      "entrance_side": "North",
+      "size_mode": "minimum",
+      "expected_room_counts": {
+        "Bedroom": 2,
+        "LivingRoom": 1,
+        "Kitchen": 1,
+        "Bathroom": 2
+      },
+      "backend_translation_warnings": [
+        "Applied zoning-driven placement order for 2BHK to stabilize residential composition."
+      ],
+      "algorithmic": {
+        "status": "completed",
+        "backend_target": "algorithmic",
+        "winning_source": null,
+        "report_status": "COMPLIANT",
+        "design_score": 0.8583,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "generated_rooms": {
+          "Bedroom": 2,
+          "LivingRoom": 1,
+          "Kitchen": 1,
+          "Bathroom": 2
+        },
+        "metrics": {
+          "total_area": 55.1,
+          "fully_connected": true,
+          "max_travel_distance": 10.38,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.6678,
+          "corridor_width": 1.2,
+          "circulation_walkable_area": 4.08,
+          "connectivity_to_exit": true,
+          "door_path_travel_distance": 9.19,
+          "public_frontage_score": 0.7329,
+          "bedroom_privacy_score": 0.9456,
+          "kitchen_living_score": 1.0,
+          "bathroom_access_score": 1.0,
+          "architectural_reasonableness": 0.8902,
+          "max_room_area_error": 0.063
+        },
+        "planner_summary": null,
+        "artifact_paths": {
+          "svg": "outputs\\bench_debug_mini\\2bhk_north_minimum\\algorithmic_blueprint.svg",
+          "report": "outputs\\bench_debug_mini\\2bhk_north_minimum\\algorithmic_compliance_report.json"
+        },
+        "acceptance": {
+          "accepted": true,
+          "failed_checks": [],
+          "checks": {
+            "compliant": true,
+            "room_program_complete": true,
+            "expected_program_match": true,
+            "fully_connected": true,
+            "exit_connected": true,
+            "adjacency_fit": true,
+            "bounded_circulation": true,
+            "room_area_drift_ok": true,
+            "public_frontage_ok": true,
+            "bedroom_privacy_ok": true,
+            "kitchen_living_ok": true,
+            "bathroom_access_ok": true,
+            "architectural_reasonableness_ok": true
+          },
+          "circulation_ratio": 0.074,
+          "thresholds": {
+            "adjacency_satisfaction": 0.2,
+            "circulation_ratio_max": 0.18,
+            "max_room_area_error": 0.35,
+            "public_frontage_score": 0.35,
+            "bedroom_privacy_score": 0.3,
+            "kitchen_living_score": 0.5,
+            "bathroom_access_score": 0.5,
+            "architectural_reasonableness": 0.45
+          }
+        }
+      },
+      "planner": {
+        "status": "completed",
+        "backend_target": "planner",
+        "winning_source": "algorithmic_compact_baseline",
+        "report_status": "COMPLIANT",
+        "design_score": 0.8583,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "generated_rooms": {
+          "Bedroom": 2,
+          "LivingRoom": 1,
+          "Kitchen": 1,
+          "Bathroom": 2
+        },
+        "metrics": {
+          "total_area": 55.1,
+          "fully_connected": true,
+          "max_travel_distance": 10.38,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.6678,
+          "corridor_width": 1.2,
+          "circulation_walkable_area": 4.08,
+          "connectivity_to_exit": true,
+          "door_path_travel_distance": 9.19,
+          "public_frontage_score": 0.7329,
+          "bedroom_privacy_score": 0.9456,
+          "kitchen_living_score": 1.0,
+          "bathroom_access_score": 1.0,
+          "architectural_reasonableness": 0.8902,
+          "max_room_area_error": 0.063
+        },
+        "planner_summary": {
+          "source": "zoning-plan",
+          "checkpoint_path": null,
+          "room_order_count": 6,
+          "spatial_hint_count": 6,
+          "adjacency_preferences_count": 3,
+          "compact_baseline_only": true
+        },
+        "artifact_paths": {
+          "svg": "outputs\\bench_debug_mini\\2bhk_north_minimum\\planner_blueprint.svg",
+          "report": "outputs\\bench_debug_mini\\2bhk_north_minimum\\planner_compliance_report.json"
+        },
+        "acceptance": {
+          "accepted": true,
+          "failed_checks": [],
+          "checks": {
+            "compliant": true,
+            "room_program_complete": true,
+            "expected_program_match": true,
+            "fully_connected": true,
+            "exit_connected": true,
+            "adjacency_fit": true,
+            "bounded_circulation": true,
+            "room_area_drift_ok": true,
+            "public_frontage_ok": true,
+            "bedroom_privacy_ok": true,
+            "kitchen_living_ok": true,
+            "bathroom_access_ok": true,
+            "architectural_reasonableness_ok": true
+          },
+          "circulation_ratio": 0.074,
+          "thresholds": {
+            "adjacency_satisfaction": 0.2,
+            "circulation_ratio_max": 0.18,
+            "max_room_area_error": 0.35,
+            "public_frontage_score": 0.35,
+            "bedroom_privacy_score": 0.3,
+            "kitchen_living_score": 0.5,
+            "bathroom_access_score": 0.5,
+            "architectural_reasonableness": 0.45
+          }
+        }
+      },
+      "comparison": {
+        "winner": "tie",
+        "reason": "equal_score",
+        "design_score_delta": 0.0,
+        "adjacency_delta": 0.0,
+        "alignment_delta": 0.0
+      }
+    },
+    {
+      "name": "2bhk_south_minimum",
+      "prompt": "Design a 2BHK apartment with a south entrance, 2 bedrooms, 2 bathrooms, 1 kitchen, and 1 living room, and a total area near 55.1 sqm.",
+      "layout_type": "2BHK",
+      "entrance_side": "South",
+      "size_mode": "minimum",
+      "error": "Design-quality gate rejected all algorithmic variants: Not fully connected"
+    },
+    {
+      "name": "2bhk_west_minimum",
+      "prompt": "Design a 2BHK apartment with a west entrance, 2 bedrooms, 2 bathrooms, 1 kitchen, and 1 living room, and a total area near 55.1 sqm.",
+      "layout_type": "2BHK",
+      "entrance_side": "West",
+      "size_mode": "minimum",
+      "error": "Design-quality gate rejected all algorithmic variants: Not fully connected"
+    }
+  ]
+}

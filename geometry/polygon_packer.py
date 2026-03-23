@@ -72,7 +72,78 @@ def bisect_polygon(poly, ratio, axis='x'):
     return poly1, poly2
 
 
-def recursive_pack(poly, items, entrance_pt=None, learned_hints=None):
+def _assign_polygon_to_room(room, poly):
+    """Assign a cleaned polygon to a room."""
+    try:
+        clean_poly = poly.simplify(0.01)
+        coords = list(clean_poly.exterior.coords)
+        room.polygon = [(round(x, 3), round(y, 3)) for x, y in coords]
+    except Exception:
+        pass
+
+
+def _room_hint_position(room, learned_hints, minx, miny, maxx, maxy, axis):
+    if not learned_hints:
+        return None
+    hint = learned_hints.get(getattr(room, "name", "")) or learned_hints.get(getattr(room, "room_type", ""))
+    if not hint:
+        return None
+    cx_norm, cy_norm = hint
+    if axis == 'x':
+        return minx + cx_norm * (maxx - minx)
+    return miny + cy_norm * (maxy - miny)
+
+
+def _prefer_low_side(room, axis, mid, entrance_pt=None, learned_hints=None, bounds=None):
+    minx, miny, maxx, maxy = bounds
+    hinted = _room_hint_position(room, learned_hints, minx, miny, maxx, maxy, axis)
+    if hinted is not None:
+        return hinted <= mid
+
+    if entrance_pt is None:
+        return True
+
+    entrance_coord = entrance_pt[0] if axis == 'x' else entrance_pt[1]
+    entrance_is_low = entrance_coord <= mid
+    room_type = getattr(room, "room_type", "")
+    if room_type in {"LivingRoom", "DrawingRoom", "Kitchen", "DiningRoom"}:
+        return entrance_is_low
+    if room_type in {"Bedroom", "Bathroom", "WC"}:
+        return not entrance_is_low
+    return entrance_is_low
+
+
+def _fit_single_room_polygon(poly, item, entrance_pt=None, learned_hints=None):
+    room = item['room']
+    target_area = max(float(item.get('weight', 0.0) or 0.0), 1e-6)
+    if poly.area <= target_area * 1.15:
+        return poly
+
+    minx, miny, maxx, maxy = poly.bounds
+    width = maxx - minx
+    height = maxy - miny
+    axis = 'x' if width > height else 'y'
+    mid = (minx + maxx) / 2.0 if axis == 'x' else (miny + maxy) / 2.0
+    ratio = max(0.03, min(0.92, target_area / max(poly.area, 1e-6)))
+
+    prefer_low = _prefer_low_side(
+        room,
+        axis,
+        mid,
+        entrance_pt=entrance_pt,
+        learned_hints=learned_hints,
+        bounds=(minx, miny, maxx, maxy),
+    )
+
+    if prefer_low:
+        fitted, _ = bisect_polygon(poly, ratio, axis)
+    else:
+        _, fitted = bisect_polygon(poly, 1.0 - ratio, axis)
+
+    return fitted or poly
+
+
+def recursive_pack(poly, items, entrance_pt=None, learned_hints=None, fit_single_room=True):
     """
     Recursively divides 'poly' to fit 'items' proportionally.
     items: list of dicts {'room': Room, 'weight': float}
@@ -85,14 +156,15 @@ def recursive_pack(poly, items, entrance_pt=None, learned_hints=None):
         return
         
     if len(items) == 1:
-        # Assign entire remaining polygon to this room
-        try:
-            # Simplify slightly to avoid collinear coordinate bloating
-            clean_poly = poly.simplify(0.01)
-            coords = list(clean_poly.exterior.coords)
-            items[0]['room'].polygon = [(round(x, 3), round(y, 3)) for x, y in coords]
-        except Exception:
-            pass
+        final_poly = poly
+        if fit_single_room:
+            final_poly = _fit_single_room_polygon(
+                poly,
+                items[0],
+                entrance_pt=entrance_pt,
+                learned_hints=learned_hints,
+            )
+        _assign_polygon_to_room(items[0]['room'], final_poly)
         return
 
     # Split items into two groups roughly equal by weight
@@ -141,9 +213,15 @@ def recursive_pack(poly, items, entrance_pt=None, learned_hints=None):
                 """Return average hint position along the cut axis for the group."""
                 positions = []
                 for item in group:
+                    rname = getattr(item['room'], 'name', None)
                     rtype = getattr(item['room'], 'room_type', None)
-                    if rtype and rtype in learned_hints:
-                        cx_norm, cy_norm = learned_hints[rtype]
+                    hint = None
+                    if rname and rname in learned_hints:
+                        hint = learned_hints[rname]
+                    elif rtype and rtype in learned_hints:
+                        hint = learned_hints[rtype]
+                    if hint:
+                        cx_norm, cy_norm = hint
                         if axis == 'x':
                             # Denormalize to real coords using boundary extent
                             positions.append(minx + cx_norm * (maxx - minx))
@@ -206,11 +284,14 @@ def recursive_pack(poly, items, entrance_pt=None, learned_hints=None):
                     should_swap = True
 
         if should_swap:
-            recursive_pack(poly1, group2, entrance_pt, learned_hints)
-            recursive_pack(poly2, group1, entrance_pt, learned_hints)
+            swapped_poly1, swapped_poly2 = bisect_polygon(poly, 1.0 - ratio, axis)
+            if swapped_poly1 and swapped_poly2:
+                poly1, poly2 = swapped_poly1, swapped_poly2
+            recursive_pack(poly1, group2, entrance_pt, learned_hints, fit_single_room=fit_single_room)
+            recursive_pack(poly2, group1, entrance_pt, learned_hints, fit_single_room=fit_single_room)
         else:
-            recursive_pack(poly1, group1, entrance_pt, learned_hints)
-            recursive_pack(poly2, group2, entrance_pt, learned_hints)
+            recursive_pack(poly1, group1, entrance_pt, learned_hints, fit_single_room=fit_single_room)
+            recursive_pack(poly2, group2, entrance_pt, learned_hints, fit_single_room=fit_single_room)
     else:
         # Failsafe if bisection somehow collapses: forcibly split the polygon down the middle mathematically
         minx, miny, maxx, maxy = poly.bounds
@@ -226,8 +307,8 @@ def recursive_pack(poly, items, entrance_pt=None, learned_hints=None):
         poly1 = _get_largest_polygon(p1) or poly
         poly2 = _get_largest_polygon(p2) or poly
 
-        recursive_pack(poly1, items[:len(items)//2], entrance_pt, learned_hints)
-        recursive_pack(poly2, items[len(items)//2:], entrance_pt, learned_hints)
+        recursive_pack(poly1, items[:len(items)//2], entrance_pt, learned_hints, fit_single_room=fit_single_room)
+        recursive_pack(poly2, items[len(items)//2:], entrance_pt, learned_hints, fit_single_room=fit_single_room)
 
 
 class PolygonPacker:
@@ -241,12 +322,14 @@ class PolygonPacker:
     """
 
     def __init__(self, building, boundary_polygon, entrance_point=None,
-                 learned_hints=None):
+                 learned_hints=None, placement_order=None, room_zones=None):
         self.building = building
         self.boundary = boundary_polygon
         self.entrance = entrance_point
         # learned_hints: {room_type: (cx_norm, cy_norm)} in [0,1] space
         self.learned_hints = learned_hints or {}
+        self.placement_order = placement_order or []
+        self.room_zones = room_zones or {}
 
     def allocate(self):
         rooms = [r for r in self.building.rooms if r.final_area and r.final_area > 0]
@@ -263,14 +346,30 @@ class PolygonPacker:
         except Exception:
             return Allocator(self.building).allocate()
             
-        # Sort rooms by area primarily, but keep a stable order
-        rooms.sort(key=lambda r: (r.room_type == 'LivingRoom', r.final_area), reverse=True)
+        if self.placement_order:
+            order_rank = {room_name: index for index, room_name in enumerate(self.placement_order)}
+            rooms.sort(
+                key=lambda r: (
+                    order_rank.get(getattr(r, "name", ""), len(order_rank) + 1),
+                    {"public": 0, "service": 1, "private": 2}.get(self.room_zones.get(getattr(r, "name", ""), "private"), 3),
+                    -(r.final_area or 0.0),
+                )
+            )
+        else:
+            # Sort rooms by area primarily, but keep a stable order
+            rooms.sort(
+                key=lambda r: (
+                    {"public": 0, "service": 1, "private": 2}.get(self.room_zones.get(getattr(r, "name", ""), "private"), 3),
+                    -(r.final_area or 0.0),
+                )
+            )
         items = [{'room': r, 'weight': r.final_area} for r in rooms]
         
         recursive_pack(
             poly, items,
             entrance_pt=self.entrance,
             learned_hints=self.learned_hints if self.learned_hints else None,
+            fit_single_room=False,
         )
         
         return self._bounding_box()

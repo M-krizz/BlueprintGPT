@@ -1,0 +1,1 @@
+{"plot_type": "Custom", "rooms": [{"name": "LivingRoom_1", "type": "LivingRoom", "area_ratio": 0.18, "centroid": [0.3, 0.5]}, {"name": "Kitchen_1", "type": "Kitchen", "area_ratio": 0.14, "centroid": [0.55, 0.5]}], "adjacency": [["LivingRoom_1", "Kitchen_1"]], "contact_pairs": [["LivingRoom_1", "Kitchen_1"]]}

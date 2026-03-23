@@ -1,12 +1,12 @@
-"""
-gemini_adapter.py – Google Gemini API integration for natural language understanding,
+﻿"""
+gemini_adapter.py â€“ Google Gemini API integration for natural language understanding,
 design explanation, and correction parsing.
 
 This module provides:
 1. Intent Classification - detect whether user wants design, question, or conversation
-2. NL → Spec conversion (parse user intent into system arguments)
-3. Design → Explanation (explain generated layouts and rankings)
-4. Correction → Delta (parse user corrections into actionable changes)
+2. NL â†’ Spec conversion (parse user intent into system arguments)
+3. Design â†’ Explanation (explain generated layouts and rankings)
+4. Correction â†’ Delta (parse user corrections into actionable changes)
 5. Context-aware Chat - respond to questions and conversations appropriately
 """
 from __future__ import annotations
@@ -18,18 +18,60 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from utils.processing_logger import ProcessingLogger
 
+# Constraint Analyzer for intelligent spec enhancement
+try:
+    from nl_interface.constraint_analyzer import (
+        get_analyzer,
+        get_layout_requirements,
+        enhance_spec as enhance_spec_with_constraints,
+        get_constraint_summary,
+    )
+    _HAS_CONSTRAINT_ANALYZER = True
+except ImportError:
+    _HAS_CONSTRAINT_ANALYZER = False
+    get_analyzer = None
+    get_layout_requirements = None
+    enhance_spec_with_constraints = None
+    get_constraint_summary = None
+
 # Gemini API
 try:
-    import google.generativeai as genai
+    from google import genai as google_genai
+    _GENAI_SDK = "google.genai"
     _HAS_GENAI = True
 except ImportError:
-    genai = None
-    _HAS_GENAI = False
+    google_genai = None
+    try:
+        import google.generativeai as legacy_genai
+        _GENAI_SDK = "google.generativeai"
+        _HAS_GENAI = True
+    except ImportError:
+        legacy_genai = None
+        _GENAI_SDK = None
+        _HAS_GENAI = False
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# â”€â”€ Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 GEMINI_ENABLED = os.getenv("GEMINI_ENABLED", "true").lower() == "true"
+DEPRECATED_MODEL_ALIASES = {
+    "gemini-1.5-flash": "gemini-2.5-flash",
+    "gemini-1.5-pro": "gemini-2.5-pro",
+    "gemini-pro": "gemini-2.5-pro",
+}
+
+
+def _resolve_gemini_model(model_name: str) -> str:
+    configured = (model_name or "").strip() or "gemini-2.5-flash"
+    replacement = DEPRECATED_MODEL_ALIASES.get(configured.lower())
+    if replacement:
+        ProcessingLogger.logger.warning(
+            f"GEMINI_MODEL '{configured}' is deprecated or unavailable; using '{replacement}' instead."
+        )
+        return replacement
+    return configured
+
+
+GEMINI_MODEL = _resolve_gemini_model(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
 
 # Intent types
 INTENT_DESIGN = "design"           # User wants to create/modify a floor plan
@@ -38,25 +80,86 @@ INTENT_CORRECTION = "correction"   # User wants to modify existing design
 INTENT_CONVERSATION = "conversation"  # General chat/greeting
 
 
+def _is_gemini_auth_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    auth_markers = (
+        "permission_denied",
+        "reported as leaked",
+        "invalid api key",
+        "api key not valid",
+        "api_key_invalid",
+        "forbidden",
+        "401",
+        "403",
+    )
+    return any(marker in message for marker in auth_markers)
+
+
+def _disable_gemini(reason: str) -> None:
+    global _gemini_ready, _gemini_disabled_reason
+    if _gemini_disabled_reason:
+        return
+    _gemini_ready = False
+    _gemini_disabled_reason = reason
+    ProcessingLogger.logger.warning(f"Gemini disabled for this process: {reason}")
+
+
 def _init_gemini() -> bool:
     """Initialize Gemini client. Returns True if successful."""
+    global _gemini_client
     if not _HAS_GENAI:
         return False
     if not GEMINI_API_KEY:
         return False
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
+        if _GENAI_SDK == "google.genai":
+            _gemini_client = google_genai.Client(api_key=GEMINI_API_KEY)
+        elif _GENAI_SDK == "google.generativeai":
+            legacy_genai.configure(api_key=GEMINI_API_KEY)
+            _gemini_client = None
+        else:
+            return False
         return True
-    except Exception:
+    except Exception as exc:
+        ProcessingLogger.logger.warning(f"Gemini client initialization failed: {exc}")
         return False
 
 
+_gemini_client = None
+_gemini_disabled_reason = None
 _gemini_ready = _init_gemini() if GEMINI_ENABLED else False
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+def _generate_text(prompt: str, *, response_mime_type: Optional[str] = None) -> Optional[str]:
+    """Generate text with the configured Gemini SDK."""
+    if not is_available():
+        return None
+
+    try:
+        if _GENAI_SDK == "google.genai":
+            config = {}
+            if response_mime_type:
+                config["response_mime_type"] = response_mime_type
+            response = _gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=config or None,
+            )
+            return getattr(response, "text", None)
+
+        model = legacy_genai.GenerativeModel(GEMINI_MODEL)
+        response = model.generate_content(prompt)
+        return getattr(response, "text", None)
+    except Exception as exc:
+        if _is_gemini_auth_error(exc):
+            _disable_gemini(str(exc))
+            return None
+        raise
+
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  System Prompts
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 INTENT_CLASSIFICATION_PROMPT = """You are BlueprintGPT, an AI assistant for architectural floor plan design.
 Analyze the user's message and classify their intent into ONE of these categories:
@@ -97,47 +200,101 @@ Conversation state: {state}
 Previous designs exist: {has_designs}
 """
 
-SPEC_EXTRACTION_PROMPT = """You are an AI assistant for an architectural floor plan generator.
-Your task is to extract structured specifications from natural language descriptions.
+SPEC_EXTRACTION_PROMPT_BASE = """You are an intelligent AI assistant for an architectural floor plan generator.
+Your task is to extract structured specifications from natural language descriptions and apply building constraints.
 
-Extract the following from the user's message:
-1. **rooms**: List of room types and counts (e.g., "2 bedrooms" → [{"type": "Bedroom", "count": 2}])
-   - **BHK Format**: "3BHK" means 3 Bedrooms + 1 Hall (LivingRoom) + 1 Kitchen + 2 Bathrooms
-   - "2BHK" means 2 Bedrooms + 1 Hall (LivingRoom) + 1 Kitchen + 1 Bathroom
-2. **adjacency**: Room relationships (e.g., "kitchen near dining" → [{"source": "Kitchen", "target": "DiningRoom", "relation": "near_to"}])
-3. **entrance_side**: North, South, East, or West
+## IMPORTANT: Layout Type Requirements
+
+You must understand the minimum requirements for each layout type:
+
+### 1BHK (35-60 sqm recommended):
+- 1 Bedroom (min 7.5 sqm)
+- 1 LivingRoom (min 7.5 sqm)
+- 1 Kitchen (min 3.3 sqm)
+- 1 Bathroom (min 1.2 sqm)
+
+### 2BHK (55-100 sqm recommended):
+- 2 Bedrooms (each min 9.5 sqm)
+- 1 LivingRoom (min 9.5 sqm)
+- 1 Kitchen (min 4.5 sqm)
+- 1 Bathroom (min 1.8 sqm)
+
+### 3BHK (85-150 sqm recommended):
+- 3 Bedrooms (each min 9.5 sqm)
+- 1 LivingRoom (min 9.5 sqm)
+- 1 Kitchen (min 4.5 sqm)
+- 2 Bathrooms (each min 1.8 sqm)
+
+### 4BHK (120-200 sqm recommended):
+- 4 Bedrooms (each min 9.5 sqm)
+- 1 LivingRoom (min 9.5 sqm)
+- 1 Kitchen (min 4.5 sqm)
+- 2 Bathrooms (each min 1.8 sqm)
+- 1 DiningRoom (optional, min 9.5 sqm)
+
+## Extraction Rules:
+
+1. **rooms**: List of room types and counts
+   - For "3BHK": Extract as 3 Bedrooms + 1 LivingRoom + 1 Kitchen + 2 Bathrooms
+   - For "2BHK": Extract as 2 Bedrooms + 1 LivingRoom + 1 Kitchen + 1 Bathroom
+   - Always include all mandatory rooms for the layout type
+
+2. **adjacency**: Room relationships based on architectural best practices:
+   - Bathroom should be near Bedroom
+   - Kitchen should be near LivingRoom or DiningRoom
+   - Bedrooms should have privacy (separation from public spaces)
+
+3. **entrance_side**: North, South, East, or West (default: South)
+
 4. **plot_type**: "5marla", "10marla", "20marla", or "custom"
-5. **style_hints**: Any style preferences like "open plan", "compact", "privacy first", "minimize corridor"
-6. **corrections**: If user is requesting changes to a previous design
 
-Valid room types: Bedroom, Kitchen, Bathroom, LivingRoom, DiningRoom, DrawingRoom, Garage, Store
+5. **layout_type**: Inferred layout type ("1BHK", "2BHK", "3BHK", "4BHK", "STUDIO")
 
-Respond ONLY with a valid JSON object. Example:
+6. **style_hints**: Any style preferences
+
+Valid room types: Bedroom, Kitchen, Bathroom, LivingRoom, DiningRoom, DrawingRoom, Garage, Store, Pantry, WC
+
+## Response Format:
+
+Respond ONLY with a valid JSON object:
 {
-  "rooms": [{"type": "Bedroom", "count": 2}, {"type": "Kitchen", "count": 1}],
-  "adjacency": [{"source": "Kitchen", "target": "DiningRoom", "relation": "near_to"}],
-  "entrance_side": "North",
+  "layout_type": "3BHK",
+  "rooms": [
+    {"type": "Bedroom", "count": 3},
+    {"type": "LivingRoom", "count": 1},
+    {"type": "Kitchen", "count": 1},
+    {"type": "Bathroom", "count": 2}
+  ],
+  "adjacency": [
+    {"source": "Bathroom", "target": "Bedroom", "relation": "near_to"},
+    {"source": "Kitchen", "target": "LivingRoom", "relation": "near_to"}
+  ],
+  "entrance_side": "South",
   "plot_type": "10marla",
-  "style_hints": ["open plan"],
-  "corrections": null,
+  "style_hints": [],
   "intent": "new_design"
 }
 
-If user is requesting a correction, set intent to "correction" and populate corrections field:
-{
-  "intent": "correction",
-  "corrections": {
-    "target_design_index": 0,
-    "changes": [
-      {"type": "move_room", "room": "Kitchen", "direction": "left"},
-      {"type": "resize_room", "room": "Bedroom_1", "size_change": "larger"},
-      {"type": "add_room", "room_type": "Bathroom"},
-      {"type": "remove_room", "room": "Store"},
-      {"type": "change_adjacency", "room_a": "Kitchen", "room_b": "LivingRoom", "new_relation": "adjacent_to"}
-    ]
-  }
-}
+If user is requesting a correction, set intent to "correction" and populate corrections field.
 """
+
+# Dynamic prompt with constraint summary (built at runtime)
+def _build_spec_extraction_prompt() -> str:
+    """Build the spec extraction prompt with dynamic constraint information."""
+    base = SPEC_EXTRACTION_PROMPT_BASE
+
+    # Add constraint summary if available
+    if _HAS_CONSTRAINT_ANALYZER and get_constraint_summary:
+        try:
+            constraint_info = get_constraint_summary()
+            return f"{base}\n\n## System Constraints:\n{constraint_info}"
+        except Exception:
+            pass
+
+    return base
+
+# For backward compatibility
+SPEC_EXTRACTION_PROMPT = SPEC_EXTRACTION_PROMPT_BASE
 
 EXPLANATION_PROMPT = """You are an AI assistant explaining architectural floor plan designs to users.
 
@@ -227,9 +384,9 @@ If they want to create a design, guide them on what information you need.
 If they have questions about a generated design, explain it in detail."""
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  Core Functions
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 def _extract_json_from_text(text: str) -> Optional[Dict]:
     """Extract a JSON object from text, handling markdown fences and nested braces."""
@@ -262,7 +419,7 @@ def _extract_json_from_text(text: str) -> Optional[Dict]:
 
 def is_available() -> bool:
     """Check if Gemini is available and configured."""
-    return _gemini_ready and GEMINI_ENABLED
+    return _gemini_ready and GEMINI_ENABLED and not _gemini_disabled_reason
 
 
 def classify_intent(
@@ -293,19 +450,17 @@ def classify_intent(
         return result
 
     try:
-        model = genai.GenerativeModel(GEMINI_MODEL)
-
         prompt = INTENT_CLASSIFICATION_PROMPT.format(
             user_message=user_message,
             state=state,
             has_designs=has_designs,
         )
 
-        response = model.generate_content(prompt)
-        if not response.text:
+        text = _generate_text(prompt, response_mime_type="application/json")
+        if not text:
             return _fallback_intent_classify(user_message, has_designs)
 
-        result = _extract_json_from_text(response.text)
+        result = _extract_json_from_text(text)
         if result and "intent" in result:
             ProcessingLogger.logger.debug(f"Gemini intent classification: {result['intent']} (confidence: {result.get('confidence', 0)})")
             return result
@@ -356,6 +511,11 @@ def _quick_intent_classify(user_message: str, has_designs: bool) -> Optional[Dic
         r'\bmake\s+(the\s+)?(\w+)\s+(larger|bigger|smaller)',
         r'\bswap\b', r'\bchange\s+(the\s+)?position',
         r'\bmodify\b', r'\badjust\b', r'\bresize\b',
+        r'\bshould\s+be\s+(adjacent|next\s+to|near|close)\b',
+        r'\bto\s+be\s+(adjacent|next\s+to|near|close)\b',
+        r'\bkeep\s+.+\s+(adjacent|next\s+to|near|close)\b',
+        r'\bplace\s+.+\s+(near|next\s+to|beside|adjacent\s+to)\b',
+        r'\bcloser\s+to\b',
         r'design\s*#?\d+', r'the\s+(first|second|third)\s+(design|one)',
         r'\badd\s+a\s+', r'\bremove\s+(the\s+)?'
     ]
@@ -436,17 +596,34 @@ def _fallback_intent_classify(user_message: str, has_designs: bool) -> Dict[str,
         if re.search(pattern, msg_lower):
             design_keywords.append(key)
 
+    correction_found = has_designs and any(
+        re.search(pattern, msg_lower)
+        for pattern in [
+            r'\bmove\s+(the\s+)?(\w+)', r'\bshift\s+(the\s+)?(\w+)',
+            r'\bmake\s+(the\s+)?(\w+)\s+(larger|bigger|smaller)',
+            r'\bswap\b', r'\bchange\s+(the\s+)?position',
+            r'\bmodify\b', r'\badjust\b', r'\bresize\b',
+            r'\bshould\s+be\s+(adjacent|next\s+to|near|close)\b',
+            r'\bto\s+be\s+(adjacent|next\s+to|near|close)\b',
+            r'\bkeep\s+.+\s+(adjacent|next\s+to|near|close)\b',
+            r'\bplace\s+.+\s+(near|next\s+to|beside|adjacent\s+to)\b',
+            r'\bcloser\s+to\b',
+            r'design\s*#?\d+', r'the\s+(first|second|third)\s+(design|one)',
+            r'\badd\s+a\s+', r'\bremove\s+(the\s+)?'
+        ]
+    )
+
     # Determine intent - prioritize questions over design keywords
     if is_question:
         # It's a question - classify as QUESTION even if it contains design keywords
         intent = INTENT_QUESTION
         confidence = 0.8
+    elif correction_found:
+        intent = INTENT_CORRECTION
+        confidence = 0.8
     elif design_keywords:
         intent = INTENT_DESIGN
         confidence = min(0.7 + len(design_keywords) * 0.05, 0.9)
-    elif has_designs and any(word in msg_lower for word in ["move", "change", "modify", "swap", "larger", "smaller", "add", "remove"]):
-        intent = INTENT_CORRECTION
-        confidence = 0.75
     else:
         intent = INTENT_CONVERSATION
         confidence = 0.6
@@ -576,6 +753,7 @@ def extract_spec_from_nl(user_text: str, conversation_history: Optional[List[Dic
     Extract structured specification from natural language using Gemini.
 
     Falls back to regex-based extraction if Gemini is unavailable.
+    Applies constraint-aware enhancement to ensure proper model inputs.
     """
     ProcessingLogger.logger.debug(f"extract_spec_from_nl called with text: '{user_text[:80]}...'")
     ProcessingLogger.logger.debug(f"Gemini available: {is_available()}")
@@ -583,12 +761,12 @@ def extract_spec_from_nl(user_text: str, conversation_history: Optional[List[Dic
     if not is_available():
         ProcessingLogger.logger.debug("Using fallback extraction (Gemini not available)")
         result = _fallback_extract(user_text)
+        result = _apply_constraint_enhancement(result)
         ProcessingLogger.logger.debug(f"Fallback result: {result}")
         return result
 
     try:
         ProcessingLogger.logger.debug(f"Calling Gemini API with model: {GEMINI_MODEL}")
-        model = genai.GenerativeModel(GEMINI_MODEL)
 
         # Build context with conversation history
         messages = []
@@ -597,13 +775,17 @@ def extract_spec_from_nl(user_text: str, conversation_history: Optional[List[Dic
                 messages.append(f"{msg['role']}: {msg['content']}")
 
         context = "\n".join(messages) if messages else ""
-        full_prompt = f"{SPEC_EXTRACTION_PROMPT}\n\nConversation context:\n{context}\n\nUser message: {user_text}"
 
-        response = model.generate_content(full_prompt)
-        text = response.text
+        # Use constraint-aware prompt
+        spec_prompt = _build_spec_extraction_prompt()
+        full_prompt = f"{spec_prompt}\n\nConversation context:\n{context}\n\nUser message: {user_text}"
+
+        text = _generate_text(full_prompt, response_mime_type="application/json")
         if not text:
             ProcessingLogger.logger.debug("Gemini returned empty response, using fallback")
-            return _fallback_extract(user_text)
+            result = _fallback_extract(user_text)
+            result = _apply_constraint_enhancement(result)
+            return result
         text = text.strip()
 
         ProcessingLogger.logger.debug(f"Gemini response (first 200 chars): {text[:200]}")
@@ -612,18 +794,68 @@ def extract_spec_from_nl(user_text: str, conversation_history: Optional[List[Dic
         result = _extract_json_from_text(text)
         if result:
             ProcessingLogger.logger.debug(f"Gemini extracted JSON: {result}")
+            # Apply constraint enhancement
+            result = _apply_constraint_enhancement(result)
+            ProcessingLogger.logger.debug(f"Constraint-enhanced result: {result}")
             return result
 
         ProcessingLogger.logger.debug("No JSON found in Gemini response, using fallback")
         result = _fallback_extract(user_text)
+        result = _apply_constraint_enhancement(result)
         ProcessingLogger.logger.debug(f"Fallback result: {result}")
         return result
 
     except Exception as e:
         ProcessingLogger.logger.warning(f"Gemini extraction failed: {e}")
         result = _fallback_extract(user_text)
+        result = _apply_constraint_enhancement(result)
         ProcessingLogger.logger.debug(f"Fallback result: {result}")
         return result
+
+
+def _apply_constraint_enhancement(spec: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Apply constraint-aware enhancement to a specification.
+
+    This ensures that:
+    1. All room types have proper minimum dimensions
+    2. Layout type requirements are satisfied
+    3. Adjacency requirements are included
+    4. Boundary dimensions are calculated if not provided
+    """
+    if not _HAS_CONSTRAINT_ANALYZER or not enhance_spec_with_constraints:
+        ProcessingLogger.logger.debug("Constraint analyzer not available, skipping enhancement")
+        return spec
+
+    try:
+        enhanced = enhance_spec_with_constraints(spec)
+
+        # Log comprehensive constraint analysis
+        layout_type = enhanced.get('layout_type', 'unknown')
+        rooms = enhanced.get('rooms', [])
+        metadata = enhanced.get('constraint_metadata', {})
+        auto_dims = enhanced.get('auto_dimensions', {})
+
+        ProcessingLogger.log_constraint_analysis(
+            layout_type=layout_type,
+            room_count=len(rooms),
+            min_area=metadata.get('min_total_area_sqm', 0),
+            recommended_area=metadata.get('recommended_area_sqm', 0) if 'recommended_area_sqm' in metadata else metadata.get('min_total_area_sqm', 0) * 1.3,
+            plot_bucket=metadata.get('plot_bucket', 'unknown'),
+            auto_dimensions=(auto_dims.get('width_m'), auto_dims.get('height_m')) if auto_dims else None
+        )
+
+        # Log room requirements if debug enabled
+        ProcessingLogger.log_room_requirements(rooms)
+
+        # Log adjacency requirements
+        adjacencies = enhanced.get('adjacency', [])
+        ProcessingLogger.log_adjacency_requirements(adjacencies)
+
+        return enhanced
+    except Exception as e:
+        ProcessingLogger.logger.warning(f"Constraint enhancement failed: {e}")
+        return spec
 
 
 def explain_design(
@@ -641,8 +873,6 @@ def explain_design(
         return _fallback_explain(design_data, rank, total_designs, metrics)
 
     try:
-        model = genai.GenerativeModel(GEMINI_MODEL)
-
         score = metrics.get("design_score", 0) if metrics else 0
         compliance = metrics.get("compliance_status", "Unknown") if metrics else "Unknown"
         travel = metrics.get("travel_distance", "N/A") if metrics else "N/A"
@@ -662,10 +892,10 @@ def explain_design(
             violations=json.dumps(violations),
         )
 
-        response = model.generate_content(prompt)
-        if not response.text:
+        text = _generate_text(prompt)
+        if not text:
             return _fallback_explain(design_data, rank, total_designs, metrics)
-        return response.text.strip()
+        return text.strip()
 
     except Exception as e:
         ProcessingLogger.logger.warning(f"Gemini explanation failed: {e}")
@@ -686,8 +916,6 @@ def parse_correction(
         return _fallback_parse_correction(user_request, design_index, current_rooms)
 
     try:
-        model = genai.GenerativeModel(GEMINI_MODEL)
-
         rooms_str = ", ".join([r.get("name", r.get("type", "Unknown")) for r in current_rooms])
 
         prompt = CORRECTION_PROMPT.format(
@@ -696,10 +924,10 @@ def parse_correction(
             user_request=user_request,
         )
 
-        response = model.generate_content(prompt)
-        if not response.text:
+        text = _generate_text(prompt, response_mime_type="application/json")
+        if not text:
             return _fallback_parse_correction(user_request, design_index, current_rooms)
-        text = response.text.strip()
+        text = text.strip()
 
         # Extract JSON from response
         parsed = _extract_json_from_text(text)
@@ -723,11 +951,9 @@ def chat_response(
     Enhanced to properly answer questions and provide helpful guidance.
     """
     if not is_available():
-        return _fallback_chat(user_message, context)
+        return _fallback_chat(user_message, context, conversation_history)
 
     try:
-        model = genai.GenerativeModel(GEMINI_MODEL)
-
         # Build conversation history
         history = ""
         if conversation_history:
@@ -761,26 +987,48 @@ def chat_response(
             user_message=user_message,
         )
 
-        response = model.generate_content(prompt)
-        if not response.text:
-            return _fallback_chat(user_message, context)
-        return response.text.strip()
+        text = _generate_text(prompt)
+        if not text:
+            return _fallback_chat(user_message, context, conversation_history)
+        return text.strip()
 
     except Exception as e:
         ProcessingLogger.logger.warning(f"Gemini chat failed: {e}")
-        return _fallback_chat(user_message, context)
+        return _fallback_chat(user_message, context, conversation_history)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  Fallback Functions (when Gemini unavailable)
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-def _canonical_room_from_label(label: str) -> str:
-    """Convert a room label like 'living room' to canonical type like 'LivingRoom'."""
+def _canonical_room_from_label(label: str, current_rooms: Optional[List[Dict]] = None) -> str:
+    """Convert a room label like 'living room' or 'bedroom1' to a canonical room type or room name."""
     from nl_interface.constants import ROOM_LABELS
     label_lower = label.lower().strip()
+    compact = re.sub(r"[\s_]+", "", label_lower)
+
+    for room in current_rooms or []:
+        room_name = str(room.get("name") or "").strip()
+        room_type = str(room.get("type") or "").strip()
+        if not room_name and not room_type:
+            continue
+        aliases = {
+            room_name.lower(),
+            re.sub(r"[\s_]+", "", room_name.lower()),
+            room_type.lower(),
+            re.sub(r"[\s_]+", "", room_type.lower()),
+        }
+        if label_lower in aliases or compact in aliases:
+            return room_name or room_type
+
     for canonical, labels in ROOM_LABELS.items():
-        if label_lower in labels or label_lower == canonical.lower():
+        normalized_labels = {re.sub(r"[\s_]+", "", value.lower()) for value in labels}
+        if (
+            label_lower in labels
+            or label_lower == canonical.lower()
+            or compact in normalized_labels
+            or compact == re.sub(r"[\s_]+", "", canonical.lower())
+        ):
             return canonical
     return label.capitalize()
 
@@ -895,7 +1143,7 @@ def _fallback_parse_correction(
     )
     room_pat = "|".join(re.escape(l) for l in all_labels)
     # Also match single-word capitalized names as fallback
-    room_or_word = rf"(?:{room_pat}|\w+)"
+    room_or_word = rf"(?:{room_pat}(?:\s*\d+)?|\w+)"
     article = r"(?:the|a|an)\s+"
 
     # Detect move requests: "move (the) kitchen left"
@@ -906,7 +1154,7 @@ def _fallback_parse_correction(
     for pattern, change_type in move_patterns:
         match = re.search(pattern, user_lower)
         if match:
-            room_name = _canonical_room_from_label(match.group(1))
+            room_name = _canonical_room_from_label(match.group(1), current_rooms)
             changes.append({
                 "type": change_type,
                 "room": room_name,
@@ -922,9 +1170,9 @@ def _fallback_parse_correction(
         match = re.search(pattern, user_lower)
         if match:
             if "make" in pattern:
-                room_name = _canonical_room_from_label(match.group(1))
+                room_name = _canonical_room_from_label(match.group(1), current_rooms)
             else:
-                room_name = _canonical_room_from_label(match.group(2))
+                room_name = _canonical_room_from_label(match.group(2), current_rooms)
             size_dir = "larger" if any(w in user_lower for w in ("larger", "bigger", "increase", "wider")) else "smaller"
             changes.append({
                 "type": change_type,
@@ -932,23 +1180,43 @@ def _fallback_parse_correction(
                 "size_change": size_dir,
             })
 
+    adjacency_patterns = [
+        rf"({room_or_word})\s+(?:and|with)\s+({room_or_word})\s+should\s+be\s+(adjacent|next to|near|close)",
+        rf"({room_or_word})\s+(?:and|with)\s+({room_or_word})\s+to\s+be\s+(adjacent|next to|near|close)",
+        rf"keep\s+({room_or_word})\s+(?:and|with)\s+({room_or_word})\s+(adjacent|near|close)",
+        rf"place\s+({room_or_word})\s+(?:near|next to|beside|adjacent to)\s+({room_or_word})",
+    ]
+    for pattern in adjacency_patterns:
+        match = re.search(pattern, user_lower)
+        if not match:
+            continue
+        room_a = _canonical_room_from_label(match.group(1), current_rooms)
+        room_b = _canonical_room_from_label(match.group(2), current_rooms)
+        changes.append({
+            "type": "change_adjacency",
+            "room_a": room_a,
+            "room_b": room_b,
+            "relation": "adjacent_to",
+        })
+        break
+
     # Detect swap requests: "swap kitchen and bedroom"
     swap_match = re.search(rf"swap\s+{article}?({room_or_word})\s+(?:and|with)\s+{article}?({room_or_word})", user_lower)
     if swap_match:
         changes.append({
             "type": "swap_rooms",
-            "room_a": _canonical_room_from_label(swap_match.group(1)),
-            "room_b": _canonical_room_from_label(swap_match.group(2)),
+            "room_a": _canonical_room_from_label(swap_match.group(1), current_rooms),
+            "room_b": _canonical_room_from_label(swap_match.group(2), current_rooms),
         })
 
     # Detect add/remove
     add_match = re.search(rf"add\s+{article}?({room_or_word})", user_lower)
     if add_match:
-        changes.append({"type": "add_room", "room_type": _canonical_room_from_label(add_match.group(1))})
+        changes.append({"type": "add_room", "room_type": _canonical_room_from_label(add_match.group(1), current_rooms)})
 
     remove_match = re.search(rf"remove\s+{article}?({room_or_word})", user_lower)
     if remove_match:
-        changes.append({"type": "remove_room", "room": _canonical_room_from_label(remove_match.group(1))})
+        changes.append({"type": "remove_room", "room": _canonical_room_from_label(remove_match.group(1), current_rooms)})
 
     return {
         "understood": len(changes) > 0,
@@ -957,91 +1225,127 @@ def _fallback_parse_correction(
     }
 
 
-def _fallback_chat(user_message: str, context: Dict[str, Any]) -> str:
-    """Enhanced template-based chat response when Gemini is unavailable."""
+def _summarize_room_program(rooms: List[Dict]) -> str:
+    parts = []
+    for room in rooms or []:
+        room_type = room.get("type") or room.get("name") or "Room"
+        count = int(room.get("count", 1) or 1)
+        parts.append(f"{count} {room_type}")
+    return ", ".join(parts)
+
+
+
+def _latest_design_summary(context: Dict[str, Any]) -> Tuple[Dict[str, Any], str, Optional[str], Optional[str]]:
+    latest_design = context.get("latest_design") or {}
+    latest_rooms = latest_design.get("rooms") or []
+    program = _summarize_room_program(latest_rooms)
+    if not program:
+        spec = context.get("spec", {}) or {}
+        program = _summarize_room_program(spec.get("rooms", []))
+    return latest_design, program, latest_design.get("engine"), latest_design.get("report_status")
+
+
+
+def _fallback_chat(
+    user_message: str,
+    context: Dict[str, Any],
+    conversation_history: Optional[List[Dict]] = None,
+) -> str:
+    """Natural fallback chat when Gemini is unavailable."""
     state = context.get("state", "initial")
     num_designs = context.get("num_designs", 0)
     msg_lower = user_message.lower().strip()
+    spec = context.get("spec", {}) or {}
+    latest_design, design_program, design_engine, design_status = _latest_design_summary(context)
+    previous_user_messages = [
+        msg.get("content", "")
+        for msg in (conversation_history or [])
+        if msg.get("role") == "user" and msg.get("content")
+    ]
+    previous_context = previous_user_messages[-2] if len(previous_user_messages) >= 2 else None
+    msg_words = set(re.findall(r"[a-z]+", msg_lower))
+    has_greeting = bool({"hi", "hello", "hey"} & msg_words) or any(
+        phrase in msg_lower for phrase in ["good morning", "good afternoon"]
+    )
 
-    # Handle greetings
-    if any(g in msg_lower for g in ["hi", "hello", "hey", "good morning", "good afternoon"]):
-        return "Hello! I'm BlueprintGPT, your architectural floor plan assistant. I can help you design floor plans for residential spaces. Would you like to get started? Just tell me about the rooms you need (e.g., '3BHK apartment' or '2 bedrooms with attached bathrooms')."
+    if has_greeting:
+        if design_program:
+            return f"I still have your latest plan in context: {design_program}. You can change it, ask why something happened, or tell me to generate a revised version."
+        return "I’m ready. Tell me the home you want, including the room program, area or plot size, entrance side, and any adjacency preferences."
 
-    # Handle thanks
     if any(t in msg_lower for t in ["thank", "thanks", "appreciate"]):
-        return "You're welcome! Let me know if you need any changes to the design or want to create a new one."
+        return "We can keep going from the same plan. If you want, tell me the next change and I’ll carry the current context forward."
 
-    # Handle questions about room types / supported rooms
+    if any(term in msg_lower for term in ["encoder", "decoder", "architecture", "planner", "how does this work", "how do you generate", "model pipeline"]):
+        return (
+            "The system is split into stages. First, the natural-language side acts like an encoder: it reads your prompt, resolves the room program, area, entrance, and adjacency intent into a structured spec. "
+            "Second, a planner predicts room relationships and rough placement intent. Third, the geometry stage acts like a decoder: it turns that structured plan into room shapes and doors. "
+            "After that, verification and repair check overlap, connectivity, area compliance, and layout quality before anything is returned. "
+            "So the encoder/decoder split is there conceptually and in runtime flow, even though the current repo still mixes learned and deterministic components in the final generation path."
+        )
+
+    if num_designs > 0 and any(term in msg_lower for term in ["can i make", "can i change", "make some changes", "modify this", "change this", "refine this", "edit this"]):
+        base = f"Yes. We can keep working on this {design_program or 'plan'}"
+        if design_engine:
+            base += f" from the `{design_engine}` path"
+        base += ". Tell me exactly what to change."
+        return base + " For example: `make the living room larger`, `move the kitchen closer to the living room`, `keep bedrooms away from the entrance`, or `regenerate with less corridor area`."
+
+    if any(term in msg_lower for term in ["overlap", "overlapped", "overlapping", "intersect", "clash", "collide"]):
+        detail = "That means the previous layout geometry was not clean enough to trust as a final residential plan."
+        if design_engine:
+            detail += f" In your case, the last design came from `{design_engine}`."
+        if design_status:
+            detail += f" Its current status is `{design_status}`."
+        return (
+            detail
+            + " The right response is not to ignore it. The system should either repair and regenerate the layout or reject it and explain why. "
+            + "If you want to continue from the same request, I can do one of three things next: regenerate with stricter no-overlap checks, keep the same program but relax adjacency pressure, or shift to a more conservative layout strategy."
+        )
+
     if any(q in msg_lower for q in ["room type", "room types", "which room", "what room", "support"]):
-        return """**Supported Room Types:**
+        return (
+            "For residential plans, I support Bedroom, Kitchen, Bathroom, LivingRoom, DiningRoom, DrawingRoom, Garage, Store, Study, WC, and Balcony. "
+            "You can specify them directly, or use formats like `2BHK` and `3BHK`, and I’ll expand them into the full room program."
+        )
 
-BlueprintGPT supports these room types for residential floor plans:
-- **Bedroom** - Main living quarters
-- **Kitchen** - Cooking and food prep area
-- **Bathroom** - Washing and sanitation facilities
-- **LivingRoom** (Hall) - Main gathering space
-- **DiningRoom** - Eating area
-- **DrawingRoom** - Formal reception area
-- **Garage** - Vehicle parking
-- **Store** - Storage space
-
-You can specify rooms in several ways:
-- **BHK format**: "3BHK" = 3 Bedrooms + 1 LivingRoom + 1 Kitchen + 2 Bathrooms
-- **Direct specification**: "2 bedrooms, 1 kitchen, 1 living room, 2 bathrooms"
-- **With adjacencies**: "3BHK with kitchen near dining room"
-
-Try it! For example: "Design a 2BHK apartment" or "Create a 3-bedroom house"""
-
-    # Handle questions about capabilities
     if any(q in msg_lower for q in ["what can you", "can you", "able to", "capabilities", "what do you do"]):
-        return """I can help you with:
+        return (
+            "I can interpret a floor-plan request, keep context across turns, generate or revise layouts, explain why a layout passed or failed, and translate high-level requests like privacy or adjacency into planning rules. "
+            "If you already have a design on screen, you can now ask for targeted changes without restating the full brief."
+        )
 
-1. **Create Floor Plans** - Tell me the rooms you need (e.g., "3BHK with attached bathrooms")
-2. **Specify Layout Preferences** - adjacency (kitchen near dining), entrance side, plot size
-3. **Modify Designs** - Once generated, ask me to move rooms, resize them, or swap positions
-4. **Explain Designs** - I'll explain why rooms are placed where they are
-
-To get started, describe your floor plan requirements!"""
-
-    # Handle questions about the system
     if "how" in msg_lower and ("work" in msg_lower or "use" in msg_lower):
-        return """Here's how to use BlueprintGPT:
+        return (
+            "Use it as a conversation. Start with the room program, then add area or plot size, entrance side, and any adjacency or privacy preferences. "
+            "After a layout is generated, you can refine it with follow-ups like `make the kitchen larger`, `reduce corridor area`, or `keep bedrooms farther from the entrance`."
+        )
 
-1. **Describe your needs**: "I need a 3BHK apartment with north entrance"
-2. **Add preferences**: "Kitchen should be near the dining room"
-3. **Specify plot**: "10 marla plot" or provide dimensions like "10x12 meters"
-4. **Review designs**: I'll generate multiple options for you
-5. **Request changes**: "Make the master bedroom larger" or "Move kitchen to the left"
-
-Try it now - what kind of floor plan do you need?"""
-
-    # Handle design-related questions
-    if "bhk" in msg_lower or "bedroom" in msg_lower or "room" in msg_lower:
-        if "mean" in msg_lower or "what is" in msg_lower:
-            return """**BHK** stands for Bedroom-Hall-Kitchen, a common Indian real estate format:
-- **2BHK** = 2 Bedrooms + 1 Living Room (Hall) + 1 Kitchen + 1-2 Bathrooms
-- **3BHK** = 3 Bedrooms + 1 Living Room + 1 Kitchen + 2 Bathrooms
-- **4BHK** = 4 Bedrooms + 1 Living Room + 1 Kitchen + 2-3 Bathrooms
-
-You can also specify rooms individually: "2 bedrooms, 1 kitchen, 1 living room, 2 bathrooms"."""
-
-    # Context-specific responses
     if state == "initial":
-        return "I'm ready to help you design a floor plan! Please describe the rooms you need, the plot size (e.g., 10 marla), and any layout preferences (e.g., entrance side, room adjacencies)."
+        return "I’m ready. Describe the home you want, for example: `3BHK with 180 sq.m and north entrance`, or `2-bedroom home with kitchen near living room`."
 
     if state == "specifying":
-        spec = context.get("spec", {})
-        rooms = spec.get("rooms", [])
-        if rooms:
-            room_summary = ", ".join([f"{r.get('count', 1)} {r.get('type')}" for r in rooms])
-            return f"I have your specification with {room_summary}. Would you like me to generate floor plan options, or do you want to add more details (plot size, entrance side, room adjacencies)?"
-        return "Please tell me what rooms you need for your floor plan."
+        if design_program:
+            reply = f"I’m tracking the current brief as {design_program}."
+            if previous_context:
+                reply += f" Earlier, you said: `{previous_context}`."
+            reply += " If you want, I can generate now, or you can still refine the area, entrance, privacy, or room relationships."
+            return reply
+        return "Tell me the room program first, such as `2BHK`, `3 bedrooms with 2 bathrooms`, or `studio with open kitchen`."
 
     if state == "generated" or num_designs > 0:
-        return f"I've generated {num_designs} design options for you. You can:\n- Ask me to explain any design\n- Request modifications (e.g., 'make bedroom larger')\n- Create a new design with different specifications"
+        summary = f"I still have your latest design in context"
+        if design_program:
+            summary += f": {design_program}"
+        if design_engine:
+            summary += f", generated through `{design_engine}`"
+        if design_status:
+            summary += f", with status `{design_status}`"
+        summary += "."
+        return summary + " Ask for a change, ask why a rule was applied, or tell me to regenerate with a different priority."
 
     if state == "correcting":
-        return "I'm ready to modify your design. What changes would you like? For example: 'move the kitchen left', 'make the master bedroom larger', or 'swap kitchen and dining room'."
+        return "I’m ready to modify the current layout. Tell me the change in plain language, and I’ll keep the rest of the design context intact."
 
-    # Default helpful response
-    return "I'm here to help with your floor plan design. Tell me about the rooms you need, and I'll create layout options for you. You can say things like '3BHK apartment' or '2 bedrooms, 1 kitchen, 2 bathrooms with north entrance'."
+    return "I’m still on the same floor-plan conversation. Tell me the next change, the question you want answered, or the new constraint you want me to apply."
+

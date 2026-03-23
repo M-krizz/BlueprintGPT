@@ -126,7 +126,10 @@ def _rooms_sorted_for_packing(building):
     return rooms
 
 
-def _room_zone(room):
+def _room_zone(room, room_zones=None):
+    room_name = getattr(room, "name", "")
+    if room_zones and room_name in room_zones:
+        return room_zones[room_name]
     if room.room_type in {"LivingRoom"}:
         return "public"
     if room.room_type in {"Kitchen"}:
@@ -159,74 +162,171 @@ def _split_regions_into_bands(regions, entrance_point):
     }
 
 
-def _pack_rooms_into_region_group(room_group, region_group, entrance_point=None):
-    if not room_group or not region_group:
-        return
+def _zone_priority(zone):
+    return {"public": 0, "service": 1, "private": 2}.get(zone, 3)
 
-    total_room_area = sum(r.final_area for r in room_group)
-    total_region_area = sum(r.area for r in region_group)
+
+def _room_adjacency_strength(room_name, adjacency_preferences):
+    if not adjacency_preferences:
+        return 0.0
+    score = 0.0
+    for item in adjacency_preferences:
+        if room_name in {item.get("a"), item.get("b")}:
+            score += float(item.get("score", item.get("weight", 0.0)) or 0.0)
+    return score
+
+
+def _distribute_rooms_across_regions(rooms, regions, entrance_point=None, learned_hints=None):
+    if not rooms or not regions:
+        return False
+
+    total_room_area = sum(r.final_area for r in rooms)
+    total_region_area = sum(r.area for r in regions)
     if total_room_area <= 0 or total_region_area <= 0:
-        return
+        return False
 
     room_idx = 0
-    for region_idx, region in enumerate(region_group):
-        if room_idx >= len(room_group):
+    for region_idx, region in enumerate(regions):
+        if room_idx >= len(rooms):
             break
 
-        if region_idx == len(region_group) - 1:
-            assigned = room_group[room_idx:]
-            room_idx = len(room_group)
+        next_room_area = float(getattr(rooms[room_idx], "final_area", 0.0) or 0.0)
+        remaining_room_area = sum(float(getattr(room, "final_area", 0.0) or 0.0) for room in rooms[room_idx:])
+        remaining_region_area = sum(float(regions[idx].area) for idx in range(region_idx, len(regions)))
+        if (
+            region_idx < len(regions) - 1
+            and next_room_area > 0.0
+            and region.area < next_room_area * 0.8
+            and (remaining_region_area - region.area) >= remaining_room_area * 0.92
+        ):
+            continue
+
+        if region_idx == len(regions) - 1:
+            assigned = rooms[room_idx:]
+            room_idx = len(rooms)
         else:
             target = total_room_area * (region.area / total_region_area)
             running = 0.0
             assigned = []
-            while room_idx < len(room_group):
-                room = room_group[room_idx]
+            while room_idx < len(rooms):
+                room = rooms[room_idx]
                 assigned.append(room)
                 running += room.final_area
                 room_idx += 1
                 if running >= target * 0.9:
                     break
 
+        if not assigned:
+            continue
+
         items = [{"room": room, "weight": room.final_area} for room in assigned]
-        recursive_pack(region, items, entrance_pt=entrance_point)
+        recursive_pack(region, items, entrance_pt=entrance_point, learned_hints=learned_hints)
+
+    return room_idx == len(rooms) and all(room.polygon for room in rooms)
 
 
-def _allocate_rooms_in_regions(building, regions, entrance_point=None):
+def _allocate_rooms_in_regions(
+    building,
+    regions,
+    entrance_point=None,
+    learned_hints=None,
+    placement_order=None,
+    room_zones=None,
+    adjacency_preferences=None,
+    frontage_room=None,
+    layout_pattern=None,
+):
     rooms = _rooms_sorted_for_packing(building)
     if not rooms or not regions:
         return False
 
-    bands = _split_regions_into_bands(regions, entrance_point)
+    order_rank = {room_name: index for index, room_name in enumerate(placement_order or [])}
+    rooms.sort(
+        key=lambda room: (
+            order_rank.get(getattr(room, "name", ""), len(order_rank) + 1),
+            _zone_priority(_room_zone(room, room_zones)),
+            -_room_adjacency_strength(getattr(room, "name", ""), adjacency_preferences),
+            -(room.final_area or 0.0),
+        )
+    )
 
-    public_rooms = [r for r in rooms if _room_zone(r) == "public"]
-    service_rooms = [r for r in rooms if _room_zone(r) == "service"]
-    private_rooms = [r for r in rooms if _room_zone(r) == "private"]
+    regions_by_distance = sorted(regions, key=lambda region: _region_distance_score(region, entrance_point))
+    if len(regions_by_distance) < 3:
+        return _distribute_rooms_across_regions(
+            rooms,
+            regions_by_distance,
+            entrance_point=entrance_point,
+            learned_hints=learned_hints,
+        )
 
-    used_region_ids = set()
+    room_groups = {"public": [], "service": [], "private": []}
+    for room in rooms:
+        room_groups.setdefault(_room_zone(room, room_zones), []).append(room)
 
-    def _reserve_regions(region_list):
-        selected = []
-        for region in region_list:
-            rid = id(region)
-            if rid not in used_region_ids:
-                selected.append(region)
-                used_region_ids.add(rid)
-        return selected
+    public_rooms = room_groups.get("public") or []
+    if not public_rooms:
+        return _distribute_rooms_across_regions(
+            rooms,
+            regions_by_distance,
+            entrance_point=entrance_point,
+            learned_hints=learned_hints,
+        )
 
-    _pack_rooms_into_region_group(public_rooms, _reserve_regions(bands["public"]), entrance_point=entrance_point)
-    _pack_rooms_into_region_group(service_rooms, _reserve_regions(bands["service"]), entrance_point=entrance_point)
+    region_bands = _split_regions_into_bands(regions_by_distance, entrance_point)
+    frontage_target = next(
+        (room for room in public_rooms if frontage_room and getattr(room, "name", "") == frontage_room),
+        None,
+    ) or public_rooms[0]
+    frontage_candidates = list(region_bands.get("public") or regions_by_distance[:1])
+    frontage_region = max(frontage_candidates[: min(2, len(frontage_candidates))], key=lambda region: region.area)
 
-    remaining_regions = [region for region in regions if id(region) not in used_region_ids]
-    private_region_pool = _reserve_regions(bands["private"]) + remaining_regions
-    _pack_rooms_into_region_group(private_rooms, private_region_pool, entrance_point=entrance_point)
+    if not _distribute_rooms_across_regions(
+        [frontage_target],
+        [frontage_region],
+        entrance_point=entrance_point,
+        learned_hints=learned_hints,
+    ):
+        return False
 
-    # fallback: if any rooms still unassigned due to geometry degeneracy, pack them into largest region
-    unassigned = [room for room in rooms if not room.polygon]
-    if unassigned and regions:
-        largest = max(regions, key=lambda r: r.area)
-        items = [{"room": room, "weight": room.final_area} for room in unassigned]
-        recursive_pack(largest, items, entrance_pt=entrance_point)
+    remaining_public_rooms = [room for room in public_rooms if room != frontage_target]
+    room_groups["public"] = remaining_public_rooms
+
+    frontage_region_id = id(frontage_region)
+    region_bands["public"] = [region for region in region_bands.get("public", []) if id(region) != frontage_region_id]
+
+    zone_sequence = ["public", "service", "private"]
+    if layout_pattern == "compact_frontage":
+        zone_sequence = ["public", "service", "private"]
+    elif layout_pattern == "zonal_split":
+        zone_sequence = ["public", "service", "private"]
+
+    spillover_regions = []
+    for zone in zone_sequence:
+        zone_rooms = room_groups.get(zone) or []
+        zone_regions = list(region_bands.get(zone) or [])
+        if not zone_rooms:
+            spillover_regions.extend(zone_regions)
+            continue
+
+        candidate_regions = zone_regions or spillover_regions
+        spillover_regions = []
+        if not candidate_regions:
+            return False
+
+        zone_rooms.sort(
+            key=lambda room: (
+                order_rank.get(getattr(room, "name", ""), len(order_rank) + 1),
+                -_room_adjacency_strength(getattr(room, "name", ""), adjacency_preferences),
+                -(room.final_area or 0.0),
+            )
+        )
+        if not _distribute_rooms_across_regions(
+            zone_rooms,
+            candidate_regions,
+            entrance_point=entrance_point,
+            learned_hints=learned_hints,
+        ):
+            return False
 
     return all(room.polygon for room in rooms)
 
@@ -238,23 +338,24 @@ def _build_circulation_from_boundary(boundary_poly, entrance_point, strategy_nam
         return Polygon(), points, width, False
 
     strip = _orthogonal_strip_buffer(points, width)
-    
-    # 1. Keep corridor strictly internal so it's surrounded by rooms
-    inward_poly = boundary_poly.buffer(-0.8)
+
+    # 1. Keep corridor internal, but not so deep that it dominates the frontage.
+    inward_margin = max(0.35, min(0.55, width * 0.4))
+    inward_poly = boundary_poly.buffer(-inward_margin)
     if inward_poly.is_empty:
-        inward_poly = boundary_poly.buffer(-0.2)
+        inward_poly = boundary_poly.buffer(-0.15)
     if inward_poly.is_empty:
         inward_poly = boundary_poly
-        
+
     core_circulation = strip.intersection(inward_poly)
-    
-    # 2. Add an entrance stem so it touches the outer boundary precisely at the entrance
+
+    # 2. Add the shortest entrance stem needed to reach the internal spine.
     c = boundary_poly.centroid
     centroid = (c.x, c.y)
     entrance = entrance_point if entrance_point else centroid
-    stem = LineString([entrance, centroid]).buffer(width / 2.0, cap_style=2, join_style=2).intersection(boundary_poly)
-    
-    from shapely.ops import unary_union
+    stem_target = points[1] if len(points) > 1 else centroid
+    stem = LineString([entrance, stem_target]).buffer(width / 2.0, cap_style=2, join_style=2).intersection(boundary_poly)
+
     circulation = unary_union([core_circulation, stem])
 
     connected = True
@@ -263,7 +364,18 @@ def _build_circulation_from_boundary(boundary_poly, entrance_point, strategy_nam
     return circulation, points, width, connected
 
 
-def generate_corridor_first_variants(building, boundary_polygon, entrance_point, min_corridor_width):
+def generate_corridor_first_variants(
+    building,
+    boundary_polygon,
+    entrance_point,
+    min_corridor_width,
+    learned_hints=None,
+    placement_order=None,
+    room_zones=None,
+    adjacency_preferences=None,
+    frontage_room=None,
+    layout_pattern=None,
+):
     try:
         boundary_poly = Polygon(boundary_polygon)
         if not boundary_poly.is_valid:
@@ -286,7 +398,17 @@ def generate_corridor_first_variants(building, boundary_polygon, entrance_point,
         if not regions:
             continue
 
-        ok = _allocate_rooms_in_regions(b, regions, entrance_point=entrance_point)
+        ok = _allocate_rooms_in_regions(
+            b,
+            regions,
+            entrance_point=entrance_point,
+            learned_hints=learned_hints,
+            placement_order=placement_order,
+            room_zones=room_zones,
+            adjacency_preferences=adjacency_preferences,
+            frontage_room=frontage_room,
+            layout_pattern=layout_pattern,
+        )
         if not ok:
             continue
 
@@ -315,3 +437,7 @@ def generate_corridor_first_variants(building, boundary_polygon, entrance_point,
         variants.append((b, strategy_name))
 
     return variants
+
+
+
+

@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 from learned.model.sample import load_model, sample_layout, constrained_sample_layout
 from learned.model.model_cache import cached_load_model, get_cache_stats
 from learned.monitoring import log_generation_quality
+from learned.data.tokenizer_layout import RoomBox
 from learned.templates import find_layout_template, apply_layout_template
 from learned.integration.learned_to_building_adapter import adapt_generated_layout_to_building
 from learned.integration.prerank import prerank_samples
@@ -104,6 +105,32 @@ def _raw_validity(building, regulation_file) -> Tuple[bool, List[str]]:
     return len(hard) == 0, hard
 
 
+def _template_room_boxes(template_layout: Dict[str, Any], boundary_polygon) -> List[RoomBox]:
+    """Convert template absolute room bounds back into normalized RoomBox objects."""
+    bx0, by0, bx1, by1 = boundary_polygon.bounds
+    width = max(bx1 - bx0, 1e-6)
+    height = max(by1 - by0, 1e-6)
+    room_boxes: List[RoomBox] = []
+
+    for room_data in template_layout.get("rooms", []):
+        try:
+            x1, y1, x2, y2 = room_data["bounds"]
+        except Exception:
+            continue
+
+        room_boxes.append(
+            RoomBox(
+                room_type=str(room_data.get("type", "Unknown")),
+                x_min=max(0.0, min(1.0, (x1 - bx0) / width)),
+                y_min=max(0.0, min(1.0, (y1 - by0) / height)),
+                x_max=max(0.0, min(1.0, (x2 - bx0) / width)),
+                y_max=max(0.0, min(1.0, (y2 - by0) / height)),
+            )
+        )
+
+    return room_boxes
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Main
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -115,7 +142,7 @@ def generate_best_layout_from_model(
     sampler: Optional[Callable] = None,
     tokenizer=None,
     model=None,
-    checkpoint_path: str = "learned/model/checkpoints/kaggle_test.pt",
+    checkpoint_path: str = "learned/model/checkpoints/improved_v1.pt",
     regulation_file: str = "ontology/regulation_data.json",
     K: int = 10,
     max_attempts: int = 30,
@@ -219,26 +246,18 @@ def generate_best_layout_from_model(
                         # Generate layout using template
                         template_layout = apply_layout_template(template, boundary_polygon, spec)
 
-                        # Convert template layout to format expected by pipeline
-                        template_rooms = []
-                        for room_data in template_layout["rooms"]:
-                            x1, y1, x2, y2 = room_data["bounds"]
-                            # Create RoomBox-like structure
-                            room_box = {
-                                "type": room_data["type"],
-                                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-                                "area": room_data["area"]
-                            }
-                            template_rooms.append(room_box)
+                        template_rooms = _template_room_boxes(template_layout, boundary_polygon)
 
                         if template_rooms:
                             # Try to adapt the template rooms to Building format
                             try:
                                 adapted_building = adapt_generated_layout_to_building(
-                                    decoded=template_rooms,
-                                    boundary_polygon=boundary_poly,
-                                    entrance_point=entrance,
+                                    decoded_rooms=template_rooms,
+                                    boundary_poly=boundary_poly,
+                                    entrance=entrance,
                                     spec=spec,
+                                    regulation_data=regulation_file,
+                                    sample_id=-1,
                                 )
 
                                 # Create template candidate
@@ -416,7 +435,7 @@ def generate_best_layout_from_model(
             "breakdown": breakdown,
             "metrics": metrics,
             "repair_trace": repair_trace,
-            "repair_report": repair_report,
+            "repair_report": repair_report.to_dict() if repair_report else None,
         }
         candidates.append(cand)
 
@@ -555,7 +574,7 @@ def generate_best_layout_from_model(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def generate_best_layout(
-    checkpoint_path: str = "learned/model/checkpoints/kaggle_test.pt",
+    checkpoint_path: str = "learned/model/checkpoints/improved_v1.pt",
     boundary_polygon: List[Tuple[float, float]] = None,
     entrance_point: Optional[Tuple[float, float]] = None,
     occupancy_type: str = "Residential",

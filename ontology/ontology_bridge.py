@@ -7,20 +7,25 @@ from graph.manhattan_path import max_travel_distance
 
 
 class OntologyBridge:
+    MAX_PERSISTED_ONTOLOGY_BYTES = 1_000_000
+
     def __init__(self, ontology_file, reasoner_mode="try"):
         self.ontology_file = ontology_file
         self.reasoner_mode = reasoner_mode  # off | try | require
         self.owlready_available = False
         self.load_error = None
+        self.recovered_from_load_error = False
         self.onto = None
         self.owl = None
         self.namespace = None
+        self.world = None
 
         try:
             import owlready2 as owl
 
             self.owl = owl
             self.owlready_available = True
+            self.world = owl.World()
         except Exception as exc:
             self.load_error = str(exc)
             return
@@ -33,22 +38,39 @@ class OntologyBridge:
     def _load_or_bootstrap_ontology(self):
         onto_path = Path(self.ontology_file)
         onto_path.parent.mkdir(parents=True, exist_ok=True)
+        self.recovered_from_load_error = False
+        should_persist = False
+
+        oversized_file = (
+            onto_path.exists()
+            and onto_path.stat().st_size > self.MAX_PERSISTED_ONTOLOGY_BYTES
+        )
 
         # Keep loading deterministic and quiet: use file path first; if that
         # fails, bootstrap from the canonical in-memory IRI.
-        if onto_path.exists() and onto_path.stat().st_size > 0:
+        if onto_path.exists() and onto_path.stat().st_size > 0 and not oversized_file:
             try:
-                self.onto = self.owl.get_ontology(str(onto_path.resolve())).load()
+                self.onto = self.world.get_ontology(str(onto_path.resolve())).load()
             except Exception as exc:
                 self.load_error = str(exc)
-                self.onto = self.owl.get_ontology("http://genai.local/regulatory.owl")
+                self.recovered_from_load_error = True
+                should_persist = True
+                self.onto = self.world.get_ontology("http://genai.local/regulatory.owl")
         else:
-            self.onto = self.owl.get_ontology("http://genai.local/regulatory.owl")
+            if oversized_file:
+                self.load_error = (
+                    f"Persisted ontology exceeded {self.MAX_PERSISTED_ONTOLOGY_BYTES} bytes; rebuilding clean copy."
+                )
+                self.recovered_from_load_error = True
+            self.onto = self.world.get_ontology("http://genai.local/regulatory.owl")
+            should_persist = True
 
         self.namespace = self.onto
         # Always ensure schema and SWRL rules are present after load/bootstrap.
         self._ensure_schema_and_rules()
-        self.onto.save(file=str(onto_path), format="rdfxml")
+        if should_persist:
+            self.onto.save(file=str(onto_path), format="rdfxml")
+            self.load_error = None
 
     def _ensure_class(self, name, base):
         existing = getattr(self.namespace, name, None)
@@ -284,6 +306,7 @@ class OntologyBridge:
             "errors": errors,
             "warnings": warnings,
             "ontology_loaded": bool(self.onto is not None),
+            "ontology_recovered": self.recovered_from_load_error,
             "owlready_available": self.owlready_available,
             "reasoner_available": self.owlready_available,
             "allowed_room_types": sorted(allowed_types),
@@ -349,6 +372,7 @@ class OntologyBridge:
                 "reasoner_success": False,
                 "reasoner_error": None,
                 "ontology_loaded": bool(self.onto is not None),
+                "ontology_recovered": self.recovered_from_load_error,
                 "ontology_file": self.ontology_file,
                 "load_error": self.load_error,
                 "max_allowed_travel_distance": max_allowed_travel,
@@ -370,6 +394,7 @@ class OntologyBridge:
                 "reasoner_success": False,
                 "reasoner_error": self.load_error,
                 "ontology_loaded": False,
+                "ontology_recovered": self.recovered_from_load_error,
                 "ontology_file": self.ontology_file,
                 "load_error": self.load_error,
                 "max_allowed_travel_distance": max_allowed_travel,
@@ -530,6 +555,7 @@ class OntologyBridge:
                 "reasoner_success": reasoner_success,
                 "reasoner_error": reasoner_error,
                 "ontology_loaded": True,
+                "ontology_recovered": self.recovered_from_load_error,
                 "ontology_file": self.ontology_file,
                 "load_error": self.load_error,
                 "max_allowed_travel_distance": max_allowed_travel,

@@ -173,7 +173,18 @@ def generate_comparison_explanation(
         return "No designs to compare."
 
     if len(designs) == 1:
-        return f"Only one design was generated. " + (designs[0].get("explanation", "") or "")
+        best = designs[0]
+        summary = best.get("ranking_summary", {})
+        parts = [
+            "## Ranking Note",
+            "Only one design cleared the current generation and quality filters.",
+        ]
+        if summary.get("strengths"):
+            parts.append("Strengths: " + ", ".join(summary["strengths"]) + ".")
+        if summary.get("weaknesses"):
+            parts.append("Remaining weak spots: " + ", ".join(summary["weaknesses"]) + ".")
+        parts.append("You can keep refining this layout with targeted edits.")
+        return "\n\n".join(parts)
 
     # Build comparison
     best = designs[0]

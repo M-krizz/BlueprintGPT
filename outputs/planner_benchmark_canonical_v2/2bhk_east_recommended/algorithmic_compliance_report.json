@@ -1,0 +1,941 @@
+{
+  "input": {
+    "occupancy": "Residential",
+    "building_type": "Residential",
+    "plot_type": null,
+    "layout_type": "2BHK",
+    "boundary_polygon": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        9.5,
+        0.0
+      ],
+      [
+        9.5,
+        7.9
+      ],
+      [
+        0.0,
+        7.9
+      ]
+    ],
+    "entrance_point": [
+      9.5,
+      3.95
+    ],
+    "entrance_side": "East",
+    "total_area": 75.0,
+    "area_unit": "sq.m",
+    "allocation_strategy": "priority_weights",
+    "adjacency": [
+      {
+        "a": "Bathroom",
+        "b": "Bedroom",
+        "type": "prefer"
+      },
+      {
+        "a": "Kitchen",
+        "b": "LivingRoom",
+        "type": "prefer"
+      },
+      {
+        "a": "Bedroom",
+        "b": "Bedroom",
+        "type": "must"
+      }
+    ],
+    "preferences": {
+      "compactness": "medium",
+      "minimize_travel_distance": false,
+      "zoning_pattern": "public_front_private_rear"
+    },
+    "_nl_spec": {
+      "building_type": "Residential",
+      "plot_type": null,
+      "entrance_side": "East",
+      "rooms": [
+        {
+          "type": "Bedroom",
+          "count": 2
+        },
+        {
+          "type": "Bathroom",
+          "count": 2
+        },
+        {
+          "type": "Kitchen",
+          "count": 1
+        },
+        {
+          "type": "LivingRoom",
+          "count": 1
+        }
+      ],
+      "preferences": {
+        "adjacency": [],
+        "privacy": {
+          "Bathroom": "private",
+          "Bedroom": "private",
+          "Kitchen": "service",
+          "LivingRoom": "public"
+        },
+        "minimize_corridor": false
+      },
+      "weights": {
+        "privacy": 0.3333,
+        "compactness": 0.3333,
+        "corridor": 0.3333
+      },
+      "semantic_spec": {
+        "building_type": "Residential",
+        "layout_type": "2BHK",
+        "shorthand": "2BHK",
+        "requested_rooms": {
+          "Bedroom": 2,
+          "Bathroom": 2,
+          "Kitchen": 1,
+          "LivingRoom": 1
+        },
+        "plot_type": null,
+        "entrance_side": "East",
+        "total_area_sqm": 75.0,
+        "boundary_size_m": [
+          9.5,
+          7.9
+        ],
+        "style_hints": [],
+        "adjacency_preferences": [],
+        "privacy_preferences": {
+          "Bathroom": "private",
+          "Bedroom": "private",
+          "Kitchen": "service",
+          "LivingRoom": "public"
+        },
+        "unsupported_requests": [],
+        "unresolved_fields": [],
+        "assumptions_used": [
+          "Interpreted '2BHK' as a canonical residential shorthand program."
+        ],
+        "user_prompt": "Design a 2BHK apartment with a east entrance, 2 bedrooms, 2 bathrooms, 1 kitchen, and 1 living room, and a total area near 75.0 sqm."
+      },
+      "room_program": {
+        "layout_type": "2BHK",
+        "canonical": true,
+        "rooms": [
+          {
+            "name": "Bedroom_1",
+            "type": "Bedroom",
+            "zone": "private",
+            "semantic_role": "master_bedroom",
+            "required": true,
+            "metadata": {
+              "canonical_layout": true
+            }
+          },
+          {
+            "name": "Bedroom_2",
+            "type": "Bedroom",
+            "zone": "private",
+            "semantic_role": "secondary_bedroom",
+            "required": true,
+            "metadata": {
+              "canonical_layout": true
+            }
+          },
+          {
+            "name": "LivingRoom_1",
+            "type": "LivingRoom",
+            "zone": "public",
+            "semantic_role": "public_anchor",
+            "required": true,
+            "metadata": {
+              "canonical_layout": true
+            }
+          },
+          {
+            "name": "Kitchen_1",
+            "type": "Kitchen",
+            "zone": "service",
+            "semantic_role": "service_anchor",
+            "required": true,
+            "metadata": {
+              "canonical_layout": true
+            }
+          },
+          {
+            "name": "Bathroom_1",
+            "type": "Bathroom",
+            "zone": "private",
+            "semantic_role": "attached_bathroom",
+            "required": true,
+            "metadata": {
+              "canonical_layout": true
+            }
+          },
+          {
+            "name": "Bathroom_2",
+            "type": "Bathroom",
+            "zone": "private",
+            "semantic_role": "common_bathroom",
+            "required": true,
+            "metadata": {
+              "canonical_layout": true
+            }
+          }
+        ],
+        "required_counts": {
+          "Bedroom": 2,
+          "LivingRoom": 1,
+          "Kitchen": 1,
+          "Bathroom": 2
+        },
+        "assumptions_used": [
+          "Interpreted '2BHK' as a canonical residential shorthand program.",
+          "Expanded 2BHK into the canonical room program used by the generation core."
+        ],
+        "deferred_semantics": [
+          "Bedroom_1 is treated as the preferred master bedroom.",
+          "Bathroom_1 is treated as the preferred attached bathroom."
+        ],
+        "supported_scope": "canonical_residential"
+      },
+      "zoning_plan": {
+        "layout_pattern": "public_front_private_rear",
+        "entrance_frontage_zone": "public",
+        "frontage_room": "LivingRoom_1",
+        "named_adjacency": [
+          {
+            "a": "Kitchen_1",
+            "b": "LivingRoom_1",
+            "type": "prefer",
+            "score": 1.0
+          },
+          {
+            "a": "Bathroom_1",
+            "b": "Bedroom_1",
+            "type": "prefer",
+            "score": 0.95
+          },
+          {
+            "a": "Bathroom_2",
+            "b": "Bedroom_2",
+            "type": "prefer",
+            "score": 0.85
+          }
+        ],
+        "zone_map": {
+          "Bedroom_1": "private",
+          "Bedroom_2": "private",
+          "LivingRoom_1": "public",
+          "Kitchen_1": "service",
+          "Bathroom_1": "private",
+          "Bathroom_2": "private"
+        },
+        "spatial_hints": {
+          "Bedroom_1": [
+            0.24,
+            0.72
+          ],
+          "Bedroom_2": [
+            0.24,
+            0.3
+          ],
+          "LivingRoom_1": [
+            0.78,
+            0.5
+          ],
+          "Kitchen_1": [
+            0.76,
+            0.24
+          ],
+          "Bathroom_1": [
+            0.42,
+            0.78
+          ],
+          "Bathroom_2": [
+            0.42,
+            0.24
+          ]
+        },
+        "room_order": [
+          "LivingRoom_1",
+          "Kitchen_1",
+          "Bedroom_1",
+          "Bedroom_2",
+          "Bathroom_1",
+          "Bathroom_2"
+        ],
+        "size_priors": {
+          "Bedroom_1": {
+            "ideal_area_sqm": 12.0,
+            "min_area_sqm": 9.0,
+            "max_area_sqm": 20.0
+          },
+          "Bedroom_2": {
+            "ideal_area_sqm": 12.0,
+            "min_area_sqm": 9.0,
+            "max_area_sqm": 20.0
+          },
+          "LivingRoom_1": {
+            "ideal_area_sqm": 20.0,
+            "min_area_sqm": 12.0,
+            "max_area_sqm": 40.0
+          },
+          "Kitchen_1": {
+            "ideal_area_sqm": 9.0,
+            "min_area_sqm": 6.0,
+            "max_area_sqm": 15.0
+          },
+          "Bathroom_1": {
+            "ideal_area_sqm": 4.5,
+            "min_area_sqm": 3.0,
+            "max_area_sqm": 8.0
+          },
+          "Bathroom_2": {
+            "ideal_area_sqm": 4.5,
+            "min_area_sqm": 3.0,
+            "max_area_sqm": 8.0
+          }
+        },
+        "heuristics": [
+          "Public rooms should stay close to the entrance frontage.",
+          "Bedrooms should remain deeper in the private zone when possible.",
+          "Kitchen should remain close to the living room or shared public space.",
+          "Bathrooms should stay close to bedrooms and accessible without dominating the entrance view."
+        ],
+        "assumptions_used": [
+          "Interpreted '2BHK' as a canonical residential shorthand program.",
+          "Expanded 2BHK into the canonical room program used by the generation core.",
+          "Using a 'public_front_private_rear' zoning pattern for the initial composition."
+        ]
+      },
+      "layout_type": null,
+      "constraint_metadata": {},
+      "auto_dimensions": {},
+      "style_hints": [],
+      "_missing_fields": [
+        "plot_type"
+      ],
+      "_validation_errors": [],
+      "_feasibility_warnings": [],
+      "_interpretation_notes": []
+    },
+    "_nl_constraints": {
+      "adjacency": [],
+      "privacy": {
+        "Bathroom": "private",
+        "Bedroom": "private",
+        "Kitchen": "service",
+        "LivingRoom": "public"
+      },
+      "weights": {
+        "privacy": 0.3333,
+        "compactness": 0.3333,
+        "corridor": 0.3333
+      }
+    },
+    "semantic_spec": {
+      "building_type": "Residential",
+      "layout_type": "2BHK",
+      "shorthand": "2BHK",
+      "requested_rooms": {
+        "Bedroom": 2,
+        "Bathroom": 2,
+        "Kitchen": 1,
+        "LivingRoom": 1
+      },
+      "plot_type": null,
+      "entrance_side": "East",
+      "total_area_sqm": 75.0,
+      "boundary_size_m": [
+        9.5,
+        7.9
+      ],
+      "style_hints": [],
+      "adjacency_preferences": [],
+      "privacy_preferences": {
+        "Bathroom": "private",
+        "Bedroom": "private",
+        "Kitchen": "service",
+        "LivingRoom": "public"
+      },
+      "unsupported_requests": [],
+      "unresolved_fields": [],
+      "assumptions_used": [
+        "Interpreted '2BHK' as a canonical residential shorthand program."
+      ],
+      "user_prompt": "Design a 2BHK apartment with a east entrance, 2 bedrooms, 2 bathrooms, 1 kitchen, and 1 living room, and a total area near 75.0 sqm."
+    },
+    "room_program": {
+      "layout_type": "2BHK",
+      "canonical": true,
+      "rooms": [
+        {
+          "name": "Bedroom_1",
+          "type": "Bedroom",
+          "zone": "private",
+          "semantic_role": "master_bedroom",
+          "required": true,
+          "metadata": {
+            "canonical_layout": true
+          }
+        },
+        {
+          "name": "Bedroom_2",
+          "type": "Bedroom",
+          "zone": "private",
+          "semantic_role": "secondary_bedroom",
+          "required": true,
+          "metadata": {
+            "canonical_layout": true
+          }
+        },
+        {
+          "name": "LivingRoom_1",
+          "type": "LivingRoom",
+          "zone": "public",
+          "semantic_role": "public_anchor",
+          "required": true,
+          "metadata": {
+            "canonical_layout": true
+          }
+        },
+        {
+          "name": "Kitchen_1",
+          "type": "Kitchen",
+          "zone": "service",
+          "semantic_role": "service_anchor",
+          "required": true,
+          "metadata": {
+            "canonical_layout": true
+          }
+        },
+        {
+          "name": "Bathroom_1",
+          "type": "Bathroom",
+          "zone": "private",
+          "semantic_role": "attached_bathroom",
+          "required": true,
+          "metadata": {
+            "canonical_layout": true
+          }
+        },
+        {
+          "name": "Bathroom_2",
+          "type": "Bathroom",
+          "zone": "private",
+          "semantic_role": "common_bathroom",
+          "required": true,
+          "metadata": {
+            "canonical_layout": true
+          }
+        }
+      ],
+      "required_counts": {
+        "Bedroom": 2,
+        "LivingRoom": 1,
+        "Kitchen": 1,
+        "Bathroom": 2
+      },
+      "assumptions_used": [
+        "Interpreted '2BHK' as a canonical residential shorthand program.",
+        "Expanded 2BHK into the canonical room program used by the generation core."
+      ],
+      "deferred_semantics": [
+        "Bedroom_1 is treated as the preferred master bedroom.",
+        "Bathroom_1 is treated as the preferred attached bathroom."
+      ],
+      "supported_scope": "canonical_residential"
+    },
+    "zoning_plan": {
+      "layout_pattern": "public_front_private_rear",
+      "entrance_frontage_zone": "public",
+      "frontage_room": "LivingRoom_1",
+      "named_adjacency": [
+        {
+          "a": "Kitchen_1",
+          "b": "LivingRoom_1",
+          "type": "prefer",
+          "score": 1.0
+        },
+        {
+          "a": "Bathroom_1",
+          "b": "Bedroom_1",
+          "type": "prefer",
+          "score": 0.95
+        },
+        {
+          "a": "Bathroom_2",
+          "b": "Bedroom_2",
+          "type": "prefer",
+          "score": 0.85
+        }
+      ],
+      "zone_map": {
+        "Bedroom_1": "private",
+        "Bedroom_2": "private",
+        "LivingRoom_1": "public",
+        "Kitchen_1": "service",
+        "Bathroom_1": "private",
+        "Bathroom_2": "private"
+      },
+      "spatial_hints": {
+        "Bedroom_1": [
+          0.24,
+          0.72
+        ],
+        "Bedroom_2": [
+          0.24,
+          0.3
+        ],
+        "LivingRoom_1": [
+          0.78,
+          0.5
+        ],
+        "Kitchen_1": [
+          0.76,
+          0.24
+        ],
+        "Bathroom_1": [
+          0.42,
+          0.78
+        ],
+        "Bathroom_2": [
+          0.42,
+          0.24
+        ]
+      },
+      "room_order": [
+        "LivingRoom_1",
+        "Kitchen_1",
+        "Bedroom_1",
+        "Bedroom_2",
+        "Bathroom_1",
+        "Bathroom_2"
+      ],
+      "size_priors": {
+        "Bedroom_1": {
+          "ideal_area_sqm": 12.0,
+          "min_area_sqm": 9.0,
+          "max_area_sqm": 20.0
+        },
+        "Bedroom_2": {
+          "ideal_area_sqm": 12.0,
+          "min_area_sqm": 9.0,
+          "max_area_sqm": 20.0
+        },
+        "LivingRoom_1": {
+          "ideal_area_sqm": 20.0,
+          "min_area_sqm": 12.0,
+          "max_area_sqm": 40.0
+        },
+        "Kitchen_1": {
+          "ideal_area_sqm": 9.0,
+          "min_area_sqm": 6.0,
+          "max_area_sqm": 15.0
+        },
+        "Bathroom_1": {
+          "ideal_area_sqm": 4.5,
+          "min_area_sqm": 3.0,
+          "max_area_sqm": 8.0
+        },
+        "Bathroom_2": {
+          "ideal_area_sqm": 4.5,
+          "min_area_sqm": 3.0,
+          "max_area_sqm": 8.0
+        }
+      },
+      "heuristics": [
+        "Public rooms should stay close to the entrance frontage.",
+        "Bedrooms should remain deeper in the private zone when possible.",
+        "Kitchen should remain close to the living room or shared public space.",
+        "Bathrooms should stay close to bedrooms and accessible without dominating the entrance view."
+      ],
+      "assumptions_used": [
+        "Interpreted '2BHK' as a canonical residential shorthand program.",
+        "Expanded 2BHK into the canonical room program used by the generation core.",
+        "Using a 'public_front_private_rear' zoning pattern for the initial composition."
+      ]
+    },
+    "_constraint_metadata": {
+      "min_total_area_sqm": 55,
+      "recommended_area_sqm": 75,
+      "plot_bucket": "above_50sqm",
+      "spacing": {
+        "min_gap_meters": 0.1,
+        "corridor_width": 1.0,
+        "door_clearance": 0.9
+      }
+    },
+    "rooms": [
+      {
+        "name": "Bedroom_1",
+        "type": "Bedroom"
+      },
+      {
+        "name": "Bedroom_2",
+        "type": "Bedroom"
+      },
+      {
+        "name": "LivingRoom_1",
+        "type": "LivingRoom"
+      },
+      {
+        "name": "Kitchen_1",
+        "type": "Kitchen"
+      },
+      {
+        "name": "Bathroom_1",
+        "type": "Bathroom"
+      },
+      {
+        "name": "Bathroom_2",
+        "type": "Bathroom"
+      }
+    ],
+    "planner_guidance": {
+      "source": "zoning-plan",
+      "layout_pattern": "public_front_private_rear",
+      "frontage_room": "LivingRoom_1",
+      "spatial_hints": {
+        "Bedroom_1": [
+          0.24,
+          0.72
+        ],
+        "Bedroom_2": [
+          0.24,
+          0.3
+        ],
+        "LivingRoom_1": [
+          0.78,
+          0.5
+        ],
+        "Kitchen_1": [
+          0.76,
+          0.24
+        ],
+        "Bathroom_1": [
+          0.42,
+          0.78
+        ],
+        "Bathroom_2": [
+          0.42,
+          0.24
+        ]
+      },
+      "room_order": [
+        "LivingRoom_1",
+        "Kitchen_1",
+        "Bedroom_1",
+        "Bedroom_2",
+        "Bathroom_1",
+        "Bathroom_2"
+      ],
+      "room_zones": {
+        "Bedroom_1": "private",
+        "Bedroom_2": "private",
+        "LivingRoom_1": "public",
+        "Kitchen_1": "service",
+        "Bathroom_1": "private",
+        "Bathroom_2": "private"
+      },
+      "adjacency_preferences": [
+        {
+          "a": "Kitchen_1",
+          "b": "LivingRoom_1",
+          "type": "prefer",
+          "score": 1.0
+        },
+        {
+          "a": "Bathroom_1",
+          "b": "Bedroom_1",
+          "type": "prefer",
+          "score": 0.95
+        },
+        {
+          "a": "Bathroom_2",
+          "b": "Bedroom_2",
+          "type": "prefer",
+          "score": 0.85
+        }
+      ]
+    },
+    "learned_spatial_hints": {
+      "Bedroom_1": [
+        0.24,
+        0.72
+      ],
+      "Bedroom_2": [
+        0.24,
+        0.3
+      ],
+      "LivingRoom_1": [
+        0.78,
+        0.5
+      ],
+      "Kitchen_1": [
+        0.76,
+        0.24
+      ],
+      "Bathroom_1": [
+        0.42,
+        0.78
+      ],
+      "Bathroom_2": [
+        0.42,
+        0.24
+      ]
+    },
+    "_spec_validation": {
+      "schema_valid": true,
+      "kg_valid": true,
+      "valid": true,
+      "errors": []
+    },
+    "_repair": {
+      "repair_attempts": 0
+    },
+    "learned_checkpoint": "__disabled_checkpoint__.pt"
+  },
+  "source": "algorithmic",
+  "allocation": {
+    "input_total_area": 75.0,
+    "input_unit": "sq.m",
+    "input_total_area_sqm": 75.0,
+    "circulation_factor": 0.12,
+    "target_usable_area_sqm": 66.96,
+    "min_required_area_sqm": 39.1,
+    "allocation_strategy": "priority_weights",
+    "rooms": [
+      {
+        "name": "Bedroom_1",
+        "type": "Bedroom",
+        "weight": 1.3,
+        "min_area": 9.5,
+        "allocated_area": 14.83
+      },
+      {
+        "name": "Bedroom_2",
+        "type": "Bedroom",
+        "weight": 1.3,
+        "min_area": 9.5,
+        "allocated_area": 14.83
+      },
+      {
+        "name": "LivingRoom_1",
+        "type": "LivingRoom",
+        "weight": 1.5,
+        "min_area": 12.0,
+        "allocated_area": 18.15
+      },
+      {
+        "name": "Kitchen_1",
+        "type": "Kitchen",
+        "weight": 1.1,
+        "min_area": 4.5,
+        "allocated_area": 9.01
+      },
+      {
+        "name": "Bathroom_1",
+        "type": "Bathroom",
+        "weight": 0.8,
+        "min_area": 1.8,
+        "allocated_area": 5.08
+      },
+      {
+        "name": "Bathroom_2",
+        "type": "Bathroom",
+        "weight": 0.8,
+        "min_area": 1.8,
+        "allocated_area": 5.08
+      }
+    ],
+    "surplus_area_sqm": 27.86
+  },
+  "modifications": [],
+  "checks": {
+    "room_minimums": true,
+    "connectivity": true,
+    "travel_distance": true,
+    "exit_width": true,
+    "circulation_to_exit": true,
+    "llm_spec_valid": true,
+    "kg_valid": true,
+    "rule_preflight_valid": true,
+    "kg_precheck_valid": true
+  },
+  "metrics": {
+    "total_area": 75.02,
+    "occupant_load": 6.0,
+    "required_exit_width": 1.0,
+    "max_travel_distance": 12.75,
+    "max_allowed_travel_distance": 22.5,
+    "travel_distance_compliant": true,
+    "fully_connected": true,
+    "zone_map": {
+      "Bedroom_1": "private",
+      "Bedroom_2": "private",
+      "LivingRoom_1": "public",
+      "Kitchen_1": "service",
+      "Bathroom_1": "private",
+      "Bathroom_2": "private"
+    },
+    "adjacency_satisfaction": 0.2931,
+    "adjacency_details": [
+      {
+        "pair": "Kitchen<->DiningRoom",
+        "weight": 1.0,
+        "satisfied": false
+      },
+      {
+        "pair": "Kitchen<->LivingRoom",
+        "weight": 0.9,
+        "satisfied": true
+      },
+      {
+        "pair": "LivingRoom<->DiningRoom",
+        "weight": 0.7,
+        "satisfied": false
+      },
+      {
+        "pair": "LivingRoom<->Bedroom",
+        "weight": 0.4,
+        "satisfied": false
+      },
+      {
+        "pair": "Bedroom<->Bathroom",
+        "weight": 0.8,
+        "satisfied": true
+      },
+      {
+        "pair": "Bedroom<->WC",
+        "weight": 0.6,
+        "satisfied": false
+      },
+      {
+        "pair": "Bedroom<->DressingArea",
+        "weight": 0.5,
+        "satisfied": false
+      },
+      {
+        "pair": "LivingRoom<->Lobby",
+        "weight": 0.6,
+        "satisfied": false
+      },
+      {
+        "pair": "Lobby<->Kitchen",
+        "weight": 0.3,
+        "satisfied": false
+      }
+    ],
+    "corridor_width": 1.2,
+    "circulation_walkable_area": 5.7,
+    "connectivity_to_exit": true,
+    "alignment_score": 0.5426,
+    "door_path_travel_distance": 10.57,
+    "max_room_area_error": 0.2091,
+    "room_area_errors": [
+      {
+        "room": "Bedroom_1",
+        "target_area": 14.83,
+        "actual_area": 15.682,
+        "relative_error": 0.0575
+      },
+      {
+        "room": "Bedroom_2",
+        "target_area": 14.83,
+        "actual_area": 15.345,
+        "relative_error": 0.0347
+      },
+      {
+        "room": "LivingRoom_1",
+        "target_area": 18.15,
+        "actual_area": 14.355,
+        "relative_error": 0.2091
+      },
+      {
+        "room": "Kitchen_1",
+        "target_area": 9.01,
+        "actual_area": 9.36,
+        "relative_error": 0.0388
+      },
+      {
+        "room": "Bathroom_1",
+        "target_area": 5.08,
+        "actual_area": 5.445,
+        "relative_error": 0.0719
+      },
+      {
+        "room": "Bathroom_2",
+        "target_area": 5.08,
+        "actual_area": 5.445,
+        "relative_error": 0.0719
+      }
+    ],
+    "skip_corridors": false,
+    "public_frontage_score": 0.6086,
+    "bedroom_privacy_score": 0.9818,
+    "kitchen_living_score": 1.0,
+    "bathroom_access_score": 1.0,
+    "architectural_reasonableness": 0.8576
+  },
+  "circulation_space": {
+    "corridor_width": 1.2,
+    "walkable_area": 5.7,
+    "connectivity_to_exit": true
+  },
+  "grounding": {
+    "llm_spec_valid": true,
+    "kg_valid": true,
+    "rule_preflight_valid": true,
+    "kg_precheck_valid": true,
+    "repair_attempts": 0,
+    "errors": [],
+    "rule_preflight": {
+      "valid": true,
+      "errors": [],
+      "warnings": [],
+      "min_required_room_area_sqm": 39.1,
+      "circulation_factor": 0.12
+    },
+    "kg_precheck": {}
+  },
+  "truth_table": [
+    {
+      "claim": "Connectivity",
+      "algorithm_result": true
+    },
+    {
+      "claim": "Travel distance within limit",
+      "algorithm_result": true,
+      "margin": 9.75
+    },
+    {
+      "claim": "Exit width sufficient",
+      "algorithm_result": true
+    }
+  ],
+  "status": "COMPLIANT",
+  "violations": [],
+  "bounding_box": {
+    "width": 9.5,
+    "height": 7.9
+  },
+  "explanation": {
+    "summary": "The generated layout meets all compliance requirements. Design quality score: 0.75. All rooms are connected. Adjacency satisfaction: 29.3%. Alignment score: 54.3%.",
+    "status": "COMPLIANT",
+    "design_score": 0.7457,
+    "design_reasons": [],
+    "violations_count": 0,
+    "metrics_snapshot": {
+      "fully_connected": true,
+      "adjacency_satisfaction": 0.2931,
+      "alignment_score": 0.5426,
+      "max_travel_distance": 12.75,
+      "max_allowed_travel_distance": 22.5
+    }
+  }
+}

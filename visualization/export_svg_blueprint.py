@@ -845,7 +845,7 @@ def _draw_room_label(g, room, ox: float, oy: float):
         "font-size": "10",
         "fill": "#37474f",
     })
-    dim.text = f"{area:.1f} m²"
+    dim.text = f"{area:.1f} sq.m"
 
 #  Door rendering (opening + swing arc)
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -951,29 +951,70 @@ def _draw_boundary(g: Element, boundary_polygon, ox: float, oy: float):
     })
 
 
-def _draw_entrance(g: Element, entrance_point, ox: float, oy: float, exit_width: float = 1.0):
+def _draw_entrance(g: Element, boundary_polygon, entrance_point, ox: float, oy: float, exit_width: float = 1.0):
     if entrance_point is None:
         return
+
     ex, ey = entrance_point
     px = ox + _px(ex)
     py = oy + _px(ey)
-    ew = _px(exit_width)
+    half = _px(exit_width) / 2.0
 
-    # White gap for entrance
-    SubElement(g, "line", {
-        "x1": f"{px:.1f}", "y1": f"{py:.1f}",
-        "x2": f"{px + ew:.1f}", "y2": f"{py:.1f}",
-        "stroke": "white", "stroke-width": str(WALL_WIDTH + 3),
-    })
-    # Arrow
-    SubElement(g, "path", {
-        "d": f"M{px + ew/2:.1f},{py + 15:.1f} L{px + ew/2:.1f},{py:.1f} "
-             f"L{px + ew/2 - 4:.1f},{py + 6:.1f} M{px + ew/2:.1f},{py:.1f} "
-             f"L{px + ew/2 + 4:.1f},{py + 6:.1f}",
-        "stroke": "#d32f2f", "stroke-width": "1.5", "fill": "none",
-    })
+    side = "top"
+    if boundary_polygon:
+        xs = [p[0] for p in boundary_polygon]
+        ys = [p[1] for p in boundary_polygon]
+        x_min, x_max = min(xs), max(xs)
+        y_min, y_max = min(ys), max(ys)
+        distances = {
+            "left": abs(ex - x_min),
+            "right": abs(ex - x_max),
+            "top": abs(ey - y_min),
+            "bottom": abs(ey - y_max),
+        }
+        side = min(distances, key=distances.get)
+
+    if side in {"top", "bottom"}:
+        y = py
+        x1 = px - half
+        x2 = px + half
+        SubElement(g, "line", {
+            "x1": f"{x1:.1f}", "y1": f"{y:.1f}",
+            "x2": f"{x2:.1f}", "y2": f"{y:.1f}",
+            "stroke": "white", "stroke-width": str(WALL_WIDTH + 3),
+        })
+        arrow_start_y = y - 15 if side == "top" else y + 15
+        arrow_head_y = y - 6 if side == "top" else y + 6
+        label_y = y - 22 if side == "top" else y + 24
+        SubElement(g, "path", {
+            "d": f"M{px:.1f},{arrow_start_y:.1f} L{px:.1f},{y:.1f} "
+                 f"L{px - 4:.1f},{arrow_head_y:.1f} M{px:.1f},{y:.1f} "
+                 f"L{px + 4:.1f},{arrow_head_y:.1f}",
+            "stroke": "#d32f2f", "stroke-width": "1.5", "fill": "none",
+        })
+        label_x = px
+    else:
+        x = px
+        y1 = py - half
+        y2 = py + half
+        SubElement(g, "line", {
+            "x1": f"{x:.1f}", "y1": f"{y1:.1f}",
+            "x2": f"{x:.1f}", "y2": f"{y2:.1f}",
+            "stroke": "white", "stroke-width": str(WALL_WIDTH + 3),
+        })
+        arrow_start_x = x - 15 if side == "left" else x + 15
+        arrow_head_x = x - 6 if side == "left" else x + 6
+        label_x = x - 34 if side == "left" else x + 34
+        label_y = py + 3
+        SubElement(g, "path", {
+            "d": f"M{arrow_start_x:.1f},{py:.1f} L{x:.1f},{py:.1f} "
+                 f"L{arrow_head_x:.1f},{py - 4:.1f} M{x:.1f},{py:.1f} "
+                 f"L{arrow_head_x:.1f},{py + 4:.1f}",
+            "stroke": "#d32f2f", "stroke-width": "1.5", "fill": "none",
+        })
+
     lbl = SubElement(g, "text", {
-        "x": f"{px + ew/2:.1f}", "y": f"{py + 24:.1f}",
+        "x": f"{label_x:.1f}", "y": f"{label_y:.1f}",
         "text-anchor": "middle", "font-size": "8", "fill": "#d32f2f",
         "font-weight": "bold",
     })
@@ -1000,7 +1041,7 @@ def _draw_title_block(svg: Element, title: str, width_px: float, height_px: floa
         "x": f"{MARGIN:.0f}", "y": f"{tb_y + 38:.0f}",
         "font-size": "11", "fill": "#b0bec5",
     })
-    info.text = (f"Occupancy: {occupancy}  |  Total Area: {total_area:.1f} mÂ²  |  "
+    info.text = (f"Occupancy: {occupancy}  |  Total Area: {total_area:.1f} sq.m  |  "
                  f"Scale: 1:{SCALE}  |  GenAI Floor Plan Generator")
 
     # Scale bar
@@ -1163,10 +1204,7 @@ def render_svg_blueprint(
     # Entrance
     g_entrance = SubElement(svg, "g", {"id": "entrance"})
     exit_w = building.exit.width if building.exit else 1.0
-    _draw_entrance(g_entrance, entrance_point, ox, oy, exit_w)
-    g_ent = SubElement(svg, "g", {"id": "entrance"})
-    ew = getattr(building.exit, "width", 1.0) if hasattr(building, "exit") and building.exit else 1.0
-    _draw_entrance(g_ent, entrance_point, ox, oy, ew)
+    _draw_entrance(g_entrance, boundary_polygon, entrance_point, ox, oy, exit_w)
 
     # Doors
     g_doors = SubElement(svg, "g", {"id": "doors"})
@@ -1298,4 +1336,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
 

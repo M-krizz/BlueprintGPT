@@ -48,7 +48,8 @@ class ProcessingLogger:
         """Log user interaction analysis."""
         boundary_str = f"{boundary.get('width', 'None')}x{boundary.get('height', 'None')}" if boundary else "None"
 
-        msg = f"USER_INTERACTION - Session: {session_id[:8]}..."
+        session_token = (session_id or "unknown")[:8]
+        msg = f"USER_INTERACTION - Session: {session_token}..."
         logger.info(msg)
         _print_log("INFO", msg)
 
@@ -149,6 +150,47 @@ class ProcessingLogger:
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"  Spec extracted: {spec_extracted}, Correction parsed: {correction_parsed}")
+
+    @staticmethod
+    def log_constraint_analysis(layout_type: str, room_count: int, min_area: float,
+                                recommended_area: float, plot_bucket: str,
+                                auto_dimensions: Optional[tuple] = None):
+        """Log constraint analysis results for layout type."""
+        msg = f"CONSTRAINT_ANALYSIS - Layout: {layout_type}, Rooms: {room_count}"
+        logger.info(msg)
+        _print_log("INFO", msg)
+
+        msg2 = f"  Min area: {min_area:.1f} sqm, Recommended: {recommended_area:.1f} sqm, Bucket: {plot_bucket}"
+        logger.info(msg2)
+        _print_log("INFO", msg2)
+
+        if auto_dimensions:
+            msg3 = f"  Auto dimensions: {auto_dimensions[0]:.1f}m x {auto_dimensions[1]:.1f}m"
+            logger.info(msg3)
+            _print_log("INFO", msg3)
+
+    @staticmethod
+    def log_room_requirements(rooms: List[Dict]):
+        """Log individual room requirements from constraint analysis."""
+        for room in rooms:
+            room_type = room.get("type", "Unknown")
+            min_area = room.get("min_area_sqm", 0)
+            min_width = room.get("min_width_m", 0)
+            msg = f"  ROOM_CONSTRAINT - {room_type}: min_area={min_area:.1f}sqm, min_width={min_width:.1f}m"
+            logger.debug(msg)
+            if LOG_LEVEL == "DEBUG" and USE_DIRECT_PRINT:
+                _print_log("DEBUG", msg)
+
+    @staticmethod
+    def log_adjacency_requirements(adjacencies: List[Dict]):
+        """Log adjacency requirements from constraint analysis."""
+        if adjacencies:
+            count = len(adjacencies)
+            sample = adjacencies[:3]
+            sample_str = ", ".join([f"{a.get('source', 'X')}->{a.get('target', 'Y')}" for a in sample])
+            msg = f"  ADJACENCY_CONSTRAINTS - {count} rules: {sample_str}{'...' if count > 3 else ''}"
+            logger.info(msg)
+            _print_log("INFO", msg)
 
 
 class DetailedLogger:

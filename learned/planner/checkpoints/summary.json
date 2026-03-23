@@ -1,0 +1,330 @@
+{
+  "summary": {
+    "case_count": 4,
+    "completed_case_count": 4,
+    "winner_counts": {
+      "planner": 1,
+      "algorithmic": 3,
+      "tie": 0
+    },
+    "planner_avg_score_delta": -0.018,
+    "planner_avg_adjacency_delta": 0.0,
+    "planner_avg_alignment_delta": -0.0718
+  },
+  "cases": [
+    {
+      "name": "two_bedroom_open_kitchen",
+      "prompt": "Create a 2 bedroom house with open kitchen near living room and minimize corridor.",
+      "backend_translation_warnings": [
+        "Inferred standard layout rooms from 2BHK: LivingRoom, Kitchen, Bathroom."
+      ],
+      "algorithmic": {
+        "status": "completed",
+        "backend_target": "algorithmic",
+        "winning_source": null,
+        "report_status": "COMPLIANT",
+        "design_score": 0.9731,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.8655
+        },
+        "planner_summary": null,
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/two_bedroom_open_kitchen/algorithmic_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/two_bedroom_open_kitchen/algorithmic_compliance_report.json"
+        }
+      },
+      "planner": {
+        "status": "completed",
+        "backend_target": "planner",
+        "winning_source": "planner_packer",
+        "report_status": "COMPLIANT",
+        "design_score": 0.9633,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.8262
+        },
+        "planner_summary": {
+          "source": "planner_model",
+          "checkpoint_path": "learned/planner/checkpoints/room_planner.pt",
+          "room_order_count": 5,
+          "spatial_hint_count": 5,
+          "adjacency_preferences_count": 3
+        },
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/two_bedroom_open_kitchen/planner_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/two_bedroom_open_kitchen/planner_compliance_report.json"
+        }
+      },
+      "comparison": {
+        "winner": "algorithmic",
+        "reason": "better_design_score",
+        "design_score_delta": -0.0098,
+        "adjacency_delta": 0.0,
+        "alignment_delta": -0.0393
+      }
+    },
+    {
+      "name": "three_bedroom_family_layout",
+      "prompt": "Need 3 bedrooms, 2 bathrooms, 1 kitchen and 1 drawing room on a 10 marla plot with a north entrance.",
+      "backend_translation_warnings": [],
+      "algorithmic": {
+        "status": "completed",
+        "backend_target": "algorithmic",
+        "winning_source": null,
+        "report_status": "COMPLIANT",
+        "design_score": 1.0067,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 1.0
+        },
+        "planner_summary": null,
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/three_bedroom_family_layout/algorithmic_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/three_bedroom_family_layout/algorithmic_compliance_report.json"
+        }
+      },
+      "planner": {
+        "status": "completed",
+        "backend_target": "planner",
+        "winning_source": "planner_packer",
+        "report_status": "COMPLIANT",
+        "design_score": 0.9824,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.9027
+        },
+        "planner_summary": {
+          "source": "planner_model",
+          "checkpoint_path": "learned/planner/checkpoints/room_planner.pt",
+          "room_order_count": 7,
+          "spatial_hint_count": 7,
+          "adjacency_preferences_count": 8
+        },
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/three_bedroom_family_layout/planner_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/three_bedroom_family_layout/planner_compliance_report.json"
+        }
+      },
+      "comparison": {
+        "winner": "algorithmic",
+        "reason": "better_design_score",
+        "design_score_delta": -0.0243,
+        "adjacency_delta": 0.0,
+        "alignment_delta": -0.0973
+      }
+    },
+    {
+      "name": "privacy_weighted_three_bedroom",
+      "prompt": "Design a 3BHK house with north entrance, keep bedroom private, kitchen near living room, and minimize corridor.",
+      "backend_translation_warnings": [],
+      "algorithmic": {
+        "status": "completed",
+        "backend_target": "algorithmic",
+        "winning_source": null,
+        "report_status": "COMPLIANT",
+        "design_score": 1.0067,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 1.0
+        },
+        "planner_summary": null,
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/privacy_weighted_three_bedroom/algorithmic_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/privacy_weighted_three_bedroom/algorithmic_compliance_report.json"
+        }
+      },
+      "planner": {
+        "status": "completed",
+        "backend_target": "planner",
+        "winning_source": "planner_packer",
+        "report_status": "COMPLIANT",
+        "design_score": 0.9681,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.8456
+        },
+        "planner_summary": {
+          "source": "planner_model",
+          "checkpoint_path": "learned/planner/checkpoints/room_planner.pt",
+          "room_order_count": 7,
+          "spatial_hint_count": 7,
+          "adjacency_preferences_count": 6
+        },
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/privacy_weighted_three_bedroom/planner_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/privacy_weighted_three_bedroom/planner_compliance_report.json"
+        }
+      },
+      "comparison": {
+        "winner": "algorithmic",
+        "reason": "better_design_score",
+        "design_score_delta": -0.0386,
+        "adjacency_delta": 0.0,
+        "alignment_delta": -0.1544
+      }
+    },
+    {
+      "name": "compact_two_bedroom",
+      "prompt": "Need 2 bedrooms, 1 bathroom, 1 kitchen and 1 drawing room in a compact layout with a west entrance.",
+      "backend_translation_warnings": [],
+      "algorithmic": {
+        "status": "completed",
+        "backend_target": "algorithmic",
+        "winning_source": null,
+        "report_status": "COMPLIANT",
+        "design_score": 0.9747,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.8718
+        },
+        "planner_summary": null,
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/compact_two_bedroom/algorithmic_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/compact_two_bedroom/algorithmic_compliance_report.json"
+        }
+      },
+      "planner": {
+        "status": "completed",
+        "backend_target": "planner",
+        "winning_source": "planner_packer",
+        "report_status": "COMPLIANT",
+        "design_score": 0.9756,
+        "design_reasons": [],
+        "room_coverage": {
+          "matched": [
+            "Bathroom",
+            "Bedroom",
+            "Kitchen",
+            "LivingRoom"
+          ],
+          "missing": [],
+          "extra": []
+        },
+        "metrics": {
+          "fully_connected": true,
+          "max_travel_distance": 0.0,
+          "max_allowed_travel_distance": 22.5,
+          "adjacency_satisfaction": 0.3621,
+          "alignment_score": 0.8754
+        },
+        "planner_summary": {
+          "source": "planner_model",
+          "checkpoint_path": "learned/planner/checkpoints/room_planner.pt",
+          "room_order_count": 5,
+          "spatial_hint_count": 5,
+          "adjacency_preferences_count": 3
+        },
+        "artifact_paths": {
+          "svg": "outputs/planner_benchmark_colab/compact_two_bedroom/planner_blueprint.svg",
+          "report": "outputs/planner_benchmark_colab/compact_two_bedroom/planner_compliance_report.json"
+        }
+      },
+      "comparison": {
+        "winner": "planner",
+        "reason": "better_design_score",
+        "design_score_delta": 0.0009,
+        "adjacency_delta": 0.0,
+        "alignment_delta": 0.0036
+      }
+    }
+  ]
+}

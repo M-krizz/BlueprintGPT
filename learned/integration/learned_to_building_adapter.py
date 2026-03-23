@@ -36,10 +36,11 @@ _CANONICAL_MAP: Dict[str, str] = {
     "DrawingRoom":    "LivingRoom",
     "Lounge":         "LivingRoom",
     "Lobby":          "LivingRoom",
+    "Hall":           "LivingRoom",
     "Dining":         "DiningRoom",
     "DiningRoom":     "DiningRoom",
-    "Store":          "Storage",
-    "Storage":        "Storage",
+    "Store":          "Store",
+    "Storage":        "Store",
     "Stairs":         "Staircase",
     "Staircase":      "Staircase",
     "Passage":        "Corridor",
@@ -69,8 +70,70 @@ _CANONICAL_MAP: Dict[str, str] = {
 _SKIP_TYPES = {"Corridor", "Passage", "Unknown"}
 
 
+def _normalize_room_key(raw_type: str) -> str:
+    return "".join(ch for ch in str(raw_type or "") if ch.isalnum()).lower()
+
+
+_NORMALIZED_CANONICAL_MAP: Dict[str, str] = {
+    _normalize_room_key(raw): canonical
+    for raw, canonical in _CANONICAL_MAP.items()
+}
+_NORMALIZED_CANONICAL_MAP.update(
+    {
+        "bedroom": "Bedroom",
+        "bathroom": "Bathroom",
+        "kitchen": "Kitchen",
+        "livingroom": "LivingRoom",
+        "living": "LivingRoom",
+        "drawingroom": "LivingRoom",
+        "hall": "LivingRoom",
+        "diningroom": "DiningRoom",
+        "store": "Store",
+        "storage": "Store",
+        "garage": "Garage",
+        "study": "Study",
+        "balcony": "Balcony",
+        "openspace": "OpenSpace",
+        "sidegarden": "SideGarden",
+        "dressingarea": "DressingArea",
+        "prayerroom": "PrayerRoom",
+        "servantquarter": "ServantQuarter",
+        "backyard": "Backyard",
+        "laundry": "Laundry",
+        "lawn": "Lawn",
+        "wc": "WC",
+        "toilet": "WC",
+        "corridor": "Corridor",
+        "passage": "Passage",
+        "staircase": "Staircase",
+        "stairs": "Staircase",
+        "unknown": "Unknown",
+    }
+)
+
+
 def _canonicalize(raw_type: str) -> str:
-    return _CANONICAL_MAP.get(raw_type, raw_type)
+    normalized = _normalize_room_key(raw_type)
+    return _NORMALIZED_CANONICAL_MAP.get(normalized, raw_type)
+
+
+def _required_room_counts(spec_rooms: List[Dict[str, Any]]) -> Counter:
+    """Support both expanded room specs and aggregate room-count specs."""
+    required_counts: Counter = Counter()
+
+    for room_spec in spec_rooms:
+        canonical_type = _canonicalize(room_spec.get("type", ""))
+        if not canonical_type:
+            continue
+
+        try:
+            count = int(room_spec.get("count", 1))
+        except (TypeError, ValueError):
+            count = 1
+
+        required_counts[canonical_type] += max(count, 0)
+
+    return required_counts
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -200,7 +263,7 @@ def adapt_generated_layout_to_building(
     # ── 2. Ensure required room counts from spec ─────────────────────────
     spec_rooms = spec.get("rooms", [])
     if spec_rooms:
-        required_counts: Counter = Counter(r["type"] for r in spec_rooms)
+        required_counts = _required_room_counts(spec_rooms)
 
         # Group candidates by canonical type
         by_type: Dict[str, List[Tuple[Room, str, float]]] = {}

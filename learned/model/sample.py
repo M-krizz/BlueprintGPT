@@ -117,11 +117,15 @@ def load_best_model(device: str = "cpu") -> tuple[LayoutTransformer, LayoutToken
             # Final fallback: look for any checkpoint
             from pathlib import Path
             checkpoint_dir = Path("learned/model/checkpoints")
-            checkpoint_files = list(checkpoint_dir.glob("*.pt"))
-            if checkpoint_files:
-                checkpoint_path = str(checkpoint_files[0])
+            preferred = checkpoint_dir / "improved_v1.pt"
+            if preferred.exists():
+                checkpoint_path = str(preferred)
             else:
-                raise FileNotFoundError("No model checkpoints found")
+                checkpoint_files = list(checkpoint_dir.glob("*.pt"))
+                if checkpoint_files:
+                    checkpoint_path = str(sorted(checkpoint_files)[0])
+                else:
+                    raise FileNotFoundError("No model checkpoints found")
 
         return load_model(checkpoint_path, device)
 
