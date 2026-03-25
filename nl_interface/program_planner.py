@@ -249,6 +249,14 @@ def build_zoning_plan(
             "max_area_sqm": float(area_standard.get("max", area_standard.get("ideal", 12.0))),
         }
 
+    _apply_canonical_residential_refinements(
+        room_program,
+        semantic_spec,
+        spatial_hints,
+        size_priors,
+        adjacency,
+        heuristics,
+    )
     _apply_room_position_preferences(
         spatial_hints,
         source_spec.get("room_position_preferences") or {},
@@ -295,15 +303,165 @@ def build_zoning_plan(
     )
 
 
+def _apply_canonical_residential_refinements(
+    room_program: RoomProgram,
+    semantic_spec: SemanticSpec,
+    spatial_hints: Dict[str, List[float]],
+    size_priors: Dict[str, Dict[str, float]],
+    adjacency: List[Dict[str, Any]],
+    heuristics: List[str],
+) -> None:
+    layout_type = room_program.layout_type or semantic_spec.layout_type
+    if layout_type not in {"2BHK", "3BHK", "4BHK"}:
+        return
+
+    rooms_by_role: Dict[str, List[ProgramRoom]] = defaultdict(list)
+    rooms_by_type: Dict[str, List[ProgramRoom]] = defaultdict(list)
+    for room in room_program.rooms:
+        rooms_by_role[room.semantic_role].append(room)
+        rooms_by_type[room.type].append(room)
+
+    living_rooms = rooms_by_type.get("LivingRoom", []) + rooms_by_type.get("DrawingRoom", [])
+    kitchens = rooms_by_type.get("Kitchen", [])
+    master_rooms = rooms_by_role.get("master_bedroom", [])
+    secondary_rooms = rooms_by_role.get("secondary_bedroom", [])
+    attached_baths = rooms_by_role.get("attached_bathroom", [])
+    common_baths = rooms_by_role.get("common_bathroom", [])
+
+    if living_rooms:
+        living_target = 16.0 if layout_type == "2BHK" else 18.0 if layout_type == "3BHK" else 20.0
+        size_priors[living_rooms[0].name].update(
+            {
+                "ideal_area_sqm": living_target,
+                "min_area_sqm": max(14.0, living_target - 2.0),
+                "max_area_sqm": living_target + 4.0,
+            }
+        )
+    for kitchen in kitchens:
+        kitchen_target = 8.5 if layout_type == "2BHK" else 9.5 if layout_type == "3BHK" else 10.5
+        size_priors[kitchen.name].update(
+            {
+                "ideal_area_sqm": kitchen_target,
+                "min_area_sqm": max(6.0, kitchen_target - 2.0),
+                "max_area_sqm": kitchen_target + 2.5,
+            }
+        )
+    for idx, room in enumerate(master_rooms):
+        size_priors[room.name].update(
+            {
+                "ideal_area_sqm": 14.5 if layout_type != "4BHK" else 15.5,
+                "min_area_sqm": 12.0,
+                "max_area_sqm": 18.5,
+            }
+        )
+    for idx, room in enumerate(secondary_rooms):
+        ideal_area = 11.5 if idx == 0 else 11.0
+        size_priors[room.name].update(
+            {
+                "ideal_area_sqm": ideal_area,
+                "min_area_sqm": 9.5,
+                "max_area_sqm": 14.0,
+            }
+        )
+    for room in attached_baths:
+        size_priors[room.name].update(
+            {
+                "ideal_area_sqm": 4.2,
+                "min_area_sqm": 3.2,
+                "max_area_sqm": 5.4,
+            }
+        )
+    for room in common_baths:
+        size_priors[room.name].update(
+            {
+                "ideal_area_sqm": 3.4 if layout_type in {"3BHK", "4BHK"} else 3.2,
+                "min_area_sqm": 2.4,
+                "max_area_sqm": 4.6,
+            }
+        )
+
+    frontage_templates = {
+        "public_anchor": [(0.40, 0.22), (0.52, 0.24)],
+        "service_anchor": [(0.18, 0.24), (0.18, 0.48)],
+        "master_bedroom": [(0.76, 0.76)],
+        "secondary_bedroom": [(0.24, 0.76), (0.76, 0.42), (0.24, 0.46), (0.50, 0.78)],
+        "attached_bathroom": [(0.68, 0.58)],
+        "common_bathroom": [(0.34, 0.58), (0.52, 0.56)],
+    }
+    role_offsets: Dict[str, int] = defaultdict(int)
+    for room in room_program.rooms:
+        anchors = frontage_templates.get(room.semantic_role)
+        if not anchors:
+            continue
+        idx = min(role_offsets[room.semantic_role], len(anchors) - 1)
+        role_offsets[room.semantic_role] += 1
+        base_point = anchors[idx]
+        rotated = _rotate_point(base_point, semantic_spec.entrance_side)
+        spatial_hints[room.name] = [round(rotated[0], 4), round(rotated[1], 4)]
+
+    if living_rooms and kitchens:
+        _append_unique_adjacency(
+            adjacency,
+            {"a": kitchens[0].name, "b": living_rooms[0].name, "type": "prefer", "score": 1.0},
+        )
+    if master_rooms and attached_baths:
+        _append_unique_adjacency(
+            adjacency,
+            {"a": attached_baths[0].name, "b": master_rooms[0].name, "type": "prefer", "score": 1.0},
+        )
+    if common_baths and secondary_rooms:
+        _append_unique_adjacency(
+            adjacency,
+            {"a": common_baths[0].name, "b": secondary_rooms[0].name, "type": "prefer", "score": 0.88},
+        )
+    if living_rooms and common_baths:
+        _append_unique_adjacency(
+            adjacency,
+            {"a": common_baths[0].name, "b": living_rooms[0].name, "type": "avoid", "score": 0.8},
+        )
+    if kitchens and common_baths:
+        _append_unique_adjacency(
+            adjacency,
+            {"a": kitchens[0].name, "b": common_baths[0].name, "type": "avoid", "score": 0.95},
+        )
+    if layout_type in {"3BHK", "4BHK"} and living_rooms:
+        for bedroom in master_rooms + secondary_rooms:
+            _append_unique_adjacency(
+                adjacency,
+                {"a": living_rooms[0].name, "b": bedroom.name, "type": "avoid", "score": 0.55},
+            )
+
+    extra_heuristics = [
+        "Keep one bedroom as the master suite with the strongest bathroom relationship.",
+        "Keep the common bathroom accessible without opening directly into the main seating zone.",
+        "Prevent the living room from absorbing excess circulation and oversizing beyond the shared family zone.",
+    ]
+    for heuristic in extra_heuristics:
+        if heuristic not in heuristics:
+            heuristics.append(heuristic)
+
+
 def enrich_spec_with_planning(
     spec: Dict[str, Any],
     resolution: Optional[Dict[str, Any]] = None,
     user_prompt: Optional[str] = None,
+    chat_adapter: Optional[Any] = None,
 ) -> Dict[str, Any]:
     enriched = dict(spec)
     semantic_spec = build_semantic_spec(spec, resolution=resolution, user_prompt=user_prompt)
     room_program = build_room_program(semantic_spec)
     zoning_plan = build_zoning_plan(room_program, semantic_spec, resolution=resolution, source_spec=spec)
+    try:
+        from nl_interface.llm_topology_proposer import propose_topology_hints
+
+        zoning_plan = propose_topology_hints(
+            semantic_spec,
+            room_program,
+            zoning_plan,
+            chat_adapter=chat_adapter,
+        )
+    except Exception:
+        pass
     enriched["semantic_spec"] = semantic_spec.to_dict()
     enriched["room_program"] = room_program.to_dict()
     enriched["zoning_plan"] = zoning_plan.to_dict()
@@ -326,11 +484,15 @@ def summarize_zoning_plan(zoning_plan: Optional[Dict[str, Any]]) -> Optional[str
         return None
     frontage = zoning_plan.get("frontage_room") or "public room"
     pattern = zoning_plan.get("layout_pattern") or "balanced"
+    topology_source = zoning_plan.get("topology_source") or "deterministic"
+    topology_note = " Deterministic zoning only."
+    if zoning_plan.get("topology_hints_applied"):
+        topology_note = f" Topology hints merged from {topology_source}."
     heuristics = zoning_plan.get("heuristics") or []
     summary = f"Pattern: {pattern}. Frontage anchor: {frontage}."
     if heuristics:
         summary += " " + " ".join(heuristics[:2])
-    return summary
+    return summary + topology_note
 
 
 def _layout_pattern(room_program: RoomProgram) -> str:
@@ -388,6 +550,25 @@ def _named_adjacency(rooms: List[ProgramRoom], adjacency_preferences: Optional[L
                     adjacency.append(candidate)
 
     return adjacency
+
+
+def _append_unique_adjacency(adjacency: List[Dict[str, Any]], candidate: Dict[str, Any]) -> None:
+    for existing in adjacency:
+        if (
+            existing.get("a") == candidate.get("a")
+            and existing.get("b") == candidate.get("b")
+            and existing.get("type") == candidate.get("type")
+        ):
+            existing["score"] = max(float(existing.get("score", 0.0) or 0.0), float(candidate.get("score", 0.0) or 0.0))
+            return
+        if (
+            existing.get("a") == candidate.get("b")
+            and existing.get("b") == candidate.get("a")
+            and existing.get("type") == candidate.get("type")
+        ):
+            existing["score"] = max(float(existing.get("score", 0.0) or 0.0), float(candidate.get("score", 0.0) or 0.0))
+            return
+    adjacency.append(candidate)
 
 
 def _resolve_room_names(mapping: Dict[str, Any], room_key: str) -> List[str]:

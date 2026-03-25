@@ -183,6 +183,12 @@ def run_algorithmic_backend(
             "Corridor width below 1.0 m",
             "Room area allocation drift too high",
             "Circulation area is too high",
+            "Room dimensions violate minimum width constraints",
+            "Room dimensions are too impractical",
+            "Bathroom doors connect too directly to public rooms",
+            "Bathrooms are too exposed to public areas",
+            "Master bedroom suite logic is too weak",
+            "Living room is dominating the plan too much",
         }
         rejection_reasons = set(top_rejection.get("_design_reasons") or [])
         if rejection_reasons & critical_reasons:
@@ -194,6 +200,11 @@ def run_algorithmic_backend(
                 "Room area allocation drift too high",
                 "Circulation area is too high",
                 "Corridor width below 1.0 m",
+                "Room dimensions violate minimum width constraints",
+                "Room dimensions are too impractical",
+                "Bathrooms are too exposed to public areas",
+                "Master bedroom suite logic is too weak",
+                "Living room is dominating the plan too much",
             }
             if compact_program:
                 recovery_reasons.update(
@@ -1547,6 +1558,13 @@ def _design_gate(variant: Dict) -> Tuple[bool, float, List[str]]:
     m = variant.get("metrics", {}) or {}
     reasons: List[str] = []
     source = variant.get("source", "algorithmic")
+    ontology_result = variant.get("ontology") or {}
+    ontology_violations = ontology_result.get("violations", []) or []
+    ontology_codes = {
+        violation.get("code")
+        for violation in ontology_violations
+        if isinstance(violation, dict)
+    }
 
     # planner_direct mode has relaxed connectivity requirements
     is_planner_direct = source == "planner_direct"
@@ -1580,6 +1598,32 @@ def _design_gate(variant: Dict) -> Tuple[bool, float, List[str]]:
     if circulation_ratio > 0.16 and not is_planner_direct and not skip_corridors:
         reasons.append("Circulation area is too high")
 
+    unused_boundary_ratio = float(m.get("unused_boundary_ratio", 0.0) or 0.0)
+    if unused_boundary_ratio > 0.05 and not is_planner_direct:
+        reasons.append("Boundary packing leaves too much dead space")
+
+    room_shape_score = float(m.get("room_shape_score", 0.0) or 0.0)
+    if room_shape_score and room_shape_score < 0.68 and not is_planner_direct:
+        reasons.append("Room proportions are too impractical")
+
+    room_dimension_score = float(m.get("room_dimension_score", 0.0) or 0.0)
+    worst_room_width_gap = float(m.get("worst_room_width_gap", 0.0) or 0.0)
+    min_room_width_violations = m.get("min_room_width_violations", []) or []
+    critical_room_dimension_violations = m.get("critical_room_dimension_violations", []) or []
+    if (min_room_width_violations or "MIN_ROOM_WIDTH" in ontology_codes) and not is_planner_direct:
+        reasons.append("Room dimensions violate minimum width constraints")
+    elif (
+        (critical_room_dimension_violations or room_dimension_score)
+        and room_dimension_score < 0.82
+        and not is_planner_direct
+    ):
+        reasons.append("Room dimensions are too impractical")
+    elif critical_room_dimension_violations and not is_planner_direct:
+        reasons.append("Room dimensions are too impractical")
+
+    if "SANITARY_PUBLIC_DOOR" in ontology_codes and not is_planner_direct:
+        reasons.append("Bathroom doors connect too directly to public rooms")
+
     public_frontage = float(m.get("public_frontage_score", 0.0) or 0.0)
     if public_frontage and public_frontage < 0.40 and not is_planner_direct:
         reasons.append("Public frontage near entrance is too weak")
@@ -1596,6 +1640,18 @@ def _design_gate(variant: Dict) -> Tuple[bool, float, List[str]]:
     if bathroom_access and bathroom_access < 0.5 and not is_planner_direct:
         reasons.append("Bathroom access from bedrooms is too weak")
 
+    living_balance = float(m.get("living_balance_score", 0.0) or 0.0)
+    if living_balance and living_balance < 0.45 and not is_planner_direct:
+        reasons.append("Living room is dominating the plan too much")
+
+    bathroom_public_exposure = float(m.get("bathroom_public_exposure_score", 0.0) or 0.0)
+    if bathroom_public_exposure and bathroom_public_exposure < 0.45 and not is_planner_direct:
+        reasons.append("Bathrooms are too exposed to public areas")
+
+    master_suite_score = float(m.get("master_suite_score", 0.0) or 0.0)
+    if master_suite_score and master_suite_score < 0.35 and not is_planner_direct:
+        reasons.append("Master bedroom suite logic is too weak")
+
     architectural_reasonableness = float(m.get("architectural_reasonableness", 0.0) or 0.0)
     if architectural_reasonableness and architectural_reasonableness < 0.45 and not is_planner_direct:
         reasons.append("Overall residential composition is too weak")
@@ -1605,7 +1661,10 @@ def _design_gate(variant: Dict) -> Tuple[bool, float, List[str]]:
     if corridor_width < 1.0 and not is_planner_direct and not skip_corridors:
         reasons.append("Corridor width below 1.0 m")
 
-    corridor_norm = min(1.0, corridor_width / 1.5) if corridor_width > 0 else 0.0
+    if skip_corridors:
+        corridor_norm = 1.0 if bool(m.get("connectivity_to_exit")) else 0.0
+    else:
+        corridor_norm = min(1.0, corridor_width / 1.5) if corridor_width > 0 else 0.0
 
     # Scoring differs by source
     if is_planner_direct:
@@ -1622,13 +1681,17 @@ def _design_gate(variant: Dict) -> Tuple[bool, float, List[str]]:
         # Original scoring for algorithmic/learned/planner backends
         algo_bonus = 0.25 if source == "algorithmic" else 0.0
         score = (
-            0.35 * adjacency
-            + 0.25 * alignment
-            + 0.20 * travel_margin
-            + 0.20 * corridor_norm
-            + 0.15 * architectural_reasonableness
+            0.24 * adjacency
+            + 0.18 * alignment
+            + 0.12 * travel_margin
+            + 0.12 * corridor_norm
+            + 0.14 * architectural_reasonableness
+            + 0.10 * room_shape_score
+            + 0.20 * room_dimension_score
             - 0.20 * min(1.0, max_room_area_error)
             - 0.20 * min(1.0, circulation_ratio / 0.2)
+            - 0.15 * min(1.0, unused_boundary_ratio / 0.08)
+            - 0.18 * min(1.0, worst_room_width_gap / 0.8)
             + algo_bonus
         )
 
@@ -1645,10 +1708,18 @@ def _safe_metric_snapshot(metrics: Dict) -> Dict:
         "alignment_score",
         "corridor_width",
         "max_room_area_error",
+        "room_dimension_score",
+        "worst_room_width_gap",
+        "min_room_width_violations",
+        "critical_room_dimension_violations",
         "public_frontage_score",
         "bedroom_privacy_score",
         "kitchen_living_score",
         "bathroom_access_score",
+        "living_balance_score",
+        "bathroom_public_exposure_score",
+        "master_suite_score",
+        "service_cluster_score",
         "architectural_reasonableness",
     )
     return {k: metrics.get(k) for k in keys if k in metrics}

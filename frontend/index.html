@@ -475,6 +475,36 @@
     .meta-list li {
       margin-bottom: 4px;
     }
+    .meta-action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .meta-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      border-radius: 999px;
+      background: var(--accent-light);
+      color: var(--text-primary);
+      font-size: 12px;
+      line-height: 1.2;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .meta-action-btn:hover {
+      background: rgba(74, 158, 255, 0.18);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .meta-action-note {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
     .expert-panel {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
@@ -1080,6 +1110,7 @@
       document.getElementById('messages').style.display = 'none';
       document.getElementById('messages').innerHTML = '';
       document.getElementById('userInput').value = '';
+      updateComposerHint(null);
 
       // Close sidebar on mobile
       if (window.innerWidth <= 900) {
@@ -1102,6 +1133,7 @@
       if (conv.messages.length === 0) {
         welcomeEl.style.display = 'flex';
         messagesEl.style.display = 'none';
+        updateComposerHint(null);
       } else {
         welcomeEl.style.display = 'none';
         messagesEl.style.display = 'block';
@@ -1109,6 +1141,8 @@
           appendMessage(msg.role, msg.content, msg.timestamp, msg.blueprintUrl, false, msg.metadata);
         });
         messagesEl.scrollTop = messagesEl.scrollHeight;
+        const lastBotMessage = [...conv.messages].reverse().find(msg => msg.role !== 'user');
+        updateComposerHint(lastBotMessage ? lastBotMessage.metadata : null);
       }
 
       renderConversationList();
@@ -1181,6 +1215,78 @@
       return `<ul class="meta-list">${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
     }
 
+    function extractPromptExamples(items) {
+      const prompts = [];
+      if (!Array.isArray(items)) return prompts;
+      items.forEach(item => {
+        const text = String(item || '');
+        const matches = [...text.matchAll(/`([^`]+)`/g)];
+        if (matches.length > 0) {
+          matches.forEach(match => {
+            if (match[1] && !prompts.includes(match[1])) prompts.push(match[1]);
+          });
+          return;
+        }
+
+        if (
+          text.length <= 72 &&
+          /^(make|move|keep|change|set|show|add|remove|swap)\b/i.test(text) &&
+          !prompts.includes(text)
+        ) {
+          prompts.push(text);
+        }
+      });
+      return prompts.slice(0, 4);
+    }
+
+    function deriveQuickActions(metadata) {
+      const promptExamples = extractPromptExamples(metadata?.suggestedActions || []);
+      if (promptExamples.length > 0) return promptExamples;
+
+      const design = metadata?.latestDesignSummary || {};
+      const rooms = Array.isArray(design.editable_rooms) ? design.editable_rooms : [];
+      if (rooms.length === 0) return [];
+
+      const actions = [];
+      const kitchen = rooms.find(room => room.startsWith('Kitchen_'));
+      const living = rooms.find(room => room.startsWith('LivingRoom_'));
+      const bedrooms = rooms.filter(room => room.startsWith('Bedroom_'));
+      const bathrooms = rooms.filter(room => room.startsWith('Bathroom_') || room.startsWith('WC_'));
+      const primary = rooms[0];
+
+      actions.push(`make ${kitchen || primary} larger`);
+      if (kitchen && living) actions.push(`keep ${kitchen} near ${living}`);
+      if (bedrooms.length >= 2) actions.push(`move ${bedrooms[0]} closer to ${bedrooms[1]}`);
+      if (bathrooms.length > 0 && bedrooms.length > 0) actions.push(`keep ${bathrooms[0]} near ${bedrooms[0]}`);
+
+      return [...new Set(actions)].slice(0, 4);
+    }
+
+    function renderActionRow(actions, title = 'Quick Actions') {
+      if (!Array.isArray(actions) || actions.length === 0) return '';
+      const encodeActionValue = action => encodeURIComponent(action).replace(/'/g, '%27');
+      return `
+        <div class="meta-card">
+          <div class="meta-card-title">${escapeHtml(title)}</div>
+          <div class="meta-action-row">
+            ${actions.map(action => `<button class="meta-action-btn" onclick="useSuggestion(decodeURIComponent('${encodeActionValue(action)}'))">${escapeHtml(action)}</button>`).join('')}
+          </div>
+          <div class="meta-action-note">Click one to send it as the next message, or type your own change.</div>
+        </div>
+      `;
+    }
+
+    function updateComposerHint(metadata) {
+      const input = document.getElementById('userInput');
+      if (!input) return;
+      const actions = deriveQuickActions(metadata);
+      if (actions.length > 0) {
+        input.placeholder = `Modify the current plan, for example: ${actions[0]}`;
+        return;
+      }
+      input.placeholder = 'Describe your floor plan requirements...';
+    }
+
     function renderStructuredDetails(metadata) {
       if (!metadata || typeof metadata !== 'object') return '';
 
@@ -1188,6 +1294,8 @@
       const assumptions = Array.isArray(metadata.assumptionsUsed) ? metadata.assumptionsUsed : [];
       const suggestions = Array.isArray(metadata.suggestedActions) ? metadata.suggestedActions : [];
       const design = metadata.latestDesignSummary || {};
+      const conversationState = metadata.conversationState || {};
+      const quickActions = deriveQuickActions(metadata);
 
       if (metadata.clarificationRequest) {
         sections.push(`
@@ -1229,6 +1337,18 @@
             ${renderChipRow(designChips)}
           </div>
         `);
+        if (Array.isArray(design.editable_rooms) && design.editable_rooms.length > 0) {
+          sections.push(`
+            <div class="meta-card">
+              <div class="meta-card-title">Editable Rooms</div>
+              ${renderChipRow(design.editable_rooms)}
+            </div>
+          `);
+        }
+      }
+
+      if (quickActions.length > 0) {
+        sections.push(renderActionRow(quickActions));
       }
 
       if (assumptions.length > 0) {
@@ -1245,6 +1365,21 @@
           <div class="meta-card">
             <div class="meta-card-title">Next Best Actions</div>
             ${renderList(suggestions)}
+          </div>
+        `);
+      }
+
+      if (expertMode && conversationState && (conversationState.chat_provider || conversationState.topology_source)) {
+        const runtimeChips = [];
+        if (conversationState.chat_provider) runtimeChips.push(`Chat Provider: ${conversationState.chat_provider}`);
+        if (conversationState.topology_source) runtimeChips.push(`Topology Source: ${conversationState.topology_source}`);
+        if (conversationState.topology_hints_applied !== undefined && conversationState.topology_hints_applied !== null) {
+          runtimeChips.push(`Topology Hints: ${conversationState.topology_hints_applied ? 'applied' : 'deterministic only'}`);
+        }
+        sections.push(`
+          <div class="meta-card">
+            <div class="meta-card-title">Planning Runtime</div>
+            ${renderChipRow(runtimeChips)}
           </div>
         `);
       }
@@ -1322,6 +1457,9 @@
 
       messagesEl.appendChild(msgRow);
       messagesEl.scrollTop = messagesEl.scrollHeight;
+      if (!isUser) {
+        updateComposerHint(metadata);
+      }
 
       // Save to conversation
       if (save && currentConversation !== null) {

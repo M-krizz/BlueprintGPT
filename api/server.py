@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
@@ -36,6 +37,7 @@ from nl_interface.gemini_adapter import (
     extract_spec_from_nl,
     chat_response as gemini_chat,
     is_available as gemini_available,
+    parse_correction,
     process_message as process_nl_message,
     INTENT_DESIGN,
     INTENT_CORRECTION,
@@ -499,6 +501,27 @@ def _derive_resolution_from_spec(spec: Optional[dict], resolution: Optional[dict
     return resolution
 
 
+def _entrance_side_from_resolution(resolution: Optional[dict]) -> Optional[str]:
+    resolution = resolution or {}
+    boundary_size = resolution.get("boundary_size")
+    entrance_point = resolution.get("entrance_point")
+    if not boundary_size or not entrance_point or len(boundary_size) != 2:
+        return None
+
+    width, height = float(boundary_size[0]), float(boundary_size[1])
+    ex, ey = float(entrance_point[0]), float(entrance_point[1])
+    tolerance = 1e-6
+    if abs(ey - 0.0) <= tolerance:
+        return "North"
+    if abs(ey - height) <= tolerance:
+        return "South"
+    if abs(ex - width) <= tolerance:
+        return "East"
+    if abs(ex - 0.0) <= tolerance:
+        return "West"
+    return "Custom"
+
+
 def _summarize_inferred_rules(spec: Optional[dict], resolution: Optional[dict]) -> str:
     spec = spec or {}
     resolution = resolution or {}
@@ -522,8 +545,14 @@ def _summarize_inferred_rules(spec: Optional[dict], resolution: Optional[dict]) 
         width, height = resolution["boundary_size"]
         lines.append(f"- Working plot size resolved to `{float(width):.1f}m x {float(height):.1f}m`.")
 
-    if spec.get("entrance_side"):
-        lines.append(f"- Entrance assumed on the `{spec['entrance_side']}` side.")
+    entrance_side = spec.get("entrance_side")
+    resolved_entrance_side = _entrance_side_from_resolution(resolution)
+    if entrance_side:
+        lines.append(f"- Entrance assumed on the `{entrance_side}` side.")
+    elif resolved_entrance_side:
+        lines.append(
+            f"- No entrance side was specified, so the layout defaulted to the `{resolved_entrance_side}` side."
+        )
 
     adjacency = spec.get("adjacency") or spec.get("preferences", {}).get("adjacency", [])
     user_facing_rules = []
@@ -629,6 +658,18 @@ def _build_design_conversation_reply(design_data: dict, spec: dict, resolution: 
         )
     if assumptions:
         planning_summary.append("Assumptions used: " + "; ".join(dict.fromkeys(assumptions)) + ".")
+
+    editable_rooms = _editable_room_labels(spec, design_data)
+    edit_guidance = ""
+    if editable_rooms:
+        example_rooms = editable_rooms[:8]
+        primary = example_rooms[0]
+        secondary = example_rooms[1] if len(example_rooms) > 1 else example_rooms[0]
+        edit_guidance = (
+            "You can modify this exact layout in the next message. "
+            f"Editable room labels in this plan: `{', '.join(example_rooms)}`. "
+            f"For example: `make {primary} larger`, `move {primary} closer to {secondary}`, or `keep {primary} away from the entrance`."
+        )
     return "\n\n".join(
         [
             intro,
@@ -637,6 +678,7 @@ def _build_design_conversation_reply(design_data: dict, spec: dict, resolution: 
             "\n".join(planning_summary) if planning_summary else "",
             inferred_rules,
             next_step,
+            edit_guidance,
         ]
     )
 
@@ -647,6 +689,126 @@ def _resolve_active_design_index(session: ConversationSession) -> Optional[int]:
     if session.designs:
         return len(session.designs) - 1
     return None
+
+
+def _editable_room_labels(spec: Optional[dict], design_data: Optional[dict] = None) -> List[str]:
+    labels: List[str] = []
+    room_program = (spec or {}).get("room_program") or {}
+    for room in room_program.get("rooms", []) or []:
+        room_name = room.get("name")
+        if room_name:
+            labels.append(str(room_name))
+    if labels:
+        return labels
+
+    generated = (design_data or {}).get("generated_rooms", {}) or {}
+    for room_type, count in generated.items():
+        try:
+            repeat = int(count or 0)
+        except (TypeError, ValueError):
+            repeat = 0
+        for idx in range(repeat):
+            labels.append(f"{room_type}_{idx + 1}")
+    return labels
+
+
+def _build_quick_action_prompts(editable_rooms: List[str]) -> List[str]:
+    if not editable_rooms:
+        return []
+
+    prompts: List[str] = []
+    kitchen = next((name for name in editable_rooms if name.startswith("Kitchen_")), None)
+    living = next((name for name in editable_rooms if name.startswith("LivingRoom_")), None)
+    bathrooms = [name for name in editable_rooms if name.startswith("Bathroom_") or name.startswith("WC_")]
+    bedrooms = [name for name in editable_rooms if name.startswith("Bedroom_")]
+    primary = editable_rooms[0]
+
+    prompts.append(f"make {kitchen or primary} larger")
+
+    if kitchen and living:
+        prompts.append(f"keep {kitchen} near {living}")
+
+    if len(bedrooms) >= 2:
+        prompts.append(f"move {bedrooms[0]} closer to {bedrooms[1]}")
+    elif len(editable_rooms) >= 2:
+        prompts.append(f"move {primary} closer to {editable_rooms[1]}")
+
+    if bedrooms and bathrooms:
+        prompts.append(f"keep {bathrooms[0]} near {bedrooms[0]}")
+
+    prompts.append("change the entrance to North and regenerate")
+
+    deduped: List[str] = []
+    for prompt in prompts:
+        if prompt not in deduped:
+            deduped.append(prompt)
+    return deduped[:4]
+
+
+def _current_named_rooms(session: ConversationSession) -> List[dict]:
+    latest_design = session.designs[-1].to_dict() if session.designs else None
+    if latest_design and latest_design.get("rooms"):
+        return [
+            {"name": f"{room.get('type')}_{idx + 1}", "type": room.get("type")}
+            for room in (latest_design.get("rooms", []) or [])
+            for idx in range(int(room.get("count", 1) or 1))
+        ]
+    return [{"type": room.get("type"), "name": room.get("name")} for room in session.current_spec.get("rooms", [])]
+
+
+def _should_reinterpret_as_correction(
+    session: ConversationSession,
+    user_message: str,
+    classified_intent: str,
+) -> bool:
+    if classified_intent == IntentTypes.CORRECTION or not session.designs:
+        return classified_intent == IntentTypes.CORRECTION
+
+    msg_lower = (user_message or "").lower().strip()
+    if not msg_lower:
+        return False
+
+    explicit_new_design_patterns = [
+        r"\b\d+\s*bhk\b",
+        r"\bdesign\s+(a|an)\b",
+        r"\bgenerate\b",
+        r"\bcreate\b",
+        r"\bnew\s+layout\b",
+        r"\bnew\s+design\b",
+        r"\bfrom\s+scratch\b",
+    ]
+    if any(re.search(pattern, msg_lower) for pattern in explicit_new_design_patterns):
+        return False
+
+    parsed = parse_correction(user_message, _resolve_active_design_index(session) or 0, _current_named_rooms(session))
+    if parsed.get("understood"):
+        return True
+
+    msg_lower = (user_message or "").lower()
+    correctionish = any(
+        token in msg_lower
+        for token in (
+            "move",
+            "shift",
+            "make",
+            "bigger",
+            "larger",
+            "smaller",
+            "swap",
+            "change",
+            "modify",
+            "adjust",
+            "resize",
+            "near",
+            "adjacent",
+            "closer",
+            "farther",
+            "remove",
+            "add",
+            "away from",
+        )
+    )
+    return bool(parsed.get("clarification_needed")) and correctionish
 
 
 def _summarize_applied_changes(changes: Optional[List[dict]]) -> str:
@@ -1073,15 +1235,7 @@ async def conversation_message(body: ConversationMessageRequest):
         "selected_design": session.selected_design_index,
         "latest_design": latest_design,
         "latest_generation_outcome": session.latest_generation_outcome,
-        "current_rooms": (
-            [
-                {"name": f"{room.get('type')}_{idx + 1}", "type": room.get("type")}
-                for room in (latest_design.get("rooms", []) or [])
-                for idx in range(int(room.get("count", 1) or 1))
-            ]
-            if latest_design and latest_design.get("rooms")
-            else [{"type": r.get("type"), "name": r.get("name")} for r in session.current_spec.get("rooms", [])]
-        ),
+        "current_rooms": _current_named_rooms(session),
     }
 
     # Use the new intelligent message processing with intent classification
@@ -1090,6 +1244,11 @@ async def conversation_message(body: ConversationMessageRequest):
     intent = nl_result.get("intent", IntentTypes.CONVERSATION)
     confidence = nl_result.get('intent_confidence', 0)
     should_generate = nl_result.get('should_generate', False)
+
+    if _should_reinterpret_as_correction(session, body.message, intent):
+        intent = IntentTypes.CORRECTION
+        should_generate = False
+        confidence = max(confidence, 0.9)
 
     # Log intent classification
     ProcessingLogger.log_intent_classification(
@@ -1202,7 +1361,11 @@ async def conversation_message(body: ConversationMessageRequest):
     if intent == INTENT_DESIGN and nl_result and nl_result.get("spec"):
         extracted_spec = nl_result.get("spec", {})
         if extracted_spec.get("rooms"):  # Only store if we have rooms
-            ProcessingLogger.logger.info(f"Storing extracted spec in session: {len(extracted_spec.get('rooms', []))} rooms")
+            room_type_count = len(extracted_spec.get("rooms", []))
+            room_count = sum(int(room.get("count", 1)) for room in extracted_spec.get("rooms", []))
+            ProcessingLogger.logger.info(
+                f"Storing extracted spec in session: {room_count} rooms across {room_type_count} room types"
+            )
             session.update_spec(extracted_spec)
             session.current_spec = conversation_orchestrator.enrich_spec(session.current_spec, session.resolution, body.message)
             session.set_planning_context(
@@ -1361,6 +1524,15 @@ async def conversation_message(body: ConversationMessageRequest):
                     resolution=session.resolution or {},
                     design_count=len(explained_designs),
                 )
+                editable_rooms = _editable_room_labels(session.current_spec, design_data)
+                quick_action_prompts = _build_quick_action_prompts(editable_rooms)
+                named_edit_suggestion = None
+                if quick_action_prompts:
+                    preview_examples = " or ".join(f"`{prompt}`" for prompt in quick_action_prompts[:2])
+                    named_edit_suggestion = (
+                        "Modify this exact plan in the next message. "
+                        f"For example: {preview_examples}."
+                    )
                 generation_outcome = GenerationOutcome(
                     stage="generation",
                     success=True,
@@ -1378,9 +1550,9 @@ async def conversation_message(body: ConversationMessageRequest):
                     zoning_plan=session.zoning_plan,
                     generation_outcome=generation_outcome,
                     suggested_actions=[
-                        "Refine this layout by changing kitchen, bedroom, or bathroom placement.",
-                        "Adjust plot size or entrance side and regenerate.",
-                        "Open expert mode to inspect planning and validation details.",
+                        *( [named_edit_suggestion] if named_edit_suggestion else [] ),
+                        *quick_action_prompts,
+                        "show the planning and validation details for this layout",
                     ],
                 )
                 session.set_planning_context(
@@ -1547,7 +1719,22 @@ async def conversation_message(body: ConversationMessageRequest):
         if error:
             clarification_request = (result.get("parsed") or {}).get("clarification_needed")
             response_text = error
-            if not clarification_request:
+            generic_edit_openers = (
+                "can i make",
+                "make some changes",
+                "modify this",
+                "change this",
+                "refine this",
+                "edit this",
+            )
+            if (
+                not clarification_request
+                or (
+                    isinstance(clarification_request, str)
+                    and "couldn't understand your correction request" in clarification_request.lower()
+                    and any(phrase in body.message.lower() for phrase in generic_edit_openers)
+                )
+            ):
                 response_text = conversation_orchestrator.compose_contextual_reply(
                     user_message=body.message,
                     session=session,
@@ -1555,6 +1742,11 @@ async def conversation_message(body: ConversationMessageRequest):
                     room_program=session.room_program,
                     zoning_plan=session.zoning_plan,
                 )
+                clarification_request = None
+            editable_rooms = _editable_room_labels(session.current_spec, session.designs[-1].to_dict() if session.designs else None)
+            room_name_hint = None
+            if editable_rooms:
+                room_name_hint = "Use the room labels from the current plan, for example: `" + "`, `".join(editable_rooms[:6]) + "`."
             reply_payload = conversation_orchestrator.build_reply_payload(
                 session=session,
                 semantic_spec=session.semantic_spec,
@@ -1563,6 +1755,7 @@ async def conversation_message(body: ConversationMessageRequest):
                 clarification_request=clarification_request,
                 suggested_actions=[
                     "Name the room you want to move, resize, add, or remove.",
+                    *( [room_name_hint] if room_name_hint else [] ),
                     "If needed, refer to the latest generated layout and I will modify that version.",
                 ],
             )
@@ -1650,7 +1843,13 @@ async def conversation_message(body: ConversationMessageRequest):
             design_data = dict(execution)
             design_data["artifact_urls"] = _artifact_urls(design_data.get("artifact_paths"))
             new_rank = len(session.designs) + 1
-            session.add_design(design_data, rank=new_rank)
+            change_summary = _summarize_applied_changes(result.get("changes"))
+            session.add_design(
+                design_data,
+                rank=new_rank,
+                revision_of=target_design_index,
+                change_summary=change_summary or None,
+            )
 
             explained_designs = explain_ranked_designs([design_data], session.current_spec)
             comparison = generate_comparison_explanation(explained_designs)
@@ -1659,6 +1858,11 @@ async def conversation_message(body: ConversationMessageRequest):
             change_summary = _summarize_applied_changes(result.get("changes"))
             if change_summary:
                 response_parts.append(change_summary)
+            latest_revision = session.designs[-1].to_dict() if session.designs else None
+            if latest_revision and latest_revision.get("revision_number", 1) > 1:
+                response_parts.append(
+                    f"This is revision `{latest_revision['revision_number']}` of the current layout."
+                )
             response_parts.append(
                 _build_design_conversation_reply(
                     design_data=design_data,

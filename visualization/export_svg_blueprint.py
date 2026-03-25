@@ -45,6 +45,105 @@ DOOR_WIDTH_PX = 2.0
 WINDOW_WIDTH_PX = 1.8
 LEGEND_W = 160  # reserved px on right for legend
 
+STYLE_PRESET_DOCUMENT = "document"
+STYLE_PRESET_PRESENTATION_BLUEPRINT = "presentation_blueprint"
+
+THEME_DOCUMENT = {
+    "canvas_bg": "white",
+    "sheet_bg": "white",
+    "grid_major": "#e0e0e0",
+    "grid_minor": "#f1f5f9",
+    "outer_wall": "#263238",
+    "inner_wall": "#37474f",
+    "room_fill": None,
+    "room_fill_opacity": "1.0",
+    "label_primary": "#1a237e",
+    "label_secondary": "#37474f",
+    "dimension": "#455a64",
+    "corridor_stroke": "#78909c",
+    "corridor_label": "#607d8b",
+    "door_gap": "white",
+    "door_leaf": "#37474f",
+    "door_arc": "#455a64",
+    "window": "#039be5",
+    "window_tick": "#0288d1",
+    "entrance": "#d32f2f",
+    "legend_text": "#263238",
+    "legend_border": "#37474f",
+    "footer_bg": "#263238",
+    "footer_text": "white",
+    "footer_muted": "#b0bec5",
+    "title_banner_bg": None,
+    "title_banner_text": "#263238",
+    "title_banner_rule": "#90a4ae",
+    "compass": "#263238",
+}
+
+THEME_PRESENTATION_BLUEPRINT = {
+    "canvas_bg": "#0b4ea2",
+    "sheet_bg": "#0b4ea2",
+    "grid_major": "rgba(255,255,255,0.16)",
+    "grid_minor": "rgba(255,255,255,0.06)",
+    "outer_wall": "#f8fbff",
+    "inner_wall": "#edf6ff",
+    "room_fill": "#5ca1df",
+    "room_fill_opacity": "0.15",
+    "label_primary": "#ffffff",
+    "label_secondary": "#dbeafe",
+    "dimension": "#dbeafe",
+    "corridor_stroke": "#dbeafe",
+    "corridor_label": "#e2e8f0",
+    "door_gap": "#0b4ea2",
+    "door_leaf": "#f8fbff",
+    "door_arc": "#f8fbff",
+    "window": "#f8fbff",
+    "window_tick": "#dbeafe",
+    "entrance": "#fca5a5",
+    "legend_text": "#f8fbff",
+    "legend_border": "#dbeafe",
+    "footer_bg": "#083f84",
+    "footer_text": "#ffffff",
+    "footer_muted": "#dbeafe",
+    "title_banner_bg": "#0a458f",
+    "title_banner_text": "#ffffff",
+    "title_banner_rule": "#dbeafe",
+    "compass": "#ffffff",
+}
+
+_ACTIVE_THEME = dict(THEME_DOCUMENT)
+
+SYMBOL_VIEWBOX_SIZES = {
+    "door-swing": (90.0, 90.0),
+    "door-double": (180.0, 90.0),
+    "window": (100.0, 10.0),
+    "bed-double": (120.0, 160.0),
+    "bed-single": (72.0, 160.0),
+    "kitchen-counter": (240.0, 48.0),
+    "dining-table": (96.0, 64.0),
+    "chair": (40.0, 40.0),
+    "sofa": (160.0, 72.0),
+    "toilet": (56.0, 72.0),
+    "bathtub": (136.0, 56.0),
+    "wardrobe": (96.0, 48.0),
+    "north-arrow": (24.0, 40.0),
+}
+
+
+def _set_active_theme(style_preset: str) -> None:
+    global _ACTIVE_THEME
+    if style_preset == STYLE_PRESET_PRESENTATION_BLUEPRINT:
+        _ACTIVE_THEME = dict(THEME_PRESENTATION_BLUEPRINT)
+    else:
+        _ACTIVE_THEME = dict(THEME_DOCUMENT)
+
+
+def _theme(key: str):
+    return _ACTIVE_THEME.get(key)
+
+
+def _is_presentation_blueprint() -> bool:
+    return _ACTIVE_THEME.get("canvas_bg") == THEME_PRESENTATION_BLUEPRINT["canvas_bg"]
+
 # Zone-based fill colours (muted, architectural)
 ZONE_FILL = {
     "public":  "#e8f5e9",
@@ -133,17 +232,24 @@ def _svg_root(width_px: float, height_px: float) -> Element:
         "width": str(int(width_px)),
         "height": str(int(height_px)),
         "viewBox": f"0 0 {int(width_px)} {int(height_px)}",
-        "font-family": "'Segoe UI', Helvetica, Arial, sans-serif",
+        "font-family": "'Bahnschrift', 'Segoe UI', Helvetica, Arial, sans-serif",
     })
     # Background
     SubElement(svg, "rect", {
-        "width": "100%", "height": "100%", "fill": "white",
+        "width": "100%", "height": "100%", "fill": _theme("canvas_bg") or "white",
     })
     return svg
 
 
 def _add_defs(svg: Element, boundary_polygon):
     defs = SubElement(svg, "defs")
+    corridor_bg = _theme("sheet_bg") if _is_presentation_blueprint() else "#f5f5f5"
+    corridor_hatch = _theme("corridor_stroke") if _is_presentation_blueprint() else "#bdbdbd"
+    symbol_stroke = _theme("door_arc") if _is_presentation_blueprint() else "#78909c"
+    furniture_stroke = _theme("inner_wall") if _is_presentation_blueprint() else "#666"
+    furniture_fill = "none" if _is_presentation_blueprint() else "#e0e0e0"
+    furniture_fill_light = "none" if _is_presentation_blueprint() else "#f5f5f5"
+    accent_color = _theme("window") if _is_presentation_blueprint() else "#2196f3"
 
     # ── Existing patterns ──────────────────────────────────────────────────
     # Hatch pattern for corridors
@@ -153,18 +259,19 @@ def _add_defs(svg: Element, boundary_polygon):
         "width": "8", "height": "8",
     })
     SubElement(patt, "rect", {
-        "width": "8", "height": "8", "fill": "#f5f5f5",
+        "width": "8", "height": "8", "fill": corridor_bg,
     })
     SubElement(patt, "path", {
         "d": "M0,8 l8,-8 M-2,2 l4,-4 M6,10 l4,-4",
-        "stroke": "#bdbdbd", "stroke-width": "0.5",
+        "stroke": corridor_hatch, "stroke-width": "0.5",
     })
 
     # Drop shadow
     filt = SubElement(defs, "filter", {"id": "shadow", "x": "-2%", "y": "-2%",
                                         "width": "104%", "height": "104%"})
     SubElement(filt, "feDropShadow", {
-        "dx": "1", "dy": "1", "stdDeviation": "2", "flood-opacity": "0.15",
+        "dx": "1", "dy": "1", "stdDeviation": "2",
+        "flood-opacity": "0.05" if _is_presentation_blueprint() else "0.15",
     })
 
     # ── Symbol Library ─────────────────────────────────────────────────────
@@ -178,7 +285,7 @@ def _add_defs(svg: Element, boundary_polygon):
     SubElement(door_symbol, "path", {
         "d": "M 0,0 Q 90,0 90,90",
         "fill": "none",
-        "stroke": "#78909c",
+        "stroke": symbol_stroke,
         "stroke-width": "0.8",
         "stroke-dasharray": "3,2",
     })
@@ -192,7 +299,7 @@ def _add_defs(svg: Element, boundary_polygon):
     SubElement(double_door, "path", {
         "d": "M 0,0 Q 90,0 90,90 M 180,0 Q 90,0 90,90",
         "fill": "none",
-        "stroke": "#78909c",
+        "stroke": symbol_stroke,
         "stroke-width": "0.8",
         "stroke-dasharray": "3,2",
     })
@@ -205,11 +312,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(window_symbol, "rect", {
         "x": "0", "y": "3", "width": "100", "height": "4",
-        "fill": "none", "stroke": "#2196f3", "stroke-width": "1.5"
+        "fill": "none", "stroke": accent_color, "stroke-width": "1.5"
     })
     SubElement(window_symbol, "line", {
         "x1": "50", "y1": "3", "x2": "50", "y2": "7",
-        "stroke": "#2196f3", "stroke-width": "1"
+        "stroke": accent_color, "stroke-width": "1"
     })
 
     # ── Furniture Symbols ──────────────────────────────────────────────────
@@ -222,11 +329,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(bed_double, "rect", {
         "x": "5", "y": "5", "width": "110", "height": "150",
-        "fill": "#e0e0e0", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill, "stroke": furniture_stroke, "stroke-width": "1"
     })
     SubElement(bed_double, "rect", {  # Headboard
         "x": "0", "y": "0", "width": "120", "height": "20",
-        "fill": "#bdbdbd", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": furniture_stroke, "stroke-width": "1"
     })
 
     # Single bed (0.9m x 2.0m)
@@ -237,11 +344,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(bed_single, "rect", {
         "x": "5", "y": "5", "width": "62", "height": "150",
-        "fill": "#e0e0e0", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill, "stroke": furniture_stroke, "stroke-width": "1"
     })
     SubElement(bed_single, "rect", {  # Headboard
         "x": "0", "y": "0", "width": "72", "height": "20",
-        "fill": "#bdbdbd", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": furniture_stroke, "stroke-width": "1"
     })
 
     # Kitchen counter with sink
@@ -252,18 +359,18 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(kitchen_counter, "rect", {
         "x": "0", "y": "0", "width": "240", "height": "48",
-        "fill": "#f5f5f5", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": furniture_stroke, "stroke-width": "1"
     })
     # Sink
     SubElement(kitchen_counter, "circle", {
         "cx": "60", "cy": "24", "r": "15",
-        "fill": "none", "stroke": "#2196f3", "stroke-width": "1"
+        "fill": "none", "stroke": accent_color, "stroke-width": "1"
     })
     # Stove burners
     for i, x in enumerate([140, 170, 200, 230]):
         SubElement(kitchen_counter, "circle", {
             "cx": str(x), "cy": "24", "r": "8",
-            "fill": "none", "stroke": "#ff5722", "stroke-width": "1"
+            "fill": "none", "stroke": furniture_stroke, "stroke-width": "1"
         })
 
     # Dining table (1.2m x 0.8m)
@@ -274,7 +381,7 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(dining_table, "rect", {
         "x": "0", "y": "0", "width": "96", "height": "64",
-        "fill": "#ddd", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill, "stroke": furniture_stroke, "stroke-width": "1"
     })
 
     # Chair (0.5m x 0.5m)
@@ -285,11 +392,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(chair, "rect", {
         "x": "5", "y": "5", "width": "30", "height": "30",
-        "fill": "#f0f0f0", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": furniture_stroke, "stroke-width": "1"
     })
     SubElement(chair, "rect", {  # Backrest
         "x": "5", "y": "0", "width": "30", "height": "10",
-        "fill": "#e0e0e0", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill, "stroke": furniture_stroke, "stroke-width": "1"
     })
 
     # Sofa (2.0m x 0.9m)
@@ -300,11 +407,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(sofa, "rect", {
         "x": "0", "y": "10", "width": "160", "height": "52",
-        "fill": "#e8e8e8", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill, "stroke": furniture_stroke, "stroke-width": "1"
     })
     SubElement(sofa, "rect", {  # Backrest
         "x": "0", "y": "0", "width": "160", "height": "20",
-        "fill": "#d0d0d0", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": furniture_stroke, "stroke-width": "1"
     })
 
     # Toilet
@@ -315,11 +422,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(toilet, "rect", {
         "x": "8", "y": "0", "width": "40", "height": "50",
-        "fill": "white", "stroke": "#2196f3", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": accent_color, "stroke-width": "1"
     })
     SubElement(toilet, "rect", {  # Tank
         "x": "12", "y": "52", "width": "32", "height": "20",
-        "fill": "white", "stroke": "#2196f3", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": accent_color, "stroke-width": "1"
     })
 
     # Bathtub (1.7m x 0.7m)
@@ -330,7 +437,7 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(bathtub, "rect", {
         "x": "0", "y": "0", "width": "136", "height": "56",
-        "fill": "white", "stroke": "#2196f3", "stroke-width": "1.5"
+        "fill": furniture_fill_light, "stroke": accent_color, "stroke-width": "1.5"
     })
 
     # Wardrobe (1.2m x 0.6m)
@@ -341,16 +448,16 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(wardrobe, "rect", {
         "x": "0", "y": "0", "width": "96", "height": "48",
-        "fill": "#f8f8f8", "stroke": "#666", "stroke-width": "1"
+        "fill": furniture_fill_light, "stroke": furniture_stroke, "stroke-width": "1"
     })
     # Door handles
     SubElement(wardrobe, "circle", {
         "cx": "24", "cy": "24", "r": "2",
-        "fill": "#666"
+        "fill": furniture_stroke
     })
     SubElement(wardrobe, "circle", {
         "cx": "72", "cy": "24", "r": "2",
-        "fill": "#666"
+        "fill": furniture_stroke
     })
 
     # ── Directional arrow for layout orientation ──────────────────────────
@@ -361,11 +468,11 @@ def _add_defs(svg: Element, boundary_polygon):
     })
     SubElement(north_arrow, "path", {
         "d": "M 12,4 L 8,16 L 12,12 L 16,16 Z",
-        "fill": "#333", "stroke": "#333", "stroke-width": "1"
+        "fill": _theme("compass"), "stroke": _theme("compass"), "stroke-width": "1"
     })
     SubElement(north_arrow, "text", {
         "x": "12", "y": "32", "text-anchor": "middle",
-        "font-family": "Arial", "font-size": "8", "fill": "#333"
+        "font-family": "Arial", "font-size": "8", "fill": _theme("compass")
     })
     north_text = SubElement(north_arrow, "tspan")
     north_text.text = "N"
@@ -376,7 +483,8 @@ def _add_defs(svg: Element, boundary_polygon):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _use_symbol(g: Element, symbol_id: str, x: float, y: float,
-                rotation: float = 0, scale: float = 1.0, **attrs) -> Element:
+                rotation: float = 0, scale: float = 1.0,
+                rotate_about: str = "origin", **attrs) -> Element:
     """Place a symbol from the library at specified coordinates.
 
     Parameters
@@ -390,19 +498,131 @@ def _use_symbol(g: Element, symbol_id: str, x: float, y: float,
     scale : float
         Scaling factor
     """
-    transform_parts = [f"translate({x:.1f},{y:.1f})"]
-    if rotation != 0:
-        transform_parts.append(f"rotate({rotation})")
-    if scale != 1.0:
-        transform_parts.append(f"scale({scale})")
-
+    native_w, native_h = SYMBOL_VIEWBOX_SIZES.get(symbol_id, (100.0, 100.0))
     use_attrs = {
         "href": f"#{symbol_id}",
-        "transform": " ".join(transform_parts)
+        "x": f"{x:.1f}",
+        "y": f"{y:.1f}",
+        "width": f"{native_w * scale:.1f}",
+        "height": f"{native_h * scale:.1f}",
     }
+    if rotation != 0:
+        if rotate_about == "center":
+            cx = x + (native_w * scale) / 2.0
+            cy = y + (native_h * scale) / 2.0
+        else:
+            cx = x
+            cy = y
+        use_attrs["transform"] = f"rotate({rotation},{cx:.1f},{cy:.1f})"
     use_attrs.update(attrs)
 
     return SubElement(g, "use", use_attrs)
+
+
+def _fit_symbol_scale(symbol_id: str, max_w: float, max_h: float, *, max_scale: float = 1.0) -> float:
+    native_w, native_h = SYMBOL_VIEWBOX_SIZES.get(symbol_id, (100.0, 100.0))
+    if native_w <= 0 or native_h <= 0:
+        return 1.0
+    return max(0.0, min(max_scale, max_w / native_w, max_h / native_h))
+
+
+def _render_exit_segment(boundary_polygon, entrance_point, door_width_m: float = 1.0):
+    """Build a synthetic exit-door segment aligned to the displayed entrance side."""
+    if not boundary_polygon or not entrance_point:
+        return None
+
+    xs = [p[0] for p in boundary_polygon]
+    ys = [p[1] for p in boundary_polygon]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    ex, ey = entrance_point
+    half = door_width_m / 2.0
+    tol = 1e-6
+
+    if abs(ey - min_y) <= tol:  # North
+        cx = max(min_x + half, min(max_x - half, ex))
+        return ((cx - half, min_y), (cx + half, min_y))
+    if abs(ey - max_y) <= tol:  # South
+        cx = max(min_x + half, min(max_x - half, ex))
+        return ((cx - half, max_y), (cx + half, max_y))
+    if abs(ex - min_x) <= tol:  # West
+        cy = max(min_y + half, min(max_y - half, ey))
+        return ((min_x, cy - half), (min_x, cy + half))
+    if abs(ex - max_x) <= tol:  # East
+        cy = max(min_y + half, min(max_y - half, ey))
+        return ((max_x, cy - half), (max_x, cy + half))
+    return None
+
+
+def _segments_match(segment_a, segment_b, tol: float = 1e-6) -> bool:
+    if not segment_a or not segment_b:
+        return False
+    (ax1, ay1), (ax2, ay2) = segment_a
+    (bx1, by1), (bx2, by2) = segment_b
+    same_order = (
+        abs(ax1 - bx1) <= tol and abs(ay1 - by1) <= tol and
+        abs(ax2 - bx2) <= tol and abs(ay2 - by2) <= tol
+    )
+    reverse_order = (
+        abs(ax1 - bx2) <= tol and abs(ay1 - by2) <= tol and
+        abs(ax2 - bx1) <= tol and abs(ay2 - by1) <= tol
+    )
+    return same_order or reverse_order
+
+
+def _segment_on_boundary(segment, boundary_polygon, tol: float = 0.02) -> bool:
+    if not segment or not boundary_polygon:
+        return False
+    xs = [p[0] for p in boundary_polygon]
+    ys = [p[1] for p in boundary_polygon]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    (x1, y1), (x2, y2) = segment
+
+    if abs(x1 - x2) <= tol:
+        return abs(x1 - min_x) <= tol or abs(x1 - max_x) <= tol
+    if abs(y1 - y2) <= tol:
+        return abs(y1 - min_y) <= tol or abs(y1 - max_y) <= tol
+    return False
+
+
+def _room_door_clearances(room, clearance_px: float = 42.0, tol: float = 0.08) -> Dict[str, float]:
+    clearances = {"left": 0.0, "right": 0.0, "top": 0.0, "bottom": 0.0}
+    if not getattr(room, "polygon", None):
+        return clearances
+
+    xs = [p[0] for p in room.polygon]
+    ys = [p[1] for p in room.polygon]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+
+    for door in getattr(room, "doors", []) or []:
+        segment = getattr(door, "segment", None)
+        if not segment:
+            continue
+        (x1, y1), (x2, y2) = segment
+        door_clearance = max(clearance_px, _px(getattr(door, "width", 0.9)) + 10.0)
+        if abs(x1 - x2) <= tol:
+            if abs(x1 - min_x) <= tol:
+                clearances["left"] = max(clearances["left"], door_clearance)
+            elif abs(x1 - max_x) <= tol:
+                clearances["right"] = max(clearances["right"], door_clearance)
+        elif abs(y1 - y2) <= tol:
+            if abs(y1 - min_y) <= tol:
+                clearances["top"] = max(clearances["top"], door_clearance)
+            elif abs(y1 - max_y) <= tol:
+                clearances["bottom"] = max(clearances["bottom"], door_clearance)
+    return clearances
+
+
+def _prefer_side(primary: str, secondary: str, clearances: Dict[str, float], tolerance_px: float = 6.0) -> str:
+    primary_clearance = clearances.get(primary, 0.0)
+    secondary_clearance = clearances.get(secondary, 0.0)
+    if primary_clearance + tolerance_px < secondary_clearance:
+        return primary
+    if secondary_clearance + tolerance_px < primary_clearance:
+        return secondary
+    return primary
 
 
 def _place_furniture_in_room(g: Element, room, ox: float, oy: float,
@@ -428,159 +648,299 @@ def _place_furniture_in_room(g: Element, room, ox: float, oy: float,
     svg_top = oy + _px(room_top)
     svg_width = _px(room_width)
     svg_height = _px(room_height)
+    pad = 12.0
+    door_clearances = _room_door_clearances(room)
 
     room_type = room.room_type
 
     if room_type == "Bedroom":
-        # Place bed along longest wall, wardrobe on opposite side
+        if svg_width < 150 or svg_height < 110:
+            return
         if room_width > room_height:  # Horizontal layout
-            # Bed along top wall
-            bed_x = svg_center_x - 60  # Half bed width (120px / 2)
-            bed_y = svg_top + 10
-            _use_symbol(g, "bed-double", bed_x, bed_y)
-
-            # Wardrobe along bottom wall
-            if svg_height > 100:  # Room tall enough
-                wardrobe_x = svg_center_x - 48  # Half wardrobe width
-                wardrobe_y = svg_top + svg_height - 58  # 48px height + margin
-                _use_symbol(g, "wardrobe", wardrobe_x, wardrobe_y)
-        else:  # Vertical layout
-            # Bed along left wall
-            bed_x = svg_left + 10
-            bed_y = svg_center_y - 80  # Half bed height
-            _use_symbol(g, "bed-double", bed_x, bed_y)
-
-            # Wardrobe along right wall if room is wide enough
-            if svg_width > 150:
-                wardrobe_x = svg_left + svg_width - 58
-                wardrobe_y = svg_center_y - 24
-                _use_symbol(g, "wardrobe", wardrobe_x, wardrobe_y, rotation=90)
+            bed_scale = _fit_symbol_scale("bed-double", svg_width - 2 * pad, svg_height * 0.62, max_scale=0.9)
+            if bed_scale >= 0.55:
+                bed_w = SYMBOL_VIEWBOX_SIZES["bed-double"][0] * bed_scale
+                bed_h = SYMBOL_VIEWBOX_SIZES["bed-double"][1] * bed_scale
+                bed_x = svg_center_x - bed_w / 2
+                bed_side = _prefer_side("top", "bottom", door_clearances)
+                if bed_side == "top":
+                    bed_y = svg_top + pad + door_clearances["top"]
+                else:
+                    bed_y = svg_top + svg_height - bed_h - pad - door_clearances["bottom"]
+                _use_symbol(g, "bed-double", bed_x, bed_y, scale=bed_scale)
+                remaining_h = svg_height - bed_h - (2 * pad)
+                if remaining_h >= 42 and svg_width >= 180:
+                    wardrobe_scale = _fit_symbol_scale("wardrobe", svg_width * 0.55, remaining_h, max_scale=0.9)
+                    if wardrobe_scale >= 0.6:
+                        wardrobe_w = SYMBOL_VIEWBOX_SIZES["wardrobe"][0] * wardrobe_scale
+                        wardrobe_h = SYMBOL_VIEWBOX_SIZES["wardrobe"][1] * wardrobe_scale
+                        wardrobe_x = svg_center_x - wardrobe_w / 2
+                        if bed_side == "top":
+                            wardrobe_y = svg_top + svg_height - wardrobe_h - pad - door_clearances["bottom"]
+                        else:
+                            wardrobe_y = svg_top + pad + door_clearances["top"]
+                        _use_symbol(g, "wardrobe", wardrobe_x, wardrobe_y, scale=wardrobe_scale)
+        else:
+            bed_scale = _fit_symbol_scale("bed-double", svg_width * 0.78, svg_height - 2 * pad, max_scale=0.82)
+            if bed_scale >= 0.5:
+                bed_w = SYMBOL_VIEWBOX_SIZES["bed-double"][0] * bed_scale
+                bed_h = SYMBOL_VIEWBOX_SIZES["bed-double"][1] * bed_scale
+                bed_side = _prefer_side("left", "right", door_clearances)
+                if bed_side == "left":
+                    bed_x = svg_left + pad + door_clearances["left"]
+                else:
+                    bed_x = svg_left + svg_width - bed_w - pad - door_clearances["right"]
+                bed_y = svg_center_y - bed_h / 2
+                _use_symbol(g, "bed-double", bed_x, bed_y, scale=bed_scale)
+                remaining_w = svg_width - bed_w - (2 * pad)
+                if remaining_w >= 36 and svg_height >= 160:
+                    wardrobe_scale = _fit_symbol_scale("wardrobe", remaining_w, svg_height * 0.45, max_scale=0.85)
+                    if wardrobe_scale >= 0.55:
+                        wardrobe_w = SYMBOL_VIEWBOX_SIZES["wardrobe"][0] * wardrobe_scale
+                        wardrobe_h = SYMBOL_VIEWBOX_SIZES["wardrobe"][1] * wardrobe_scale
+                        if bed_side == "left":
+                            wardrobe_x = svg_left + svg_width - wardrobe_w - pad - door_clearances["right"]
+                        else:
+                            wardrobe_x = svg_left + pad + door_clearances["left"]
+                        wardrobe_y = svg_center_y - wardrobe_h / 2
+                        _use_symbol(g, "wardrobe", wardrobe_x, wardrobe_y, scale=wardrobe_scale)
 
     elif room_type == "Kitchen":
-        # Place counter along longest wall
-        if room_width > room_height and svg_width > 200:  # Horizontal kitchen
-            counter_x = svg_center_x - 120  # Half counter width
-            counter_y = svg_top + 10
-            _use_symbol(g, "kitchen-counter", counter_x, counter_y)
-        elif svg_height > 150:  # Vertical kitchen
-            counter_x = svg_left + 10
-            counter_y = svg_center_y - 24
-            _use_symbol(g, "kitchen-counter", counter_x, counter_y, rotation=90)
+        if svg_width < 110 or svg_height < 90:
+            return
+        if room_width > room_height and svg_width > 180:
+            counter_scale = _fit_symbol_scale("kitchen-counter", svg_width - 2 * pad, svg_height * 0.35, max_scale=0.82)
+            if counter_scale >= 0.4:
+                counter_w = SYMBOL_VIEWBOX_SIZES["kitchen-counter"][0] * counter_scale
+                counter_x = svg_center_x - counter_w / 2
+                counter_side = _prefer_side("top", "bottom", door_clearances)
+                if counter_side == "top":
+                    counter_y = svg_top + pad + door_clearances["top"]
+                else:
+                    counter_y = svg_top + svg_height - (SYMBOL_VIEWBOX_SIZES["kitchen-counter"][1] * counter_scale) - pad - door_clearances["bottom"]
+                _use_symbol(g, "kitchen-counter", counter_x, counter_y, scale=counter_scale)
+        elif svg_height > 170 and svg_width > 120:
+            counter_scale = _fit_symbol_scale("kitchen-counter", svg_height - 2 * pad, svg_width * 0.42, max_scale=0.72)
+            if counter_scale >= 0.38:
+                counter_w = SYMBOL_VIEWBOX_SIZES["kitchen-counter"][0] * counter_scale
+                counter_h = SYMBOL_VIEWBOX_SIZES["kitchen-counter"][1] * counter_scale
+                counter_side = _prefer_side("left", "right", door_clearances)
+                if counter_side == "left":
+                    counter_x = svg_left + pad + door_clearances["left"]
+                else:
+                    counter_x = svg_left + svg_width - counter_h - pad - door_clearances["right"]
+                counter_y = svg_center_y - counter_w / 2
+                _use_symbol(
+                    g,
+                    "kitchen-counter",
+                    counter_x,
+                    counter_y,
+                    rotation=90,
+                    scale=counter_scale,
+                    rotate_about="center",
+                )
 
     elif room_type == "LivingRoom" or room_type == "DrawingRoom":
-        # Place sofa and possibly dining table
-        if svg_width > 180 and svg_height > 100:
-            # Sofa against one wall
-            sofa_x = svg_center_x - 80  # Half sofa width
-            sofa_y = svg_top + 20
-            _use_symbol(g, "sofa", sofa_x, sofa_y)
-
-            # Dining table if room is large enough
-            if svg_width > 250 and svg_height > 150:
-                table_x = svg_center_x - 48  # Half table width
-                table_y = svg_top + svg_height - 84  # Table height + margin
-                _use_symbol(g, "dining-table", table_x, table_y)
-
-                # Chairs around table
-                for i, (dx, dy) in enumerate([(-60, -20), (60, -20), (-60, 44), (60, 44)]):
-                    if svg_left + dx + 20 > svg_left and svg_top + table_y + dy + 20 > svg_top:
-                        _use_symbol(g, "chair", table_x + dx, table_y + dy)
+        if svg_width < 170 or svg_height < 100:
+            return
+        sofa_scale = _fit_symbol_scale("sofa", svg_width * 0.65, svg_height * 0.3, max_scale=0.82)
+        if sofa_scale >= 0.45:
+            sofa_w = SYMBOL_VIEWBOX_SIZES["sofa"][0] * sofa_scale
+            sofa_h = SYMBOL_VIEWBOX_SIZES["sofa"][1] * sofa_scale
+            sofa_side = _prefer_side("top", "bottom", door_clearances)
+            if sofa_side == "top":
+                sofa_y = svg_top + pad + door_clearances["top"]
+            else:
+                sofa_y = svg_top + svg_height - sofa_h - pad - door_clearances["bottom"]
+            sofa_x = svg_center_x - sofa_w / 2
+            _use_symbol(g, "sofa", sofa_x, sofa_y, scale=sofa_scale)
 
     elif room_type == "DiningRoom":
         # Dining table with chairs
         if svg_width > 120 and svg_height > 100:
-            table_x = svg_center_x - 48
-            table_y = svg_center_y - 32
-            _use_symbol(g, "dining-table", table_x, table_y)
+            table_scale = _fit_symbol_scale("dining-table", svg_width * 0.45, svg_height * 0.35, max_scale=0.9)
+            if table_scale < 0.5:
+                return
+            table_w = SYMBOL_VIEWBOX_SIZES["dining-table"][0] * table_scale
+            table_h = SYMBOL_VIEWBOX_SIZES["dining-table"][1] * table_scale
+            table_x = svg_center_x - table_w / 2
+            table_y = svg_center_y - table_h / 2
+            _use_symbol(g, "dining-table", table_x, table_y, scale=table_scale)
 
             # Chairs around table
             for i, (dx, dy) in enumerate([(-60, -20), (60, -20), (-60, 44), (60, 44)]):
-                chair_x = table_x + dx
-                chair_y = table_y + dy
+                chair_scale = min(table_scale, 0.8)
+                chair_w = SYMBOL_VIEWBOX_SIZES["chair"][0] * chair_scale
+                chair_h = SYMBOL_VIEWBOX_SIZES["chair"][1] * chair_scale
+                chair_x = table_x + (dx * chair_scale)
+                chair_y = table_y + (dy * chair_scale)
                 # Check bounds
-                if (chair_x > svg_left + 10 and chair_x + 40 < svg_left + svg_width - 10 and
-                    chair_y > svg_top + 10 and chair_y + 40 < svg_top + svg_height - 10):
-                    _use_symbol(g, "chair", chair_x, chair_y)
+                if (chair_x > svg_left + 10 and chair_x + chair_w < svg_left + svg_width - 10 and
+                    chair_y > svg_top + 10 and chair_y + chair_h < svg_top + svg_height - 10):
+                    _use_symbol(g, "chair", chair_x, chair_y, scale=chair_scale)
 
     elif room_type == "Bathroom" or room_type == "WC":
-        # Place toilet, and bathtub if space allows
-        if svg_width > 60 and svg_height > 80:
-            # Toilet in corner
-            toilet_x = svg_left + 10
-            toilet_y = svg_top + 10
-            _use_symbol(g, "toilet", toilet_x, toilet_y)
+        if svg_width < 95 or svg_height < 95:
+            return
+        toilet_scale = _fit_symbol_scale("toilet", svg_width * 0.48, svg_height * 0.5, max_scale=0.8)
+        if toilet_scale >= 0.45:
+            toilet_w = SYMBOL_VIEWBOX_SIZES["toilet"][0] * toilet_scale
+            toilet_h = SYMBOL_VIEWBOX_SIZES["toilet"][1] * toilet_scale
+            toilet_side_x = _prefer_side("left", "right", door_clearances)
+            toilet_side_y = _prefer_side("top", "bottom", door_clearances)
+            toilet_x = svg_left + pad + door_clearances["left"]
+            if toilet_side_x == "right":
+                toilet_x = svg_left + svg_width - toilet_w - pad - door_clearances["right"]
+            toilet_y = svg_top + pad + door_clearances["top"]
+            if toilet_side_y == "bottom":
+                toilet_y = svg_top + svg_height - toilet_h - pad - door_clearances["bottom"]
+            _use_symbol(g, "toilet", toilet_x, toilet_y, scale=toilet_scale)
 
-            # Bathtub if room is large enough
-            if svg_width > 150 and svg_height > 100:
-                tub_x = svg_left + svg_width - 146  # 136px width + margin
-                tub_y = svg_top + 10
-                _use_symbol(g, "bathtub", tub_x, tub_y)
+        if svg_width > 170 and svg_height > 110:
+            tub_scale = _fit_symbol_scale("bathtub", svg_width * 0.58, svg_height * 0.28, max_scale=0.8)
+            if tub_scale >= 0.4:
+                tub_w = SYMBOL_VIEWBOX_SIZES["bathtub"][0] * tub_scale
+                tub_x = svg_left + svg_width - tub_w - pad
+                tub_y = svg_top + pad
+                _use_symbol(g, "bathtub", tub_x, tub_y, scale=tub_scale)
+
+
+def _door_room_family(room) -> str:
+    room_type = getattr(room, "room_type", "") or ""
+    if room_type in {"LivingRoom", "DrawingRoom", "DiningRoom", "Lobby", "Foyer"}:
+        return "public"
+    if room_type in {"Bedroom", "Study", "DressingArea", "PrayerRoom"}:
+        return "private"
+    if room_type in {"Bathroom", "WC", "Toilet"}:
+        return "sanitary"
+    if room_type in {"Kitchen", "Store", "Utility", "Pantry", "Laundry", "Garage"}:
+        return "service"
+    return "other"
+
+
+def _door_room_center_px(room, ox: float, oy: float) -> Tuple[float, float]:
+    min_x, min_y, max_x, max_y = _room_bbox(room)
+    return (
+        ox + _px((min_x + max_x) / 2.0),
+        oy + _px((min_y + max_y) / 2.0),
+    )
+
+
+def _select_door_swing_room(door):
+    if getattr(door, "door_type", "") == "exit":
+        return None
+
+    room_a = getattr(door, "room_a", None)
+    room_b = getattr(door, "room_b", None)
+    if room_a is None:
+        return room_b
+    if room_b is None:
+        return room_a
+
+    priority = {
+        "sanitary": 4.0,
+        "private": 3.0,
+        "service": 2.0,
+        "other": 1.5,
+        "public": 1.0,
+    }
+    family_a = _door_room_family(room_a)
+    family_b = _door_room_family(room_b)
+    if priority[family_a] != priority[family_b]:
+        return room_a if priority[family_a] > priority[family_b] else room_b
+
+    area_a = float(getattr(room_a, "final_area", 0.0) or getattr(room_a, "requested_area", 0.0) or 0.0)
+    area_b = float(getattr(room_b, "final_area", 0.0) or getattr(room_b, "requested_area", 0.0) or 0.0)
+    return room_a if area_a <= area_b else room_b
+
+
+def _door_swing_geometry(door, ox: float, oy: float):
+    if getattr(door, "segment", None) is None:
+        return None
+
+    (sx1, sy1), (sx2, sy2) = door.segment
+    p1 = (ox + _px(sx1), oy + _px(sy1))
+    p2 = (ox + _px(sx2), oy + _px(sy2))
+    door_len = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+    if door_len < 2.0:
+        return None
+
+    horizontal = abs(p2[0] - p1[0]) >= abs(p2[1] - p1[1])
+    midpoint = ((p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0)
+    swing_room = _select_door_swing_room(door)
+
+    if swing_room is not None:
+        center_x, center_y = _door_room_center_px(swing_room, ox, oy)
+        if horizontal:
+            hinge = p1 if abs(center_x - p1[0]) <= abs(center_x - p2[0]) else p2
+            free = p2 if hinge == p1 else p1
+            sign = 1.0 if center_y >= midpoint[1] else -1.0
+            open_end = (hinge[0], hinge[1] + sign * door_len)
+        else:
+            hinge = p1 if abs(center_y - p1[1]) <= abs(center_y - p2[1]) else p2
+            free = p2 if hinge == p1 else p1
+            sign = 1.0 if center_x >= midpoint[0] else -1.0
+            open_end = (hinge[0] + sign * door_len, hinge[1])
+    else:
+        hinge = p1
+        free = p2
+        if horizontal:
+            open_end = (hinge[0], hinge[1] - door_len)
+        else:
+            open_end = (hinge[0] - door_len, hinge[1])
+
+    return {
+        "opening_start": p1,
+        "opening_end": p2,
+        "hinge": hinge,
+        "free": free,
+        "open_end": open_end,
+    }
+
+
+def _render_room_aware_door(g: Element, door, ox: float, oy: float):
+    geom = _door_swing_geometry(door, ox, oy)
+    if geom is None:
+        return
+
+    p1 = geom["opening_start"]
+    p2 = geom["opening_end"]
+    hinge = geom["hinge"]
+    free = geom["free"]
+    open_end = geom["open_end"]
+
+    SubElement(g, "line", {
+        "x1": f"{p1[0]:.1f}", "y1": f"{p1[1]:.1f}",
+        "x2": f"{p2[0]:.1f}", "y2": f"{p2[1]:.1f}",
+        "stroke": _theme("door_gap"),
+        "stroke-width": str(WALL_WIDTH + 2),
+    })
+
+    is_exit = getattr(door, "door_type", "") == "exit"
+    leaf_stroke = _theme("entrance") if is_exit else _theme("door_leaf")
+    arc_stroke = _theme("entrance") if is_exit else _theme("door_arc")
+
+    SubElement(g, "line", {
+        "x1": f"{hinge[0]:.1f}", "y1": f"{hinge[1]:.1f}",
+        "x2": f"{open_end[0]:.1f}", "y2": f"{open_end[1]:.1f}",
+        "stroke": leaf_stroke,
+        "stroke-width": "1.8" if is_exit else str(DOOR_WIDTH_PX),
+        "stroke-linecap": "round",
+    })
+
+    SubElement(g, "path", {
+        "d": f"M{free[0]:.1f},{free[1]:.1f} Q{hinge[0]:.1f},{hinge[1]:.1f} {open_end[0]:.1f},{open_end[1]:.1f}",
+        "fill": "none",
+        "stroke": arc_stroke,
+        "stroke-width": "1.8" if is_exit else "1.4",
+        "stroke-dasharray": "5,3" if is_exit else "4,3",
+        "stroke-linecap": "round",
+    })
 
 
 def _enhanced_draw_door(g: Element, door, ox: float, oy: float, use_symbols: bool = True):
     """Enhanced door rendering with optional symbol library usage."""
-    if door.segment is None:
-        return
-
-    (sx1, sy1), (sx2, sy2) = door.segment
-    px1 = ox + _px(sx1)
-    py1 = oy + _px(sy1)
-    px2 = ox + _px(sx2)
-    py2 = oy + _px(sy2)
-
-    # White gap (erase wall)
-    SubElement(g, "line", {
-        "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
-        "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
-        "stroke": "white", "stroke-width": str(WALL_WIDTH + 2),
-    })
-
-    # Door leaf lines
-    SubElement(g, "line", {
-        "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
-        "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
-        "stroke": "#37474f", "stroke-width": str(DOOR_WIDTH_PX),
-    })
-
-    if use_symbols:
-        # Use symbol for door swing arc
-        door_len = math.hypot(px2 - px1, py2 - py1)
-        if door_len >= 2:
-            # Determine rotation angle
-            dx = px2 - px1
-            dy = py2 - py1
-            angle = math.degrees(math.atan2(dy, dx))
-
-            # Check if it's wide enough for double door
-            if door_len > 120:  # > 1.5m door width
-                _use_symbol(g, "door-double", px1, py1, rotation=angle,
-                           scale=door_len/180)
-            else:
-                _use_symbol(g, "door-swing", px1, py1, rotation=angle,
-                           scale=door_len/90)
-    else:
-        # Fallback to original arc drawing
-        door_len = math.hypot(px2 - px1, py2 - py1)
-        if door_len < 2:
-            return
-        r = door_len
-        dx = px2 - px1
-        dy = py2 - py1
-
-        if abs(dy) > abs(dx):
-            arc_x = px1 + r
-            arc_y = py1
-        else:
-            arc_x = px1
-            arc_y = py1 - r
-
-        SubElement(g, "path", {
-            "d": f"M{px2:.1f},{py2:.1f} A{r:.1f},{r:.1f} 0 0 1 {arc_x:.1f},{arc_y:.1f}",
-            "fill": "none",
-            "stroke": "#78909c",
-            "stroke-width": "0.8",
-            "stroke-dasharray": "3,2",
-        })
+    _render_room_aware_door(g, door, ox, oy)
 
 
 
@@ -648,10 +1008,10 @@ def _draw_merged_walls(
         (x1, y1), (x2, y2) = item["segment"]
         wall_type = item.get("wall_type", "inner")
         if wall_type == "outer":
-            stroke = "#263238"
+            stroke = _theme("outer_wall")
             width = WALL_WIDTH
         else:
-            stroke = "#37474f"
+            stroke = _theme("inner_wall")
             width = INNER_WALL_WIDTH
 
         SubElement(g, "line", {
@@ -674,7 +1034,7 @@ def _draw_window(g: Element, segment, ox: float, oy: float):
     SubElement(g, "line", {
         "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
         "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
-        "stroke": "#039be5",
+        "stroke": _theme("window"),
         "stroke-width": str(WINDOW_WIDTH_PX),
         "stroke-linecap": "round",
     })
@@ -686,24 +1046,24 @@ def _draw_window(g: Element, segment, ox: float, oy: float):
         SubElement(g, "line", {
             "x1": f"{px1:.1f}", "y1": f"{py1 - tick:.1f}",
             "x2": f"{px1:.1f}", "y2": f"{py1 + tick:.1f}",
-            "stroke": "#0288d1", "stroke-width": "0.9",
+            "stroke": _theme("window_tick"), "stroke-width": "0.9",
         })
         SubElement(g, "line", {
             "x1": f"{px2:.1f}", "y1": f"{py2 - tick:.1f}",
             "x2": f"{px2:.1f}", "y2": f"{py2 + tick:.1f}",
-            "stroke": "#0288d1", "stroke-width": "0.9",
+            "stroke": _theme("window_tick"), "stroke-width": "0.9",
         })
     else:
         # Vertical window segment.
         SubElement(g, "line", {
             "x1": f"{px1 - tick:.1f}", "y1": f"{py1:.1f}",
             "x2": f"{px1 + tick:.1f}", "y2": f"{py1:.1f}",
-            "stroke": "#0288d1", "stroke-width": "0.9",
+            "stroke": _theme("window_tick"), "stroke-width": "0.9",
         })
         SubElement(g, "line", {
             "x1": f"{px2 - tick:.1f}", "y1": f"{py2:.1f}",
             "x2": f"{px2 + tick:.1f}", "y2": f"{py2:.1f}",
-            "stroke": "#0288d1", "stroke-width": "0.9",
+            "stroke": _theme("window_tick"), "stroke-width": "0.9",
         })
 
 
@@ -731,6 +1091,8 @@ def _draw_boundary_dims(g: Element, boundary_polygon, ox: float, oy: float, bw=N
         (ox + _px(x0), dim_y),
         (ox + _px(x1), dim_y),
         text=f"{bw:.2f} m",
+        color=_theme("dimension"),
+        text_color=_theme("dimension"),
     )
 
     # Right overall height
@@ -741,6 +1103,8 @@ def _draw_boundary_dims(g: Element, boundary_polygon, ox: float, oy: float, bw=N
         (dim_x, oy + _px(y1)),
         text=f"{bh:.2f} m",
         vertical=True,
+        color=_theme("dimension"),
+        text_color=_theme("dimension"),
     )
 
 
@@ -763,7 +1127,7 @@ def _draw_grid_overlay(g: Element, boundary_polygon, ox: float, oy: float,
         SubElement(g, "line", {
             "x1": f"{px:.1f}", "y1": f"{oy + _px(y0):.1f}",
             "x2": f"{px:.1f}", "y2": f"{oy + _px(y1):.1f}",
-            "stroke": "#e0e0e0", "stroke-width": "0.3",
+            "stroke": _theme("grid_major"), "stroke-width": "0.3",
         })
         m += step_m
 
@@ -773,7 +1137,7 @@ def _draw_grid_overlay(g: Element, boundary_polygon, ox: float, oy: float,
         SubElement(g, "line", {
             "x1": f"{ox + _px(x0):.1f}", "y1": f"{py:.1f}",
             "x2": f"{ox + _px(x1):.1f}", "y2": f"{py:.1f}",
-            "stroke": "#e0e0e0", "stroke-width": "0.3",
+            "stroke": _theme("grid_major"), "stroke-width": "0.3",
         })
         m += step_m
 
@@ -792,16 +1156,17 @@ def _draw_room(g: Element, room, ox: float, oy: float, zone: str = "",
     """
     if room.polygon is None:
         return
-    fill = _room_fill_color(room.room_type, zone)
+    fill = _theme("room_fill") or _room_fill_color(room.room_type, zone)
 
     # Room filled polygon
     d = _polygon_path(room.polygon, ox, oy)
     attrs = {
         "d": d,
         "fill": fill,
+        "fill-opacity": _theme("room_fill_opacity") or "1.0",
     }
     if draw_walls:
-        attrs["stroke"] = "#37474f"
+        attrs["stroke"] = _theme("inner_wall")
         attrs["stroke-width"] = str(INNER_WALL_WIDTH)
         attrs["stroke-linejoin"] = "miter"
     else:
@@ -830,27 +1195,30 @@ def _draw_room_label(g, room, ox: float, oy: float):
     area = w_m * h_m
 
     from xml.etree.ElementTree import SubElement
+    label_text = room.name.replace("_", " ").replace("LivingRoom", "Living Room").replace("DiningRoom", "Dining Room").upper()
     lbl = SubElement(g, "text", {
         "x": f"{cx:.1f}", "y": f"{cy - 4:.1f}",
         "text-anchor": "middle",
-        "font-size": "13",
+        "font-size": "14" if _is_presentation_blueprint() else "13",
         "font-weight": "700",
-        "fill": "#1a237e",
+        "fill": _theme("label_primary"),
     })
-    lbl.text = room.name.replace("_", " ")
+    lbl.text = label_text
 
     dim = SubElement(g, "text", {
         "x": f"{cx:.1f}", "y": f"{cy + 12:.1f}",
         "text-anchor": "middle",
         "font-size": "10",
-        "fill": "#37474f",
+        "fill": _theme("label_secondary"),
     })
-    dim.text = f"{area:.1f} sq.m"
+    dim.text = f"{w_m:.2f} m x {h_m:.2f} m"
 
 #  Door rendering (opening + swing arc)
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 def _draw_door(g: Element, door, ox: float, oy: float):
+    _render_room_aware_door(g, door, ox, oy)
+    return
     if door.segment is None:
         return
     (sx1, sy1), (sx2, sy2) = door.segment
@@ -863,14 +1231,14 @@ def _draw_door(g: Element, door, ox: float, oy: float):
     SubElement(g, "line", {
         "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
         "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
-        "stroke": "white", "stroke-width": str(WALL_WIDTH + 2),
+        "stroke": _theme("door_gap"), "stroke-width": str(WALL_WIDTH + 2),
     })
 
     # Door leaf lines
     SubElement(g, "line", {
         "x1": f"{px1:.1f}", "y1": f"{py1:.1f}",
         "x2": f"{px2:.1f}", "y2": f"{py2:.1f}",
-        "stroke": "#37474f", "stroke-width": str(DOOR_WIDTH_PX),
+        "stroke": _theme("door_leaf"), "stroke-width": str(DOOR_WIDTH_PX),
     })
 
     # Swing arc
@@ -893,7 +1261,7 @@ def _draw_door(g: Element, door, ox: float, oy: float):
         arc_y = py1 - r
 
     is_exit = getattr(door, "door_type", "") == "exit"
-    arc_stroke = "#d32f2f" if is_exit else "#455a64"
+    arc_stroke = _theme("entrance") if is_exit else _theme("door_arc")
     arc_width = "1.8" if is_exit else "1.5"
     arc_dash = "5,3" if is_exit else "4,3"
 
@@ -917,7 +1285,7 @@ def _draw_corridor(g: Element, corridor, ox: float, oy: float):
     SubElement(g, "path", {
         "d": d,
         "fill": "url(#corridor-hatch)",
-        "stroke": "#78909c",
+        "stroke": _theme("corridor_stroke"),
         "stroke-width": "1",
         "stroke-dasharray": "4,2",
     })
@@ -930,7 +1298,7 @@ def _draw_corridor(g: Element, corridor, ox: float, oy: float):
         lbl = SubElement(g, "text", {
             "x": f"{cx:.1f}", "y": f"{cy:.1f}",
             "text-anchor": "middle", "font-size": "7",
-            "fill": "#607d8b", "font-style": "italic",
+            "fill": _theme("corridor_label"), "font-style": "italic",
         })
         lbl.text = "Corridor"
 
@@ -944,7 +1312,7 @@ def _draw_boundary(g: Element, boundary_polygon, ox: float, oy: float):
     SubElement(g, "path", {
         "d": d,
         "fill": "none",
-        "stroke": "#263238",
+        "stroke": _theme("outer_wall"),
         "stroke-width": str(WALL_WIDTH + 1),
         "stroke-linejoin": "miter",
         "filter": "url(#shadow)",
@@ -981,7 +1349,7 @@ def _draw_entrance(g: Element, boundary_polygon, entrance_point, ox: float, oy: 
         SubElement(g, "line", {
             "x1": f"{x1:.1f}", "y1": f"{y:.1f}",
             "x2": f"{x2:.1f}", "y2": f"{y:.1f}",
-            "stroke": "white", "stroke-width": str(WALL_WIDTH + 3),
+            "stroke": _theme("door_gap"), "stroke-width": str(WALL_WIDTH + 3),
         })
         arrow_start_y = y - 15 if side == "top" else y + 15
         arrow_head_y = y - 6 if side == "top" else y + 6
@@ -990,7 +1358,7 @@ def _draw_entrance(g: Element, boundary_polygon, entrance_point, ox: float, oy: 
             "d": f"M{px:.1f},{arrow_start_y:.1f} L{px:.1f},{y:.1f} "
                  f"L{px - 4:.1f},{arrow_head_y:.1f} M{px:.1f},{y:.1f} "
                  f"L{px + 4:.1f},{arrow_head_y:.1f}",
-            "stroke": "#d32f2f", "stroke-width": "1.5", "fill": "none",
+            "stroke": _theme("entrance"), "stroke-width": "1.5", "fill": "none",
         })
         label_x = px
     else:
@@ -1000,7 +1368,7 @@ def _draw_entrance(g: Element, boundary_polygon, entrance_point, ox: float, oy: 
         SubElement(g, "line", {
             "x1": f"{x:.1f}", "y1": f"{y1:.1f}",
             "x2": f"{x:.1f}", "y2": f"{y2:.1f}",
-            "stroke": "white", "stroke-width": str(WALL_WIDTH + 3),
+            "stroke": _theme("door_gap"), "stroke-width": str(WALL_WIDTH + 3),
         })
         arrow_start_x = x - 15 if side == "left" else x + 15
         arrow_head_x = x - 6 if side == "left" else x + 6
@@ -1010,12 +1378,12 @@ def _draw_entrance(g: Element, boundary_polygon, entrance_point, ox: float, oy: 
             "d": f"M{arrow_start_x:.1f},{py:.1f} L{x:.1f},{py:.1f} "
                  f"L{arrow_head_x:.1f},{py - 4:.1f} M{x:.1f},{py:.1f} "
                  f"L{arrow_head_x:.1f},{py + 4:.1f}",
-            "stroke": "#d32f2f", "stroke-width": "1.5", "fill": "none",
+            "stroke": _theme("entrance"), "stroke-width": "1.5", "fill": "none",
         })
 
     lbl = SubElement(g, "text", {
         "x": f"{label_x:.1f}", "y": f"{label_y:.1f}",
-        "text-anchor": "middle", "font-size": "8", "fill": "#d32f2f",
+        "text-anchor": "middle", "font-size": "8", "fill": _theme("entrance"),
         "font-weight": "bold",
     })
     lbl.text = "ENTRANCE"
@@ -1029,17 +1397,17 @@ def _draw_title_block(svg: Element, title: str, width_px: float, height_px: floa
     SubElement(g, "rect", {
         "x": "0", "y": f"{tb_y:.0f}",
         "width": f"{width_px:.0f}", "height": f"{tb_h}",
-        "fill": "#263238",
+        "fill": _theme("footer_bg"),
     })
     t = SubElement(g, "text", {
         "x": f"{MARGIN:.0f}", "y": f"{tb_y + 22:.0f}",
-        "font-size": "16", "font-weight": "bold", "fill": "white",
+        "font-size": "16", "font-weight": "bold", "fill": _theme("footer_text"),
     })
     t.text = title
 
     info = SubElement(g, "text", {
         "x": f"{MARGIN:.0f}", "y": f"{tb_y + 38:.0f}",
-        "font-size": "11", "fill": "#b0bec5",
+        "font-size": "11", "fill": _theme("footer_muted"),
     })
     info.text = (f"Occupancy: {occupancy}  |  Total Area: {total_area:.1f} sq.m  |  "
                  f"Scale: 1:{SCALE}  |  GenAI Floor Plan Generator")
@@ -1051,20 +1419,79 @@ def _draw_title_block(svg: Element, title: str, width_px: float, height_px: floa
     SubElement(g, "line", {
         "x1": f"{bar_x:.0f}", "y1": f"{bar_y:.0f}",
         "x2": f"{bar_x + bar_w:.0f}", "y2": f"{bar_y:.0f}",
-        "stroke": "white", "stroke-width": "2",
+        "stroke": _theme("footer_text"), "stroke-width": "2",
     })
     for i in range(4):
         tx = bar_x + _px(i)
         SubElement(g, "line", {
             "x1": f"{tx:.0f}", "y1": f"{bar_y - 3:.0f}",
             "x2": f"{tx:.0f}", "y2": f"{bar_y + 3:.0f}",
-            "stroke": "white", "stroke-width": "1",
+            "stroke": _theme("footer_text"), "stroke-width": "1",
         })
         st = SubElement(g, "text", {
             "x": f"{tx:.0f}", "y": f"{bar_y + 12:.0f}",
-            "text-anchor": "middle", "font-size": "9", "fill": "#b0bec5",
+            "text-anchor": "middle", "font-size": "9", "fill": _theme("footer_muted"),
         })
         st.text = f"{i}m"
+
+
+def _derive_plan_title(building: Building, title: str) -> str:
+    cleaned = (title or "").strip()
+    generic_titles = {
+        "Floor Plan",
+        "AI-Generated Floor Plan",
+        "NL Interface - Algorithmic Run",
+        "NL Interface - Planner Direct Run",
+        "NL Interface - Learned Run",
+        "NL Interface - Hybrid Run",
+    }
+    if cleaned and cleaned not in generic_titles:
+        return cleaned.upper()
+
+    bedroom_count = sum(1 for room in building.rooms if getattr(room, "room_type", "") == "Bedroom")
+    if bedroom_count > 0:
+        return f"{bedroom_count} BHK HOME FLOOR PLAN"
+    return "RESIDENTIAL FLOOR PLAN"
+
+
+def _draw_title_banner(svg: Element, title: str, width_px: float) -> None:
+    banner_width = min(width_px * 0.56, 760)
+    banner_x = (width_px - banner_width) / 2.0
+    banner_y = 26
+    banner_h = 60
+
+    g = SubElement(svg, "g", {"id": "title-banner"})
+    if _theme("title_banner_bg"):
+        SubElement(g, "rect", {
+            "x": f"{banner_x:.1f}",
+            "y": f"{banner_y:.1f}",
+            "width": f"{banner_width:.1f}",
+            "height": f"{banner_h:.1f}",
+            "rx": "10",
+            "fill": _theme("title_banner_bg"),
+            "fill-opacity": "0.55" if _is_presentation_blueprint() else "1.0",
+            "stroke": _theme("title_banner_rule"),
+            "stroke-width": "1",
+        })
+    text = SubElement(g, "text", {
+        "x": f"{width_px / 2.0:.1f}",
+        "y": f"{banner_y + 30:.1f}",
+        "text-anchor": "middle",
+        "font-size": "26" if _is_presentation_blueprint() else "20",
+        "font-weight": "800",
+        "letter-spacing": "1.2",
+        "fill": _theme("title_banner_text"),
+    })
+    text.text = title
+    SubElement(g, "line", {
+        "x1": f"{banner_x + 40:.1f}",
+        "y1": f"{banner_y + banner_h - 12:.1f}",
+        "x2": f"{banner_x + banner_width - 40:.1f}",
+        "y2": f"{banner_y + banner_h - 12:.1f}",
+        "stroke": _theme("title_banner_rule"),
+        "stroke-width": "1.4",
+        "opacity": "0.9",
+    })
 
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1076,11 +1503,11 @@ def _draw_compass(svg: Element, x: float, y: float):
     # N arrow
     SubElement(g, "path", {
         "d": "M0,-20 L5,-5 L0,-10 L-5,-5 Z",
-        "fill": "#d32f2f", "stroke": "#263238", "stroke-width": "0.5",
+        "fill": _theme("entrance"), "stroke": _theme("compass"), "stroke-width": "0.5",
     })
     n = SubElement(g, "text", {
         "x": "0", "y": "-24", "text-anchor": "middle",
-        "font-size": "10", "font-weight": "bold", "fill": "#263238",
+        "font-size": "10", "font-weight": "bold", "fill": _theme("compass"),
     })
     n.text = "N"
 
@@ -1096,6 +1523,7 @@ def render_svg_blueprint(
     zone_map: Dict[str, str] = None,
     title: str = "Floor Plan",
     *,
+    style_preset: str = STYLE_PRESET_PRESENTATION_BLUEPRINT,
     unit: str = "m",
     show_grid: bool = True,
     merge_walls: bool = True,
@@ -1107,7 +1535,7 @@ def render_svg_blueprint(
     min_overlap_ratio: float = 0.8,
     show_room_dim_tags: bool = True,
     # ── New symbol library parameters ──────────────────────────────────────
-    furniture_enabled: bool = False,
+    furniture_enabled: bool = True,
     use_symbol_library: bool = True,
     show_north_arrow: bool = True,
 ) -> str:
@@ -1128,6 +1556,7 @@ def render_svg_blueprint(
     show_north_arrow : bool
         Display a north arrow symbol for orientation reference.
     """
+    _set_active_theme(style_preset)
     units_cfg = resolve_render_units(unit=unit, wall_snap_step=wall_snap_step)
     wall_snap_step = units_cfg.wall_snap_step
     door_gap_eps = units_cfg.door_gap_eps if door_gap_eps == 0.1 else door_gap_eps
@@ -1150,6 +1579,8 @@ def render_svg_blueprint(
 
     svg = _svg_root(width_px, height_px)
     _add_defs(svg, boundary_polygon)
+    display_title = _derive_plan_title(building, title)
+    _draw_title_banner(svg, display_title, width_px)
 
     # Grid overlay (behind everything)
     if show_grid:
@@ -1175,6 +1606,11 @@ def render_svg_blueprint(
             draw_walls=not merge_walls,
             show_room_dim_tags=show_room_dim_tags,
         )
+
+    if furniture_enabled:
+        g_furniture = SubElement(svg, "g", {"id": "furniture", "opacity": "0.58" if _is_presentation_blueprint() else "1.0"})
+        for room in building.rooms:
+            _place_furniture_in_room(g_furniture, room, ox, oy, furniture_enabled=True)
 
     # Merged wall layer (shared walls drawn once, correct thickness)
     if merge_walls:
@@ -1206,16 +1642,28 @@ def render_svg_blueprint(
     exit_w = building.exit.width if building.exit else 1.0
     _draw_entrance(g_entrance, boundary_polygon, entrance_point, ox, oy, exit_w)
 
+    render_exit_segment = _render_exit_segment(boundary_polygon, entrance_point) or (
+        getattr(building.exit, "segment", None) if hasattr(building, "exit") and building.exit else None
+    )
     # Doors
     g_doors = SubElement(svg, "g", {"id": "doors"})
     for door in building.doors:
-        _draw_door(g_doors, door, ox, oy)
-        
-    if hasattr(building, "exit") and building.exit and getattr(building.exit, "segment", None):
+        segment = getattr(door, "segment", None)
+        if _segment_on_boundary(segment, boundary_polygon) and not _segments_match(segment, render_exit_segment):
+            continue
+        if use_symbol_library:
+            _enhanced_draw_door(g_doors, door, ox, oy, use_symbols=True)
+        else:
+            _draw_door(g_doors, door, ox, oy)
+
+    if render_exit_segment:
         class ExitDoor:
-            segment = building.exit.segment
+            segment = render_exit_segment
             door_type = "exit"
-        _draw_door(g_doors, ExitDoor(), ox, oy)
+        if use_symbol_library:
+            _enhanced_draw_door(g_doors, ExitDoor(), ox, oy, use_symbols=True)
+        else:
+            _draw_door(g_doors, ExitDoor(), ox, oy)
 
     # Room labels drawn AFTER all walls and doors so they are never obscured
     g_labels = SubElement(svg, "g", {"id": "room-labels"})
@@ -1228,7 +1676,7 @@ def render_svg_blueprint(
 
     # Title block
     total_area = building.total_area or sum(r.final_area for r in building.rooms if r.final_area)
-    _draw_title_block(svg, title, width_px, height_px, total_area, building.occupancy_type)
+    _draw_title_block(svg, display_title, width_px, height_px, total_area, building.occupancy_type)
 
     # Compass
     _draw_compass(svg, width_px - LEGEND_W - 40, 40)
@@ -1239,7 +1687,7 @@ def render_svg_blueprint(
                                       "transform": f"translate({legend_x:.0f}, {MARGIN:.0f})"})
     hdr = SubElement(g_legend, "text", {
         "x": "0", "y": "14",
-        "font-size": "13", "font-weight": "bold", "fill": "#263238",
+        "font-size": "13", "font-weight": "bold", "fill": _theme("legend_text"),
     })
     hdr.text = "Legend"
     ly = 28
@@ -1252,11 +1700,14 @@ def render_svg_blueprint(
         SubElement(g_legend, "rect", {
             "x": "0", "y": f"{ly}",
             "width": "20", "height": "20",
-            "fill": fill, "stroke": "#37474f", "stroke-width": "1",
+            "fill": fill,
+            "fill-opacity": _theme("room_fill_opacity") or "1.0",
+            "stroke": _theme("legend_border"),
+            "stroke-width": "1",
         })
         lt = SubElement(g_legend, "text", {
             "x": "28", "y": f"{ly + 14}",
-            "font-size": "12", "fill": "#263238",
+            "font-size": "12", "fill": _theme("legend_text"),
         })
         lt.text = room.room_type
         ly += 28
@@ -1272,10 +1723,12 @@ def save_svg_blueprint(
     entrance_point=None,
     zone_map=None,
     title="Floor Plan",
+    style_preset: str = STYLE_PRESET_PRESENTATION_BLUEPRINT,
 ):
     """Render and save SVG to file."""
     svg_str = render_svg_blueprint(
         building, boundary_polygon, entrance_point, zone_map, title,
+        style_preset=style_preset,
     )
     p = Path(output_path)
     p.parent.mkdir(parents=True, exist_ok=True)

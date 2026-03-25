@@ -49,6 +49,9 @@ class GeneratedDesign:
     explanation: Optional[str] = None
     report_status: Optional[str] = None
     engine: Optional[str] = None
+    revision_of: Optional[int] = None
+    revision_number: int = 1
+    change_summary: Optional[str] = None
 
     def to_dict(self) -> Dict:
         return {
@@ -63,6 +66,9 @@ class GeneratedDesign:
             "explanation": self.explanation,
             "report_status": self.report_status,
             "engine": self.engine,
+            "revision_of": self.revision_of,
+            "revision_number": self.revision_number,
+            "change_summary": self.change_summary,
         }
 
 
@@ -228,8 +234,18 @@ class ConversationSession:
         self.resolution = resolution
         self.updated_at = time.time()
 
-    def add_design(self, design_data: Dict[str, Any], rank: int) -> GeneratedDesign:
+    def add_design(
+        self,
+        design_data: Dict[str, Any],
+        rank: int,
+        *,
+        revision_of: Optional[int] = None,
+        change_summary: Optional[str] = None,
+    ) -> GeneratedDesign:
         """Add a generated design to the session."""
+        revision_number = 1
+        if revision_of is not None and 0 <= revision_of < len(self.designs):
+            revision_number = max(1, int(getattr(self.designs[revision_of], "revision_number", 1) or 1)) + 1
         design = GeneratedDesign(
             index=len(self.designs),
             svg_path=design_data.get("artifact_paths", {}).get("svg", ""),
@@ -242,6 +258,9 @@ class ConversationSession:
             explanation=design_data.get("explanation"),
             report_status=design_data.get("report_status"),
             engine=(design_data.get("winning_source") or design_data.get("backend_target")),
+            revision_of=revision_of,
+            revision_number=revision_number,
+            change_summary=change_summary,
         )
         self.designs.append(design)
         self.selected_design_index = design.index
@@ -353,6 +372,9 @@ class ConversationSession:
                     explanation=design_data.get("explanation"),
                     report_status=design_data.get("report_status"),
                     engine=design_data.get("engine"),
+                    revision_of=design_data.get("revision_of"),
+                    revision_number=design_data.get("revision_number", 1),
+                    change_summary=design_data.get("change_summary"),
                 ))
             except Exception:
                 continue  # Skip malformed designs

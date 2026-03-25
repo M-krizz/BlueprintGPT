@@ -138,6 +138,217 @@ def _room_area_quality(building):
     }
 
 
+def _boundary_usage_quality(building, boundary_polygon):
+    boundary_area = _polygon_area(boundary_polygon or [])
+    if boundary_area <= 0.0:
+        return {
+            "boundary_area": 0.0,
+            "room_polygon_area": 0.0,
+            "corridor_polygon_area": 0.0,
+            "unused_boundary_area": 0.0,
+            "unused_boundary_ratio": 0.0,
+        }
+
+    room_polygon_area = sum(_polygon_area(getattr(room, "polygon", None) or []) for room in getattr(building, "rooms", []))
+    corridor_polygon_area = sum(float(getattr(corridor, "walkable_area", 0.0) or 0.0) for corridor in getattr(building, "corridors", []))
+    unused_boundary_area = max(0.0, boundary_area - room_polygon_area - corridor_polygon_area)
+    unused_boundary_ratio = unused_boundary_area / max(boundary_area, 1e-6)
+    return {
+        "boundary_area": round(boundary_area, 3),
+        "room_polygon_area": round(room_polygon_area, 3),
+        "corridor_polygon_area": round(corridor_polygon_area, 3),
+        "unused_boundary_area": round(unused_boundary_area, 3),
+        "unused_boundary_ratio": round(unused_boundary_ratio, 4),
+    }
+
+
+def _room_shape_quality(building):
+    max_aspect_by_type = {
+        "LivingRoom": 2.4,
+        "DrawingRoom": 2.4,
+        "Bedroom": 2.6,
+        "Kitchen": 2.4,
+        "Bathroom": 2.2,
+        "WC": 2.0,
+    }
+    min_dimension_by_type = {
+        "LivingRoom": 2.4,
+        "DrawingRoom": 2.4,
+        "Bedroom": 2.4,
+        "Kitchen": 1.8,
+        "Bathroom": 1.5,
+        "WC": 1.2,
+    }
+
+    weighted_scores = []
+    worst_aspect_ratio = 0.0
+    details = []
+    for room in getattr(building, "rooms", []):
+        polygon = getattr(room, "polygon", None)
+        if not polygon:
+            continue
+        try:
+            min_x, min_y, max_x, max_y = Polygon(polygon).bounds
+        except Exception:
+            continue
+
+        width = max(max_x - min_x, 1e-6)
+        height = max(max_y - min_y, 1e-6)
+        aspect_ratio = max(width / height, height / width)
+        min_dimension = min(width, height)
+        target_aspect = max_aspect_by_type.get(room.room_type, 2.8)
+        target_min_dimension = min_dimension_by_type.get(room.room_type, 1.5)
+
+        aspect_score = 1.0 if aspect_ratio <= target_aspect else max(0.0, target_aspect / aspect_ratio)
+        min_dimension_score = 1.0 if min_dimension >= target_min_dimension else max(0.0, min_dimension / target_min_dimension)
+        room_score = 0.65 * aspect_score + 0.35 * min_dimension_score
+        area_weight = max(float(getattr(room, "final_area", 0.0) or 0.0), 1e-6)
+        weighted_scores.append((room_score, area_weight))
+        worst_aspect_ratio = max(worst_aspect_ratio, aspect_ratio)
+        details.append(
+            {
+                "room": room.name,
+                "aspect_ratio": round(aspect_ratio, 3),
+                "min_dimension": round(min_dimension, 3),
+                "shape_score": round(room_score, 4),
+            }
+        )
+
+    if not weighted_scores:
+        return {
+            "room_shape_score": 0.0,
+            "worst_room_aspect_ratio": 0.0,
+            "room_shape_details": [],
+        }
+
+    weighted_total = sum(score * weight for score, weight in weighted_scores)
+    total_weight = sum(weight for _, weight in weighted_scores)
+    return {
+        "room_shape_score": round(weighted_total / max(total_weight, 1e-6), 4),
+        "worst_room_aspect_ratio": round(worst_aspect_ratio, 3),
+        "room_shape_details": details,
+    }
+
+
+def _room_dimension_quality(building, ontology_validator=None):
+    zone_rules = {}
+    room_types = sorted({getattr(room, "room_type", "") for room in getattr(building, "rooms", []) if getattr(room, "room_type", "")})
+    if ontology_validator is not None and hasattr(ontology_validator, "get_zone_rules"):
+        try:
+            zone_rules = ontology_validator.get_zone_rules(room_types=room_types)
+        except Exception:
+            zone_rules = {}
+
+    zone_aspect_targets = {
+        "public": 2.0,
+        "private": 1.95,
+        "service": 1.7,
+    }
+    zone_aspect_tolerances = {
+        "public": 0.45,
+        "private": 0.55,
+        "service": 0.25,
+    }
+    type_aspect_targets = {
+        "LivingRoom": 2.05,
+        "DrawingRoom": 2.05,
+        "DiningRoom": 1.9,
+        "Bedroom": 2.0,
+        "Kitchen": 1.65,
+        "Bathroom": 1.5,
+        "WC": 1.35,
+    }
+
+    weighted_scores = []
+    width_violations = []
+    proportion_violations = []
+    details = []
+    worst_width_gap = 0.0
+
+    for room in getattr(building, "rooms", []):
+        polygon = getattr(room, "polygon", None)
+        if not polygon:
+            continue
+        try:
+            min_x, min_y, max_x, max_y = Polygon(polygon).bounds
+        except Exception:
+            continue
+
+        width = max_x - min_x
+        height = max_y - min_y
+        smaller_dimension = max(min(width, height), 1e-6)
+        larger_dimension = max(max(width, height), 1e-6)
+        aspect_ratio = larger_dimension / smaller_dimension
+
+        zone = zone_rules.get(room.room_type, "service")
+        target_aspect = type_aspect_targets.get(room.room_type, zone_aspect_targets.get(zone, 2.2))
+        aspect_tolerance = zone_aspect_tolerances.get(zone, 0.45)
+        aspect_score = 1.0 if aspect_ratio <= target_aspect else max(0.0, target_aspect / aspect_ratio)
+
+        min_width_required = float(getattr(room, "min_width", 0.0) or 0.0)
+        width_score = 1.0
+        width_gap = 0.0
+        if min_width_required > 0:
+            width_gap = max(0.0, min_width_required - smaller_dimension)
+            width_score = 1.0 if width_gap <= 0 else max(0.0, smaller_dimension / max(min_width_required, 1e-6))
+            if width_gap > 0.01:
+                width_violations.append(
+                    {
+                        "room": room.name,
+                        "required_min_width": round(min_width_required, 3),
+                        "actual_min_dimension": round(smaller_dimension, 3),
+                        "gap": round(width_gap, 3),
+                    }
+                )
+
+        aspect_gap = max(0.0, aspect_ratio - target_aspect)
+        if aspect_gap > aspect_tolerance:
+            proportion_violations.append(
+                {
+                    "room": room.name,
+                    "zone": zone,
+                    "target_aspect_ratio": round(target_aspect, 3),
+                    "actual_aspect_ratio": round(aspect_ratio, 3),
+                    "gap": round(aspect_gap, 3),
+                }
+            )
+
+        room_score = 0.45 * width_score + 0.55 * aspect_score
+        area_weight = max(float(getattr(room, "final_area", 0.0) or 0.0), 1e-6)
+        weighted_scores.append((room_score, area_weight))
+        worst_width_gap = max(worst_width_gap, width_gap)
+        details.append(
+            {
+                "room": room.name,
+                "zone": zone,
+                "aspect_ratio": round(aspect_ratio, 3),
+                "target_aspect_ratio": round(target_aspect, 3),
+                "required_min_width": round(min_width_required, 3),
+                "actual_min_dimension": round(smaller_dimension, 3),
+                "dimension_score": round(room_score, 4),
+            }
+        )
+
+    if not weighted_scores:
+        return {
+            "room_dimension_score": 0.0,
+            "worst_room_width_gap": 0.0,
+            "min_room_width_violations": [],
+            "critical_room_dimension_violations": [],
+            "room_dimension_details": [],
+        }
+
+    weighted_total = sum(score * weight for score, weight in weighted_scores)
+    total_weight = sum(weight for _, weight in weighted_scores)
+    return {
+        "room_dimension_score": round(weighted_total / max(total_weight, 1e-6), 4),
+        "worst_room_width_gap": round(worst_width_gap, 3),
+        "min_room_width_violations": width_violations,
+        "critical_room_dimension_violations": proportion_violations,
+        "room_dimension_details": details,
+    }
+
+
 def _composition_quality(building, entrance_point, zone_map, adjacency_details):
     return composition_quality(building, entrance_point, zone_map, adjacency_details)
 
@@ -334,6 +545,9 @@ def generate_layout_from_spec(spec, regulation_file, ontology_validator=None):
         # Alignment quality
         align_score = alignment_score(var_building)
         area_quality = _room_area_quality(var_building)
+        boundary_usage = _boundary_usage_quality(var_building, boundary_polygon)
+        room_shape = _room_shape_quality(var_building)
+        dimension_quality = _room_dimension_quality(var_building, ontology_validator=ontology_validator)
         composition_quality = _composition_quality(
             var_building,
             spec.get("entrance_point"),
@@ -369,11 +583,28 @@ def generate_layout_from_spec(spec, regulation_file, ontology_validator=None):
                 "door_path_travel_distance": door_path_travel,
                 "max_room_area_error":      area_quality["max_room_area_error"],
                 "room_area_errors":         area_quality["room_area_errors"],
+                "boundary_area":            boundary_usage["boundary_area"],
+                "room_polygon_area":        boundary_usage["room_polygon_area"],
+                "corridor_polygon_area":    boundary_usage["corridor_polygon_area"],
+                "unused_boundary_area":     boundary_usage["unused_boundary_area"],
+                "unused_boundary_ratio":    boundary_usage["unused_boundary_ratio"],
+                "room_shape_score":         room_shape["room_shape_score"],
+                "worst_room_aspect_ratio":  room_shape["worst_room_aspect_ratio"],
+                "room_shape_details":       room_shape["room_shape_details"],
+                "room_dimension_score":     dimension_quality["room_dimension_score"],
+                "worst_room_width_gap":     dimension_quality["worst_room_width_gap"],
+                "min_room_width_violations": dimension_quality["min_room_width_violations"],
+                "critical_room_dimension_violations": dimension_quality["critical_room_dimension_violations"],
+                "room_dimension_details":   dimension_quality["room_dimension_details"],
                 "skip_corridors":           skip_corridors,
                 "public_frontage_score":    composition_quality["public_frontage_score"],
                 "bedroom_privacy_score":    composition_quality["bedroom_privacy_score"],
                 "kitchen_living_score":     composition_quality["kitchen_living_score"],
                 "bathroom_access_score":    composition_quality["bathroom_access_score"],
+                "living_balance_score":     composition_quality["living_balance_score"],
+                "bathroom_public_exposure_score": composition_quality["bathroom_public_exposure_score"],
+                "master_suite_score":       composition_quality["master_suite_score"],
+                "service_cluster_score":    composition_quality["service_cluster_score"],
                 "architectural_reasonableness": composition_quality["architectural_reasonableness"],
             },
             "ontology":   ont_result,

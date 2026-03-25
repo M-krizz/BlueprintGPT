@@ -5,6 +5,22 @@ from typing import Any, Dict, List, Optional
 from nl_interface.program_planner import summarize_room_program, summarize_zoning_plan
 
 
+def _editable_room_names(latest_design: Optional[Dict[str, Any]] = None, room_program: Optional[Dict[str, Any]] = None) -> List[str]:
+    names: List[str] = []
+    if room_program and room_program.get("rooms"):
+        for room in room_program.get("rooms", []):
+            room_name = room.get("name")
+            if room_name:
+                names.append(str(room_name))
+    elif latest_design and latest_design.get("rooms"):
+        for room in latest_design.get("rooms", []):
+            room_type = str(room.get("type") or "Room")
+            count = int(room.get("count", 1) or 1)
+            for idx in range(count):
+                names.append(f"{room_type}_{idx + 1}")
+    return names
+
+
 def compose_followup_reply(
     message: str,
     *,
@@ -20,12 +36,20 @@ def compose_followup_reply(
     zoning_summary = summarize_zoning_plan(zoning_plan)
     design_engine = (latest_design or {}).get("engine")
     report_status = (latest_design or {}).get("report_status")
+    revision_number = (latest_design or {}).get("revision_number")
+    editable_rooms = _editable_room_names(latest_design, room_program)
+    editable_hint = ""
+    if editable_rooms:
+        editable_hint = " Editable room labels: " + ", ".join(editable_rooms[:8]) + "."
 
     if any(phrase in lowered for phrase in ("can i make", "make some changes", "modify", "change this", "refine this", "edit this")):
         details = program_summary or "your current layout"
+        version_hint = f" This is revision {revision_number} of the current design." if revision_number and revision_number > 1 else ""
         return (
             f"Yes. We can keep iterating on the current design. I still have {details.lower()} in context. "
             f"Tell me what you want to change, for example bedroom privacy, kitchen placement, bathroom access, or plot size."
+            + version_hint
+            + editable_hint
         )
 
     if "overlap" in lowered or "overlapped" in lowered:
@@ -78,6 +102,10 @@ def build_generation_summary(design_data: Dict[str, Any]) -> Dict[str, Any]:
         "alignment_score": metrics.get("alignment_score"),
         "fully_connected": metrics.get("fully_connected"),
         "max_travel_distance": metrics.get("max_travel_distance"),
+        "editable_rooms": _editable_room_names(design_data, None),
+        "revision_number": design_data.get("revision_number"),
+        "revision_of": design_data.get("revision_of"),
+        "change_summary": design_data.get("change_summary"),
         "artifact_urls": artifact_urls,
         "svg_url": svg_url,
     }

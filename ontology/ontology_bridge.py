@@ -2,6 +2,8 @@ from pathlib import Path
 from uuid import uuid4
 from typing import List, Tuple
 
+from shapely.geometry import Polygon
+
 from graph.connectivity import is_fully_connected
 from graph.manhattan_path import max_travel_distance
 
@@ -217,9 +219,11 @@ class OntologyBridge:
             ("Kitchen",    "DiningRoom",  1.0),
             ("Kitchen",    "LivingRoom",  0.9),
             ("LivingRoom", "DiningRoom",  0.7),
-            ("LivingRoom", "Bedroom",     0.4),
+            ("LivingRoom", "Bedroom",     0.15),
             ("Bedroom",    "Bathroom",    0.8),
             ("Bedroom",    "WC",          0.6),
+            ("LivingRoom", "Bathroom",   -0.7),
+            ("LivingRoom", "WC",         -0.75),
             ("Bedroom",    "DressingArea",0.5),
             ("LivingRoom", "Lobby",       0.6),
             ("Lobby",      "Kitchen",     0.3),
@@ -314,6 +318,10 @@ class OntologyBridge:
 
     def _procedural_violations(self, building, max_allowed_travel, travel_distance, min_exit_width, connected):
         violations = []
+        public_types = {"LivingRoom", "DrawingRoom", "DiningRoom", "Lobby", "Foyer"}
+        sanitary_types = {"Bathroom", "WC", "Toilet"}
+        private_types = {"Bedroom", "Study", "DressingArea", "PrayerRoom"}
+
         for room in building.rooms:
             if room.final_area is not None and room.min_area is not None and room.final_area < room.min_area:
                 violations.append(
@@ -323,6 +331,22 @@ class OntologyBridge:
                         f"{room.name} has area {room.final_area} below required {room.min_area}",
                     )
                 )
+            polygon = getattr(room, "polygon", None)
+            min_width = float(getattr(room, "min_width", 0.0) or 0.0)
+            if polygon and min_width > 0.0:
+                try:
+                    min_x, min_y, max_x, max_y = Polygon(polygon).bounds
+                    actual_min_dimension = min(max_x - min_x, max_y - min_y)
+                except Exception:
+                    actual_min_dimension = 0.0
+                if actual_min_dimension + 0.01 < min_width:
+                    violations.append(
+                        self._new_violation(
+                            "MIN_ROOM_WIDTH",
+                            room.name,
+                            f"{room.name} has minimum dimension {actual_min_dimension:.2f} below required {min_width:.2f}",
+                        )
+                    )
 
         if travel_distance > max_allowed_travel:
             violations.append(
@@ -350,6 +374,59 @@ class OntologyBridge:
                     "Layout graph is not fully connected",
                 )
             )
+
+        access_map = {room.name: set() for room in getattr(building, "rooms", [])}
+        for door in getattr(building, "doors", []):
+            room_a = getattr(door, "room_a", None)
+            room_b = getattr(door, "room_b", None)
+            if getattr(door, "door_type", "") == "room_to_circulation":
+                if room_a is not None:
+                    access_map.setdefault(room_a.name, set()).add("circulation")
+                continue
+            if room_a is None or room_b is None:
+                continue
+            family_a = (
+                "sanitary" if room_a.room_type in sanitary_types
+                else "private" if room_a.room_type in private_types
+                else "public" if room_a.room_type in public_types
+                else "service"
+            )
+            family_b = (
+                "sanitary" if room_b.room_type in sanitary_types
+                else "private" if room_b.room_type in private_types
+                else "public" if room_b.room_type in public_types
+                else "service"
+            )
+            access_map.setdefault(room_a.name, set()).add(family_b)
+            access_map.setdefault(room_b.name, set()).add(family_a)
+
+        seen_sanitary_public_pairs = set()
+        for door in getattr(building, "doors", []):
+            room_a = getattr(door, "room_a", None)
+            room_b = getattr(door, "room_b", None)
+            if room_a is None or room_b is None:
+                continue
+
+            pair_types = {room_a.room_type, room_b.room_type}
+            if not (pair_types & sanitary_types and pair_types & public_types):
+                continue
+
+            sanitary_room = room_a if room_a.room_type in sanitary_types else room_b
+            public_room = room_b if sanitary_room is room_a else room_a
+            pair_key = tuple(sorted((sanitary_room.name, public_room.name)))
+            if pair_key in seen_sanitary_public_pairs:
+                continue
+            seen_sanitary_public_pairs.add(pair_key)
+
+            sanitary_access = access_map.get(sanitary_room.name, set())
+            if "private" not in sanitary_access and "circulation" not in sanitary_access:
+                violations.append(
+                    self._new_violation(
+                        "SANITARY_PUBLIC_DOOR",
+                        sanitary_room.name,
+                        f"{sanitary_room.name} opens directly to {public_room.name} without a private or circulation-side access alternative",
+                    )
+                )
 
         return violations
 

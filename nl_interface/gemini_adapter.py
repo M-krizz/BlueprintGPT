@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import difflib
 from typing import Any, Dict, List, Optional, Tuple
 
 from utils.processing_logger import ProcessingLogger
@@ -913,7 +914,10 @@ def parse_correction(
     Falls back to simple keyword matching if Gemini is unavailable.
     """
     if not is_available():
-        return _fallback_parse_correction(user_request, design_index, current_rooms)
+        return _normalize_parsed_correction(
+            _fallback_parse_correction(user_request, design_index, current_rooms),
+            current_rooms,
+        )
 
     try:
         rooms_str = ", ".join([r.get("name", r.get("type", "Unknown")) for r in current_rooms])
@@ -926,19 +930,28 @@ def parse_correction(
 
         text = _generate_text(prompt, response_mime_type="application/json")
         if not text:
-            return _fallback_parse_correction(user_request, design_index, current_rooms)
+            return _normalize_parsed_correction(
+                _fallback_parse_correction(user_request, design_index, current_rooms),
+                current_rooms,
+            )
         text = text.strip()
 
         # Extract JSON from response
         parsed = _extract_json_from_text(text)
         if parsed:
-            return parsed
+            return _normalize_parsed_correction(parsed, current_rooms)
 
-        return _fallback_parse_correction(user_request, design_index, current_rooms)
+        return _normalize_parsed_correction(
+            _fallback_parse_correction(user_request, design_index, current_rooms),
+            current_rooms,
+        )
 
     except Exception as e:
         ProcessingLogger.logger.warning(f"Gemini correction parsing failed: {e}")
-        return _fallback_parse_correction(user_request, design_index, current_rooms)
+        return _normalize_parsed_correction(
+            _fallback_parse_correction(user_request, design_index, current_rooms),
+            current_rooms,
+        )
 
 
 def chat_response(
@@ -1004,33 +1017,173 @@ def chat_response(
 def _canonical_room_from_label(label: str, current_rooms: Optional[List[Dict]] = None) -> str:
     """Convert a room label like 'living room' or 'bedroom1' to a canonical room type or room name."""
     from nl_interface.constants import ROOM_LABELS
-    label_lower = label.lower().strip()
-    compact = re.sub(r"[\s_]+", "", label_lower)
+    label_lower = re.sub(r"\s+", " ", label.lower().strip())
+    tokens = [tok for tok in re.split(r"\s+", label_lower) if tok]
+    filler_tokens = {"the", "thr", "teh", "a", "an", "my", "this", "that", "current", "existing"}
+    while tokens and tokens[0] in filler_tokens:
+        tokens.pop(0)
+    cleaned_label = " ".join(tokens) if tokens else label_lower
+    compact = re.sub(r"[\s_]+", "", cleaned_label)
+    alias_map: Dict[str, str] = {}
 
     for room in current_rooms or []:
         room_name = str(room.get("name") or "").strip()
         room_type = str(room.get("type") or "").strip()
         if not room_name and not room_type:
             continue
+        canonical_name = room_name or room_type
         aliases = {
             room_name.lower(),
             re.sub(r"[\s_]+", "", room_name.lower()),
             room_type.lower(),
             re.sub(r"[\s_]+", "", room_type.lower()),
         }
-        if label_lower in aliases or compact in aliases:
-            return room_name or room_type
+        for alias in aliases:
+            if alias:
+                alias_map[alias] = canonical_name
+        if cleaned_label in aliases or compact in aliases:
+            return canonical_name
 
     for canonical, labels in ROOM_LABELS.items():
         normalized_labels = {re.sub(r"[\s_]+", "", value.lower()) for value in labels}
+        alias_map.setdefault(canonical.lower(), canonical)
+        alias_map.setdefault(re.sub(r"[\s_]+", "", canonical.lower()), canonical)
+        for value in labels:
+            alias_map.setdefault(value.lower(), canonical)
+            alias_map.setdefault(re.sub(r"[\s_]+", "", value.lower()), canonical)
         if (
-            label_lower in labels
-            or label_lower == canonical.lower()
+            cleaned_label in labels
+            or cleaned_label == canonical.lower()
             or compact in normalized_labels
             or compact == re.sub(r"[\s_]+", "", canonical.lower())
         ):
             return canonical
+
+    for query in (cleaned_label, compact):
+        if not query:
+            continue
+        match = difflib.get_close_matches(query, list(alias_map.keys()), n=1, cutoff=0.72)
+        if match:
+            return alias_map[match[0]]
+
     return label.capitalize()
+
+
+def _resolve_existing_room_name(label: str, current_rooms: Optional[List[Dict]] = None) -> Tuple[Optional[str], List[str]]:
+    """Resolve a user-mentioned room label to a concrete editable room name when possible."""
+    current_rooms = current_rooms or []
+    from nl_interface.constants import ROOM_LABELS
+
+    label_lower = re.sub(r"\s+", " ", str(label or "").lower().strip())
+    tokens = [tok for tok in re.split(r"\s+", label_lower) if tok]
+    filler_tokens = {"the", "thr", "teh", "a", "an", "my", "this", "that", "current", "existing"}
+    while tokens and tokens[0] in filler_tokens:
+        tokens.pop(0)
+    cleaned_label = " ".join(tokens) if tokens else label_lower
+    compact = re.sub(r"[\s_]+", "", cleaned_label)
+
+    # First prefer exact or fuzzy matches to explicit editable room names.
+    explicit_aliases: Dict[str, str] = {}
+    names_by_type: Dict[str, List[str]] = {}
+    for room in current_rooms:
+        room_name = str(room.get("name") or "").strip()
+        room_type = str(room.get("type") or "").strip()
+        if room_type and room_name:
+            names_by_type.setdefault(room_type, []).append(room_name)
+        if room_name:
+            explicit_aliases[room_name.lower()] = room_name
+            explicit_aliases[re.sub(r"[\s_]+", "", room_name.lower())] = room_name
+
+    for query in (cleaned_label, compact):
+        if query in explicit_aliases:
+            return explicit_aliases[query], []
+
+    # Then resolve to a room type and only pick a concrete room if that type is unique.
+    canonical_type = None
+    for room_type, labels in ROOM_LABELS.items():
+        normalized_labels = {re.sub(r"[\s_]+", "", value.lower()) for value in labels}
+        if (
+            cleaned_label == room_type.lower()
+            or compact == re.sub(r"[\s_]+", "", room_type.lower())
+            or cleaned_label in labels
+            or compact in normalized_labels
+        ):
+            canonical_type = room_type
+            break
+    if canonical_type is None:
+        canonical_guess = _canonical_room_from_label(label, current_rooms)
+        if canonical_guess in names_by_type:
+            canonical_type = canonical_guess
+
+    if canonical_type is None:
+        return _canonical_room_from_label(label, current_rooms), []
+
+    candidates = list(dict.fromkeys(names_by_type.get(canonical_type, [])))
+    if len(candidates) == 1:
+        return candidates[0], []
+    if len(candidates) > 1:
+        return None, candidates
+
+    for query in (cleaned_label, compact):
+        match = difflib.get_close_matches(query, list(explicit_aliases.keys()), n=1, cutoff=0.82)
+        if match:
+            return explicit_aliases[match[0]], []
+
+    return canonical_type, []
+
+
+def _normalize_parsed_correction(parsed: Dict[str, Any], current_rooms: Optional[List[Dict]] = None) -> Dict[str, Any]:
+    """Resolve generic room references to concrete room labels and preserve correction intent on ambiguity."""
+    parsed = dict(parsed or {})
+    current_rooms = current_rooms or []
+    changes = list(parsed.get("changes") or [])
+    normalized_changes: List[Dict[str, Any]] = []
+    ambiguity_messages: List[str] = []
+
+    room_fields_by_type = {
+        "move_room": ("room",),
+        "resize_room": ("room",),
+        "remove_room": ("room",),
+        "swap_rooms": ("room_a", "room_b"),
+        "change_adjacency": ("room_a", "room_b"),
+    }
+
+    for change in changes:
+        normalized_change = dict(change)
+        fields = room_fields_by_type.get(str(change.get("type") or "").strip(), ())
+        change_ambiguous = False
+        for field in fields:
+            raw_value = normalized_change.get(field)
+            if not raw_value:
+                continue
+            resolved_name, candidates = _resolve_existing_room_name(str(raw_value), current_rooms)
+            if candidates:
+                change_ambiguous = True
+                candidate_text = ", ".join(candidates[:6])
+                ambiguity_messages.append(
+                    f"`{raw_value}` is ambiguous in the current plan. Use one of: {candidate_text}."
+                )
+            elif resolved_name:
+                normalized_change[field] = resolved_name
+        if not change_ambiguous:
+            normalized_changes.append(normalized_change)
+
+    if ambiguity_messages and not normalized_changes:
+        parsed["understood"] = False
+        parsed["changes"] = []
+        parsed["clarification_needed"] = " ".join(dict.fromkeys(ambiguity_messages))
+        parsed["correction_candidate"] = True
+        return parsed
+
+    parsed["changes"] = normalized_changes
+    if ambiguity_messages:
+        parsed["clarification_needed"] = " ".join(dict.fromkeys(ambiguity_messages))
+        parsed["correction_candidate"] = True
+    else:
+        parsed["clarification_needed"] = parsed.get("clarification_needed")
+        parsed["correction_candidate"] = parsed.get("understood", False)
+    parsed["understood"] = bool(normalized_changes)
+    return parsed
 
 
 def _fallback_extract(user_text: str) -> Dict[str, Any]:
@@ -1134,6 +1287,7 @@ def _fallback_parse_correction(
     """Simple keyword-based correction parsing when Gemini is unavailable."""
     changes = []
     user_lower = user_request.lower()
+    normalized_request = re.sub(r"[,\.;]", " ", user_lower)
 
     # Build room name pattern from known room labels
     from nl_interface.constants import ROOM_LABELS
@@ -1143,18 +1297,18 @@ def _fallback_parse_correction(
     )
     room_pat = "|".join(re.escape(l) for l in all_labels)
     # Also match single-word capitalized names as fallback
-    room_or_word = rf"(?:{room_pat}(?:\s*\d+)?|\w+)"
-    article = r"(?:the|a|an)\s+"
+    room_or_word = rf"(?:(?:{room_pat})(?:\s*\d+)?|\w+)"
+    optional_article = r"(?:(?:the|a|an)\s+)?"
 
     # Detect move requests: "move (the) kitchen left"
     move_patterns = [
-        (rf"move\s+{article}?({room_or_word})\s+(left|right|up|down)", "move_room"),
-        (rf"shift\s+{article}?({room_or_word})\s+(left|right|up|down)", "move_room"),
+        (rf"move\s+{optional_article}({room_or_word})\s+(left|right|up|down)", "move_room"),
+        (rf"shift\s+{optional_article}({room_or_word})\s+(left|right|up|down)", "move_room"),
     ]
     for pattern, change_type in move_patterns:
         match = re.search(pattern, user_lower)
         if match:
-            room_name = _canonical_room_from_label(match.group(1), current_rooms)
+            room_name = match.group(1).strip()
             changes.append({
                 "type": change_type,
                 "room": room_name,
@@ -1163,17 +1317,23 @@ def _fallback_parse_correction(
 
     # Detect resize requests: "make (the) kitchen larger"
     resize_patterns = [
-        (rf"make\s+{article}?({room_or_word})\s+(larger|bigger|smaller|bigger|wider|narrower)", "resize_room"),
-        (rf"(increase|decrease)\s+{article}?({room_or_word})\s+size", "resize_room"),
+        (rf"make\s+{optional_article}({room_or_word})\s+(larger|bigger|smaller|wider|narrower)", "resize_room"),
+        (rf"(increase|decrease)\s+{optional_article}({room_or_word})\s+size", "resize_room"),
+        (r"(?:need|want)\s+(.+?)\s+to\s+be\s+(?:still\s+)?(larger|bigger|smaller|wider|narrower)", "resize_room"),
     ]
     for pattern, change_type in resize_patterns:
-        match = re.search(pattern, user_lower)
+        match = re.search(pattern, normalized_request)
         if match:
             if "make" in pattern:
-                room_name = _canonical_room_from_label(match.group(1), current_rooms)
+                room_name = match.group(1).strip()
+                size_token = match.group(2)
+            elif "need|want" in pattern:
+                room_name = match.group(1).strip()
+                size_token = match.group(2)
             else:
-                room_name = _canonical_room_from_label(match.group(2), current_rooms)
-            size_dir = "larger" if any(w in user_lower for w in ("larger", "bigger", "increase", "wider")) else "smaller"
+                room_name = match.group(2).strip()
+                size_token = match.group(1)
+            size_dir = "larger" if size_token in ("larger", "bigger", "increase", "wider") else "smaller"
             changes.append({
                 "type": change_type,
                 "room": room_name,
@@ -1185,13 +1345,15 @@ def _fallback_parse_correction(
         rf"({room_or_word})\s+(?:and|with)\s+({room_or_word})\s+to\s+be\s+(adjacent|next to|near|close)",
         rf"keep\s+({room_or_word})\s+(?:and|with)\s+({room_or_word})\s+(adjacent|near|close)",
         rf"place\s+({room_or_word})\s+(?:near|next to|beside|adjacent to)\s+({room_or_word})",
+        rf"keep\s+{optional_article}({room_or_word})\s+(?:near|next to|beside|adjacent to|close to)\s+{optional_article}({room_or_word})",
+        rf"(?:move|bring|put)\s+{optional_article}({room_or_word})\s+(?:closer to|near|next to|beside|adjacent to)\s+{optional_article}({room_or_word})",
     ]
     for pattern in adjacency_patterns:
-        match = re.search(pattern, user_lower)
+        match = re.search(pattern, normalized_request)
         if not match:
             continue
-        room_a = _canonical_room_from_label(match.group(1), current_rooms)
-        room_b = _canonical_room_from_label(match.group(2), current_rooms)
+        room_a = match.group(1).strip()
+        room_b = match.group(2).strip()
         changes.append({
             "type": "change_adjacency",
             "room_a": room_a,
@@ -1201,28 +1363,29 @@ def _fallback_parse_correction(
         break
 
     # Detect swap requests: "swap kitchen and bedroom"
-    swap_match = re.search(rf"swap\s+{article}?({room_or_word})\s+(?:and|with)\s+{article}?({room_or_word})", user_lower)
+    swap_match = re.search(rf"swap\s+{optional_article}({room_or_word})\s+(?:and|with)\s+{optional_article}({room_or_word})", normalized_request)
     if swap_match:
         changes.append({
             "type": "swap_rooms",
-            "room_a": _canonical_room_from_label(swap_match.group(1), current_rooms),
-            "room_b": _canonical_room_from_label(swap_match.group(2), current_rooms),
+            "room_a": swap_match.group(1).strip(),
+            "room_b": swap_match.group(2).strip(),
         })
 
     # Detect add/remove
-    add_match = re.search(rf"add\s+{article}?({room_or_word})", user_lower)
+    add_match = re.search(rf"add\s+{optional_article}({room_or_word})", normalized_request)
     if add_match:
         changes.append({"type": "add_room", "room_type": _canonical_room_from_label(add_match.group(1), current_rooms)})
 
-    remove_match = re.search(rf"remove\s+{article}?({room_or_word})", user_lower)
+    remove_match = re.search(rf"remove\s+{optional_article}({room_or_word})", normalized_request)
     if remove_match:
-        changes.append({"type": "remove_room", "room": _canonical_room_from_label(remove_match.group(1), current_rooms)})
+        changes.append({"type": "remove_room", "room": remove_match.group(1).strip()})
 
-    return {
+    parsed = {
         "understood": len(changes) > 0,
         "changes": changes,
         "clarification_needed": None if changes else "I couldn't understand your correction request. Please be more specific about what you'd like to change.",
     }
+    return _normalize_parsed_correction(parsed, current_rooms)
 
 
 def _summarize_room_program(rooms: List[Dict]) -> str:

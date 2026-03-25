@@ -46,7 +46,12 @@ class ConversationOrchestrator:
         )
 
     def enrich_spec(self, spec: Dict[str, Any], resolution: Optional[Dict[str, Any]], user_message: Optional[str]) -> Dict[str, Any]:
-        return enrich_spec_with_planning(spec, resolution=resolution, user_prompt=user_message)
+        return enrich_spec_with_planning(
+            spec,
+            resolution=resolution,
+            user_prompt=user_message,
+            chat_adapter=self.chat_adapter,
+        )
 
     def build_clarification_request(self, semantic_spec: Optional[Dict[str, Any]], room_program: Optional[Dict[str, Any]]) -> Optional[str]:
         semantic_spec = semantic_spec or {}
@@ -82,6 +87,11 @@ class ConversationOrchestrator:
                 "state": session.state,
                 "has_design": bool(latest_design),
                 "layout_type": (semantic_spec or {}).get("layout_type") or (room_program or {}).get("layout_type"),
+                "chat_provider": getattr(self.chat_adapter, "provider_name", "unknown"),
+                "topology_source": (zoning_plan or {}).get("topology_source", "deterministic"),
+                "topology_hints_applied": bool((zoning_plan or {}).get("topology_hints_applied")),
+                "revision_number": (latest_design or {}).get("revision_number"),
+                "design_version_count": len(session.designs),
             },
             clarification_request=clarification_request,
             assumptions_used=list(dict.fromkeys(assumptions)),
@@ -93,6 +103,7 @@ class ConversationOrchestrator:
                 "room_program": room_program,
                 "zoning_plan": zoning_plan,
                 "generation_outcome": generation_outcome.to_dict() if generation_outcome else None,
+                "chat_provider": getattr(self.chat_adapter, "provider_name", "unknown"),
             },
             suggested_actions=suggested_actions or [],
         )

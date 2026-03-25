@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from utils.processing_logger import ProcessingLogger
 from nl_interface.adapter import build_backend_spec, route_backend, validate_resolution
+from nl_interface.chat_spec_adapter import default_chat_spec_adapter
 from nl_interface.program_planner import enrich_spec_with_planning
 from nl_interface.constants import (
     ALLOWED_BUILDING_TYPE,
@@ -119,7 +120,12 @@ def process_user_request(
         resolution = dict(resolution or {})
         resolution.update(cli_args)
 
-    enriched = enrich_spec_with_planning(normalized, resolution=resolution, user_prompt=user_text)
+    enriched = enrich_spec_with_planning(
+        normalized,
+        resolution=resolution,
+        user_prompt=user_text,
+        chat_adapter=default_chat_spec_adapter(),
+    )
 
     backend_target = route_backend(enriched)
     validation_errors = list(normalized.pop("_validation_errors", []))

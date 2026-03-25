@@ -67,6 +67,8 @@ class ZoningPlan:
     size_priors: Dict[str, Dict[str, float]] = field(default_factory=dict)
     heuristics: List[str] = field(default_factory=list)
     assumptions_used: List[str] = field(default_factory=list)
+    topology_source: str = "deterministic"
+    topology_hints_applied: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

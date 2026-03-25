@@ -1,0 +1,93 @@
+{
+  "source_dir": "learned\\data\\kaggle_json",
+  "train_output": "learned\\data\\kaggle_train.jsonl",
+  "val_output": "learned\\data\\kaggle_train_val.jsonl",
+  "record_count": 4,
+  "train_record_count": 3,
+  "val_record_count": 1,
+  "split": 0.9,
+  "num_bins": 256,
+  "max_len": 256,
+  "seed": 42,
+  "limit": 4,
+  "sample_plan_ids": [
+    "10Marla_GF_FP_037_V04",
+    "10Marla_GF_FP_019_V03",
+    "20Marla_GF_FP_010_V02",
+    "10Marla_GF_FP_005_V04"
+  ],
+  "source_stats": {
+    "source_file_count": 308,
+    "plot_types": {
+      "10Marla": 200,
+      "20Marla": 40,
+      "5Marla": 68
+    },
+    "building_types": {
+      "Residential": 308
+    },
+    "room_types": {
+      "Backyard": 12,
+      "Bathroom": 660,
+      "Bedroom": 436,
+      "Dining": 152,
+      "DrawingRoom": 276,
+      "DressingArea": 180,
+      "Garage": 308,
+      "Kitchen": 308,
+      "Laundry": 20,
+      "Lawn": 208,
+      "Lobby": 192,
+      "Lounge": 288,
+      "OpenSpace": 112,
+      "Passage": 208,
+      "PrayerRoom": 12,
+      "ServantQuarter": 12,
+      "SideGarden": 8,
+      "Staircase": 40,
+      "Stairs": 304,
+      "Store": 76
+    },
+    "room_count_distribution": {
+      "7": 4,
+      "8": 16,
+      "9": 16,
+      "10": 16,
+      "11": 60,
+      "12": 48,
+      "13": 48,
+      "14": 40,
+      "15": 44,
+      "16": 8,
+      "18": 8
+    },
+    "average_room_count": 12.377,
+    "average_boundary_width": 512.0,
+    "average_boundary_height": 927.0
+  },
+  "trainer": "improved",
+  "save_path": "learned/model/checkpoints/_tmp_kaggle_preset_smoke.pt",
+  "training_config": {
+    "epochs": 1,
+    "batch_size": 2,
+    "accumulate_steps": 1,
+    "lr": 0.0001,
+    "weight_decay": 0.01,
+    "warmup_steps": 10,
+    "device": "cpu",
+    "log_every": 5,
+    "trainer": "improved",
+    "preset": "cpu_smoke",
+    "augment": false,
+    "expansion_factor": 1,
+    "aux_loss": false,
+    "coverage_weight": 0.3,
+    "overlap_weight": 0.4,
+    "spread_weight": 0.1,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_model": 128,
+    "d_ff": 512,
+    "dropout": 0.1
+  }
+}

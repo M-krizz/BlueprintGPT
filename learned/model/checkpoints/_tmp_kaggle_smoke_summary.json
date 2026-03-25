@@ -1,0 +1,19 @@
+{
+  "source_dir": "learned\\data\\kaggle_json",
+  "train_output": "learned\\data\\kaggle_train.jsonl",
+  "val_output": "learned\\data\\kaggle_train_val.jsonl",
+  "record_count": 4,
+  "train_record_count": 3,
+  "val_record_count": 1,
+  "split": 0.9,
+  "num_bins": 256,
+  "max_len": 256,
+  "seed": 42,
+  "limit": 4,
+  "sample_plan_ids": [
+    "10Marla_GF_FP_037_V04",
+    "10Marla_GF_FP_019_V03",
+    "20Marla_GF_FP_010_V02",
+    "10Marla_GF_FP_005_V04"
+  ]
+}
